@@ -231,7 +231,7 @@ def create_buildable_object(
 
     # apply the beam length addjustment to scale
     adj_scales = [
-        (s[0] * (l / 4.0), s[1], s[2]) if l != 0 else s for s, l in zip(scales, lengths)
+        (s[0] * l, s[1], s[2]) if l != 0 else s for s, l in zip(scales, lengths)
     ]
 
     mesh.attributes.new("scale", "FLOAT_VECTOR", "POINT")
@@ -297,7 +297,7 @@ def import_lightweights(save: s.SaveGame, color_map: dict):
 
         if not instances:
             continue
-
+                
         verts, rotations, scales = map(
             list, zip(*(read_transform(i.Transform) for i in instances))
         )
@@ -305,7 +305,11 @@ def import_lightweights(save: s.SaveGame, color_map: dict):
         colors = [read_colors(i,color_map) for i in instances]
         primary_colors, secondary_colors, paint_type = zip(*colors)   
 
-        lengths = [read_length(i) for i in instances]
+        if 'Build_Beam_Painted_C' in name or 'Build_Beam_C' in name:
+            lengths = [read_length(i) for i in instances]
+            lengths = [l / 4.0 for l in lengths]
+        else:
+            lengths = [read_length(i) for i in instances]
 
         create_buildable_object(
             name, verts, rotations, scales, primary_colors, secondary_colors, paint_type, lengths
