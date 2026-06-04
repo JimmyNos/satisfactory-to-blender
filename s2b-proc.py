@@ -67,6 +67,9 @@ def get_or_create_collection(name) -> bpy.types.Collection:
 def get_import_collection() -> bpy.types.Collection:
     return get_or_create_collection('Import')
 
+def create_asset_collection() -> bpy.types.Collection:
+    return get_or_create_collection('Assets')
+
 # end blender api
 
 
@@ -104,42 +107,58 @@ def read_colors_custom(i: s.FRuntimeBuildableInstanceData) -> [Vec4, Vec4]:
     try:
         p = i.CustomizationData.OverrideColorData.PrimaryColor
         s = i.CustomizationData.OverrideColorData.SecondaryColor
+        f_path = i.CustomizationData.OverrideColorData.PaintFinish.PathName
         
-        paint_index = 1
+        if "Matte" in f_path:
+            f = 6
+        elif "Shiny" in f_path:
+            f = 7
+        else:
+            f = 0
     except AttributeError:
-        return ((1, 1, 1, 1), (1, 1, 1, 1),2)
+        return ((1, 1, 1, 1), (1, 1, 1, 1),0)
 
-    return ((p.R, p.G, p.B, p.A), (s.R, s.G, s.B, s.A),paint_index)
-
-def read_colors_paint_finish(i: s.FRuntimeBuildableInstanceData) -> [Vec4, Vec4]:
-    try:
-        p = i.CustomizationData.OverrideColorData.PrimaryColor
-        s = i.CustomizationData.OverrideColorData.SecondaryColor
-        f = i.CustomizationData.OverrideColorData.PaintFinish
-        
-        paint_index = 3
-    except AttributeError:
-        return ((0, 0, 0, 1), (0, 0, 0, 1),4)
-
-    return ((p.R, p.G, p.B, p.A), (s.R, s.G, s.B, s.A),paint_index)
+    return ((p.R, p.G, p.B, p.A), (s.R, s.G, s.B, s.A), f)
 
 
-def read_colors_swatch(i: s.FRuntimeBuildableInstanceData) -> [Vec4, Vec4]:
+def read_colors_swatch(i: s.FRuntimeBuildableInstanceData,color_map: dict) -> [Vec4, Vec4]:
     # todo swatch?
-    return ((1, 1, 1, 1), (1, 1, 1, 1),0)
+    swatch = color_map.get(str(i.CustomizationData.SwatchDesc.PathName).split('.')[-1], {})
+    try:
+        p = swatch["PrimaryColor"]
+        s = swatch["SecondaryColor"]
+        
+        # paint finish indexing for blender materials, easier to work with an index than a string in the geonode
+        if "CarbonSteel" in swatch["PaintFinish"]:
+            f = 1
+        elif "Caterium" in swatch["PaintFinish"]:
+            f = 2
+        elif "Chrome" in swatch["PaintFinish"]:
+            f = 3
+        elif "Copper" in swatch["PaintFinish"]:
+            f = 4
+        elif "Unpainted" in swatch["PaintFinish"]:
+            f = 5
+        elif "Matte" in swatch["PaintFinish"]:
+            f = 6
+        elif "Shiny" in swatch["PaintFinish"]:
+            f = 7
+        else:
+            f = 0
+        #f = swatch["PaintFinish"] 
+    except AttributeError:
+        return ((1, 1, 1, 1), (1, 1, 1, 1),0)
+    return ((p["R"], p["G"], p["B"], p["A"]), (s["R"], s["G"], s["B"], s["A"]),f)
 
 
-def read_colors(i: s.FRuntimeBuildableInstanceData) -> [Vec4, Vec4]:
+def read_colors(i: s.FRuntimeBuildableInstanceData,color_map: dict) -> [Vec4, Vec4]:
 
     # custom colors use the swatch "...SwatchDesc_Custom_C"
     if "SwatchDesc_Custom_C" in i.CustomizationData.SwatchDesc.PathName:
         return read_colors_custom(i)
-    
-    if "PaintFinishes" in i.CustomizationData.SwatchDesc.PathName:
-        return read_colors_paint_finish(i)
 
     # todo swatch
-    return read_colors_swatch(i)
+    return read_colors_swatch(i,color_map)
 
 
 def read_length(i: s.FRuntimeBuildableInstanceData) -> float:
@@ -159,42 +178,11 @@ def buildable_class_to_object(cls: str) -> [bpy.types.Object,Vec3,Vec3]:# | None
     json_file_path = mapping_path
     with open(json_file_path, 'r', encoding='utf-8') as f:
         map = json.load(f)
-    #map = {
-    #    "Build_Foundation_Concrete_8x4_C": "SM_Foundation_Concrete_8x4",
-    #    "Build_Foundation_Concrete_8x2_C": "SM_Foundation_Concrete_8x2",
-    #    "Build_Foundation_8x1_01_C": "SM_Foundation_Concrete_8x1",
-    #    "Build_PillarMiddle_C": "SM_Pillar_MiddleMetal_01",
-    #    "Build_PillarBase_C": "SM_Pillar_01",
-    #    
-    #    #pillars
-    #    "Build_Beam_C": "SM_Beam_02",
-    #    
-    #    # Beams
-    #    "Build_Barrier_Corner_C":"SM_CornerBlock_01",
-    #    "Build_Beam_Support_C":"SM_SmallestPillarBase_01",
-    #    "Build_Beam_Connector_Double_C":"SM_ConnectionCube_Wide_01",
-    #    "Build_Beam_Connector_C":"SM_ConnectionCube_01",
-    #    "Build_Beam_Cable_Cluster_C":"SM_BeamCable_02",
-    #    "Build_Beam_Cable_C":"SM_BeamCable_01",
-    #    "Build_Beam_Concrete_C":"SM_Beam_07",
-    #    "Build_Beam_Cross_C":"SM_Beam_01",
-    #    "Build_Beam_Shelf_C":"SM_Beam_05",
-    #    "Build_Beam_H_C":"SM_Beam_04",
-    #    "Build_Beam_C": "SM_Beam_02",
-    #    "Build_Beam_Painted_C": "SM_BeamPainted_01",
-    #}
 
     name = map.get(cls)
     if name is None:
         print(f"Missing object mapping: {cls}")
         return None
-    
-    #rot_q = {
-    #    "X":name["rotation"].X,
-    #    "Y":name["rotation"].Y,
-    #    "Z":name["rotation"].Z,
-    #    "W":name["rotation"].W
-    #}
     
     quat = Quaternion((-name["rotation"]["W"], name["rotation"]["X"],-name["rotation"]["Y"], name["rotation"]["Z"]))
     euler = quat.to_euler("XYZ")
@@ -202,7 +190,6 @@ def buildable_class_to_object(cls: str) -> [bpy.types.Object,Vec3,Vec3]:# | None
     
     pos = name["translation"]["X"] / 100.0, -name["translation"]["Y"] / 100.0, name["translation"]["Z"] / 100.0
 
-    #return bpy.data.objects.get(name["object_name"])
     return (bpy.data.objects.get(name["object_name"]),pos,rot)
 
 
@@ -260,7 +247,7 @@ def create_buildable_object(
     mesh.attributes["secondary_color"].data.foreach_set("color", flat)
     
     mesh.attributes.new("paint_index", "INT", "POINT")
-    flat = [rgba for rgba in paint_type]
+    flat = [idx for idx in paint_type]
     mesh.attributes["paint_index"].data.foreach_set("value", flat)
 
     node_group = bpy.data.node_groups["Buildables from Points"]
@@ -288,7 +275,9 @@ def create_buildable_object(
 
 # end geonode
 
-def import_lightweights(save: s.SaveGame):
+def import_lightweights(save: s.SaveGame, color_map: dict):
+    cls = save.allSaveObjects()
+    
     # get the lightweight buildable subsystem
     lbs = get_lbs(save)
     instances_by_class_ref = lbs.mBuildableClassToInstanceArray
@@ -313,7 +302,7 @@ def import_lightweights(save: s.SaveGame):
             list, zip(*(read_transform(i.Transform) for i in instances))
         )
 
-        colors = [read_colors(i) for i in instances]
+        colors = [read_colors(i,color_map) for i in instances]
         primary_colors, secondary_colors, paint_type = zip(*colors)   
 
         lengths = [read_length(i) for i in instances]
@@ -451,8 +440,58 @@ def import_conveyor_chain(obj: s.AFGConveyorChainActor, transform: s.FTransform3
     obj.location = pos
     get_import_collection().objects.link(obj)
         
+def import_color_slots(cls: s.SaveGame) -> dict:
+    with open(color_map_path, 'r', encoding='utf-8') as f:
+        color_map = json.load(f)
+    for obj in cls:
+        try:
+            ong_name = obj.Header.ObjectHeader.Reference.PathName
+            if 'BuildableSubsystem' in ong_name:
+                for prop in obj.Object.Properties:
+                    if 'mColorSlots_Data' in prop.Name.Name:
+                        for i, idx in enumerate(prop.Value.Values):
+                            swatch_name =list(color_map)[i]
+                            for data in idx.Data:
+                                try:
+                                    if 'PrimaryColor' in data.Name.Name:
+                                        data_attr = getattr(data.Value, 'Data')
+                                        
+                                        color_map[swatch_name]["PrimaryColor"] = {
+                                            "R": data_attr.R,
+                                            "G": data_attr.G,
+                                            "B": data_attr.B,
+                                            "A": data_attr.A
+                                        }
+                                    
+                                    if 'SecondaryColor' in data.Name.Name:
+                                        data_attr = getattr(data.Value, 'Data')
+                                        
+                                        color_map[swatch_name]["SecondaryColor"] = {
+                                            "R": data_attr.R,
+                                            "G": data_attr.G,
+                                            "B": data_attr.B,
+                                            "A": data_attr.A
+                                        }
+                                    
+                                    if 'PaintFinish' in data.Name.Name:
+                                        path_attr = getattr(data.Value, 'PathName')
+                                        color_map[swatch_name]["PaintFinish"] = str(path_attr).split('.')[-1]
+                                        
+                                except Exception as e:                    
+                                    print(f"  Error inspecting property value (import_color_slots): {e}")
+        except Exception as e:
+            print(f"  Error inspecting object (import_color_slots): {e}")
+    
+    return color_map
 
-def import_heavyweights(save: s.SaveGame):
+def import_object_actors(cls):
+    ... 
+    
+    
+
+def import_heavyweights(save: s.SaveGame, color_map: dict):
+    cls = save.allSaveObjects()
+    # color_map = import_color_slots(cls)
     for obj in save.mPersistentAndRuntimeData.SaveObjects:  
         
         if not obj.isActor():
@@ -482,12 +521,17 @@ def import_save(path: str):
     # clear out all the orphans
     bpy.ops.outliner.orphans_purge(do_recursive=True)
     
-    import_heavyweights(save)
-    import_lightweights(save)
+    cls = save.allSaveObjects()
+    
+    color_map = import_color_slots(cls)
+    #import_object_actors(save)
+    import_heavyweights(save,color_map)
+    import_lightweights(save,color_map)
 
 
 # IMPORTATNT: YOU HAVE TO SAVE AND RELOAD AND RESAVE THE FILE FOR THE BUILDABLES TO MATCH
 # I DONT KNOW WHY - perhaps the LBS is append only then it gets pruned on reload?
 path = "sav_path"
 mapping_path=r"mapping_path"
+color_map_path = r"color_map.json"
 import_save(path)
