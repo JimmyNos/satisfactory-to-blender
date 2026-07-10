@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 # path to build files
-BUILD_FILES_DIR = r"F:\blenber\SF to blend\fmodel export\Exports\FactoryGame\Content\FactoryGame\Buildable"
+BUILD_FILES_DIR = r"PATH-TO-FMODEL-EXPORTS\Content\FactoryGame\Buildable"
 
 # Output file location (in the script directory)
 OUTPUT_FILE = Path(__file__).parent / "buildable_to_asset.json"
