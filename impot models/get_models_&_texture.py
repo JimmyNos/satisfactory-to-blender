@@ -184,64 +184,114 @@ def import_model(
         #obj_materials = [slot.material.name for slot in ob.material_slots if slot.material]
         #print(f"Materials on {ob.name}: {obj_materials}")
         #continue
-    
-print("---------------------------------------------------------")
-#bpy.ops.psk.import_file(psk=file,should_import_mesh=True, should_import_armature=True)
 
-BASE_FILE_DIR = r"PATH-TO-FMODEL-EXPORTS\FactoryGame\Content\FactoryGame\Buildable"
-BUILD_TO_ASSET_DIR = r"PROJECT-PATH\impot models\buildable_to_asset.json"
+def main():
+    print("---------------------------------------------------------")
+    #bpy.ops.psk.import_file(psk=file,should_import_mesh=True, should_import_armature=True)
 
-FILE_EXTENTIONS = [
-    "png",
-    "tga"
-]
+    FILE_EXTENTIONS = [
+        "png",
+        "tga"
+    ]
 
-psk_files = list(Path(BASE_FILE_DIR).rglob("*.psk"))
-pskx_files = list(Path(BASE_FILE_DIR).rglob("*.pskx"))
-asset_files = psk_files + pskx_files
+    psk_files = list(Path(BASE_FILE_DIR).rglob("*.psk"))
+    pskx_files = list(Path(BASE_FILE_DIR).rglob("*.pskx"))
+    asset_files = psk_files + pskx_files
 
-is_pskx = "ALL"
+    is_pskx = "ALL"
 
-bpy.ops.outliner.orphans_purge(do_recursive=True)
+    bpy.ops.outliner.orphans_purge(do_recursive=True)
 
-with open(BUILD_TO_ASSET_DIR, 'r', encoding='utf-8') as f:
-    build_to_asset = json.load(f)
-count = 0
-for build in build_to_asset:
-    buildable = build_to_asset[build]
-    buildable_name = buildable['ObjectName']
-    
-    count += 1
-    if count > 5:
-        #break
-        ...
-    asset_list = {}
-    support_name = ""
-    support_mesh = []
-    for component in buildable:
-        if component == 'ObjectName':# or asset == 'ProductionIndicator':
-            continue
-        asset = buildable.get(component)
-        if not asset:
-            continue
+    with open(BUILD_TO_ASSET_DIR, 'r', encoding='utf-8') as f:
+        build_to_asset = json.load(f)
+    count = 0
+    for build in build_to_asset:
+        buildable = build_to_asset[build]
+        buildable_name = buildable['ObjectName']
         
-        print(component)
-        print("===============")
-        if type(asset) == list:
+        count += 1
+        if count > 5:
+            #break
+            ...
+        asset_list = {}
+        support_name = ""
+        support_mesh = []
+        for component in buildable:
+            if component == 'ObjectName':# or asset == 'ProductionIndicator':
+                continue
+            asset = buildable.get(component)
+            if not asset:
+                continue
             
-            for ast in asset:
-                print("--------------")
-                asset_name = ast.get('Mesh')
+            print(component)
+            print("===============")
+            if type(asset) == list:
+                
+                for ast in asset:
+                    print("--------------")
+                    asset_name = ast.get('Mesh')
+                    multiple_files = []
+                    pole_height = ast.get('Height')
+                    
+                    builable_file = [asset_file for asset_file in asset_files if asset_file.name.startswith(asset_name+'.')]
+                    
+                    if builable_file:
+                        if 1 < len(builable_file):
+                            print("Multiple files found:")
+                            #multiple_files = builable_filea
+                            file = builable_file[1]
+                        else:
+                            file = builable_file[0]
+                    else:
+                        print(f"Not Found: {asset_name}")
+                        continue
+                    
+                    parent_name = ""
+                    parent_attach = ""
+                    parent_comp_name = ast.get('Parent')
+                    print(f"asset.get('Mesh') {ast.get('Mesh')}")
+                    if parent_comp_name:
+                        print(asset_list.get(parent_comp_name))
+                        if asset_list.get(parent_comp_name):
+                            parent_name = asset_list.get(parent_comp_name,"") 
+                        else:
+                            parent_name = buildable[parent_comp_name].get('Mesh',"")
+                        print(f"parent_name: {parent_name}")
+                        parent_attach = ast.get('ParentAttach',"")
+                        print(f"parent_attach: {parent_attach}")
+                    
+                    ob_name = import_model(asset=ast,
+                        buildable_name=buildable_name,
+                        file=file,
+                        parent_name=parent_name,
+                        parent_attach=parent_attach,
+                        support_name=support_name,
+                        pole_height = pole_height
+                        )
+                    
+                    asset_list[component] = ob_name
+                    print(asset_list)
+                
+                support_ob_org = bpy.data.objects.get(support_name)    
+                if support_ob_org:
+                    bpy.data.objects.remove(support_ob_org, do_unlink=True)
+            else:   
+                asset_name = asset.get('Mesh')
                 multiple_files = []
-                pole_height = ast.get('Height')
+                if "mSupportMeshInstanceData" in component:
+                    support_name = asset_name
+                print(f"does {build} have mSupportMeshInstanceData: {support_name}")
                 
                 builable_file = [asset_file for asset_file in asset_files if asset_file.name.startswith(asset_name+'.')]
                 
                 if builable_file:
                     if 1 < len(builable_file):
-                        print("Multiple files found:")
+                        print(f"Multiple files found: {builable_file}")
                         #multiple_files = builable_filea
-                        file = builable_file[1]
+                        if "TradingPost" in str(builable_file[0]):
+                            file = builable_file[1]
+                        else:   
+                            file = builable_file[0]
                     else:
                         file = builable_file[0]
                 else:
@@ -250,75 +300,29 @@ for build in build_to_asset:
                 
                 parent_name = ""
                 parent_attach = ""
-                parent_comp_name = ast.get('Parent')
-                print(f"asset.get('Mesh') {ast.get('Mesh')}")
+                parent_comp_name = asset.get('Parent')
+                
                 if parent_comp_name:
-                    print(asset_list.get(parent_comp_name))
                     if asset_list.get(parent_comp_name):
                         parent_name = asset_list.get(parent_comp_name,"") 
                     else:
                         parent_name = buildable[parent_comp_name].get('Mesh',"")
                     print(f"parent_name: {parent_name}")
-                    parent_attach = ast.get('ParentAttach',"")
+                    parent_attach = asset.get('ParentAttach',"")
                     print(f"parent_attach: {parent_attach}")
                 
-                ob_name = import_model(asset=ast,
+                ob_name = import_model(asset=asset,
                     buildable_name=buildable_name,
                     file=file,
                     parent_name=parent_name,
                     parent_attach=parent_attach,
-                    support_name=support_name,
-                    pole_height = pole_height
                     )
                 
                 asset_list[component] = ob_name
                 print(asset_list)
-            
-            support_ob_org = bpy.data.objects.get(support_name)    
-            if support_ob_org:
-                bpy.data.objects.remove(support_ob_org, do_unlink=True)
-        else:   
-            asset_name = asset.get('Mesh')
-            multiple_files = []
-            if "mSupportMeshInstanceData" in component:
-                support_name = asset_name
-            print(f"does {build} have mSupportMeshInstanceData: {support_name}")
-            
-            builable_file = [asset_file for asset_file in asset_files if asset_file.name.startswith(asset_name+'.')]
-            
-            if builable_file:
-                if 1 < len(builable_file):
-                    print(f"Multiple files found: {builable_file}")
-                    #multiple_files = builable_filea
-                    if "TradingPost" in str(builable_file[0]):
-                        file = builable_file[1]
-                    else:   
-                        file = builable_file[0]
-                else:
-                    file = builable_file[0]
-            else:
-                print(f"Not Found: {asset_name}")
-                continue
-            
-            parent_name = ""
-            parent_attach = ""
-            parent_comp_name = asset.get('Parent')
-            
-            if parent_comp_name:
-                if asset_list.get(parent_comp_name):
-                    parent_name = asset_list.get(parent_comp_name,"") 
-                else:
-                    parent_name = buildable[parent_comp_name].get('Mesh',"")
-                print(f"parent_name: {parent_name}")
-                parent_attach = asset.get('ParentAttach',"")
-                print(f"parent_attach: {parent_attach}")
-            
-            ob_name = import_model(asset=asset,
-                buildable_name=buildable_name,
-                file=file,
-                parent_name=parent_name,
-                parent_attach=parent_attach,
-                )
-            
-            asset_list[component] = ob_name
-            print(asset_list)
+
+BASE_FILE_DIR = r"PATH-TO-FMODEL-EXPORTS\FactoryGame\Content\FactoryGame\Buildable"
+BUILD_TO_ASSET_DIR = r"PROJECT-PATH\impot models\buildable_to_asset.json"   
+          
+if __name__ == "__main__":
+    main()
