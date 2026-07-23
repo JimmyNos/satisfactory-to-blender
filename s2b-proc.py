@@ -5,7 +5,7 @@ from mathutils import Quaternion, Matrix, Vector
 from pathlib import Path
 import math
 import satisfactory_save as s
-
+import time
 # start common types
 Vec3 = tuple[float, float, float]
 Vec4 = tuple[float, float, float, float]
@@ -53,7 +53,11 @@ def debug_inspect(obj):
 def set_geonode_input(modifier: bpy.types.Modifier, label: str, value):
     for item in modifier.node_group.interface.items_tree:
         if getattr(item, "in_out", None) == "INPUT" and item.name == label:
-            modifier[item.identifier] = value
+            if bpy.app.version < (5, 2, 0):
+                modifier[item.identifier] = value
+            else:
+                input_prop = getattr(modifier.properties.inputs, item.identifier)
+                input_prop.value = value
             return
     raise KeyError(f"Input '{label}' not found")
 
@@ -77,6 +81,9 @@ def create_asset_collection() -> bpy.types.Collection:
 
 def create_sign_text_collection(sign_name,parent_name = 'Import') -> bpy.types.Collection:
     return get_or_create_collection(sign_name,parent_name)
+
+def create_weight_collection(buildable_name,parent_name = 'Import') -> bpy.types.Collection:
+    return get_or_create_collection(buildable_name,parent_name)
 
 def add_text_splines_to_curve(text: list, sign_name: str, text_n: int):
     """
@@ -125,7 +132,7 @@ def add_text_splines_to_curve(text: list, sign_name: str, text_n: int):
         # Link to the current collection to perform the conversion
         #current_collection = bpy.context.collection
         #current_collection.objects.link(text_obj)
-    return text_id    
+    return text_id,col  
 # end blender api
 
 
@@ -159,7 +166,7 @@ def read_transform(transform: s.FTransform3f):
     return pos, rot, scale
 
 
-def read_colors_custom(i: s.FRuntimeBuildableInstanceData| str) -> [Vec4, Vec4]:
+def read_colors_custom(i: s.FRuntimeBuildableInstanceData| str) -> [Vec4, Vec4,int]:
     try:
         p = i.CustomizationData.OverrideColorData.PrimaryColor
         s = i.CustomizationData.OverrideColorData.SecondaryColor
@@ -177,7 +184,7 @@ def read_colors_custom(i: s.FRuntimeBuildableInstanceData| str) -> [Vec4, Vec4]:
     return ((p.R, p.G, p.B, p.A), (s.R, s.G, s.B, s.A), f)
 
 
-def read_colors_swatch(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) -> [Vec4, Vec4]:
+def read_colors_swatch(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) -> [Vec4, Vec4,int]:
     # todo swatch?
     if type(i) != str:
         swatch = color_map.get(str(i.CustomizationData.SwatchDesc.PathName).split('.')[-1], {})
@@ -215,7 +222,7 @@ def read_colors_swatch(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) 
     return ((p["R"], p["G"], p["B"], p["A"]), (s["R"], s["G"], s["B"], s["A"]),f)
 
 
-def read_colors(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) -> [Vec4, Vec4]:
+def read_colors(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) -> [Vec4, Vec4,int]:
     # custom colors use the swatch "...SwatchDesc_Custom_C"
     #print(type(i))
     if type(i) == s.FRuntimeBuildableInstanceData:
@@ -271,6 +278,9 @@ def buildable_class_to_object(cls: str) -> [bpy.types.Object,Vec3,Vec3]:# | None
         map = json.load(f)
 
     name = map.get(cls)
+    
+    if "Build_PipelinePumpMk2" in cls:
+        name = map.get("Build_PipelinePumpMK2_C")
     if name is None:
         print(f"Missing object mapping: {cls}")
         return None
@@ -311,18 +321,36 @@ def create_buildable_object(
     secondary_colors: list[Vec4] = [],
     paint_type: list[int] = [],
     lengths: list[float] = [],
-    prop_attr: list[dict] = []
+    prop_attr: list[dict] = [],
+    is_heavy:bool = False
 ):
+    
+    
+                    
+    POLE_BUILDS = [
+        "Build_ConveyorPole_C",
+        "Build_PipelineSupport_C",
+        "Build_SignPole_",
+        "Build_PipeHyperSupport_C"
+    ]
+    
     # new mesh for all the 'name' buildables
     mesh = bpy.data.meshes.new(f"{cls}_Points")
     mesh.from_pydata(positions, [], [])
     # object from the mesh
     obj = bpy.data.objects.new(f"{cls}_Points", mesh)
     
+    get_or_create_collection("Heavyweights","Import")
+    get_or_create_collection("Lightweights","Import")
+    
     if not 'WidgetSign' in cls:
-        get_import_collection().objects.link(obj)
+        if is_heavy:
+            create_weight_collection("Heavyweights").objects.link(obj)
+        else:
+            create_weight_collection("Lightweights").objects.link(obj)
     else:
-        create_sign_text_collection(cls).objects.link(obj)
+        get_or_create_collection("Signs","Heavyweights")
+        create_sign_text_collection(cls,"Signs").objects.link(obj)
    
     # set the various named attributes
     mesh.attributes.new("rotation", "FLOAT_VECTOR", "POINT")
@@ -338,33 +366,24 @@ def create_buildable_object(
         adj_scales = [
             (s[0], s[1], s[2]) for s in scales
         ]
-        
     
+    sign_text_col_list = []
     if prop_attr:
         for i,prop in enumerate(prop_attr):
             for attr in prop_attr[i]:
-                if 'type' in attr:
+                if 'type' == attr:
                     continue
-                #print(type(prop[attr]))
-                #print(attr)
-                #print(prop[attr])
                 if 'color' in attr:
                     mesh.attributes.new(attr, prop['type'][0], "POINT")
-                    #print(prop[attr])
                     flat = [c for att in prop[attr] for c in att]
-                    #print(flat)
                     mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
                 if 'ems' in attr or 'glos' in attr:# or 'length' in attr:
                     mesh.attributes.new(attr, prop['type'][0], "POINT")
-                    #flat = [c for att in prop[attr] for c in att]
-                    #print(flat)
                     mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
                 if 'icons' in attr:
                     mesh.attributes.new(attr, prop['type'][0], "POINT")
                     flat = [c for att in prop[attr] for c in att]
-                    #print(flat)
                     mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
-                    #set_geonode_input(mod, "Use Default Object", asset_obj is None)
                 if 'text' in attr:
                     text1 = []
                     text2 = []
@@ -381,9 +400,12 @@ def create_buildable_object(
                             text_id += 1
                             text2.append(att[1])
                     sign_name = f"{cls}"#_{text_id}"
-                    text_1_id = add_text_splines_to_curve( text1,sign_name,0)
-                    text_2_id = add_text_splines_to_curve( text2,sign_name,1)
-                    text_3_id = add_text_splines_to_curve( text3,sign_name,2)
+                    text_1_id,text_col = add_text_splines_to_curve( text1,sign_name,0)
+                    sign_text_col_list.append(text_col)
+                    text_2_id,text_col = add_text_splines_to_curve( text2,sign_name,1)
+                    sign_text_col_list.append(text_col)
+                    text_3_id,text_col = add_text_splines_to_curve( text3,sign_name,2)
+                    sign_text_col_list.append(text_col)
                     text_ids = []
                     for i in range(text_id):
                         if text_3_id:
@@ -404,40 +426,60 @@ def create_buildable_object(
                     #flat = [c for att in prop[attr] for c in att]
                     ##print(flat)
                     #mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
+                if not 'WidgetSign' in cls:
                     
-                #if 'text' in attr:
-                #    onj = mesh.attributes.new(attr, prop['type'][0], "POINT")
-                #    #flat = [att.encode() for att in prop[attr]]
-                #    #print(flat)
-                #    for i,  vertex_attr in enumerate(onj.data):
-                #        flat = [att.encode() for att in prop[attr]]
-                #        vertex_attr.value = flat[i]
-                #    #mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
-                
-
-    mesh.attributes.new("scale", "FLOAT_VECTOR", "POINT")
-    flat = [c for vec in adj_scales for c in vec]
-    mesh.attributes["scale"].data.foreach_set("vector", flat)
-
-    mesh.attributes.new("primary_color", "FLOAT_COLOR", "POINT")
-    flat = [c for rgba in primary_colors for c in rgba]
-    mesh.attributes["primary_color"].data.foreach_set("color", flat)
-
-    mesh.attributes.new("secondary_color", "FLOAT_COLOR", "POINT")
-    flat = [c for rgba in secondary_colors for c in rgba]
-    mesh.attributes["secondary_color"].data.foreach_set("color", flat)
+                    if prop['type'][0] == "FLOAT2" or prop['type'][0] == "FLOAT" or prop['type'][0] == "INT" or prop['type'][0] == "BOOLEAN":
+                        try:
+                            mesh.attributes.new(attr, prop['type'][0], "POINT")
+                            mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
+                            
+                        except Exception as e:
+                            print(f"failed to create {attr} {prop['type'][0]} attribute for {cls}: {e}")
+                            afs
+                           
+    try:
+        mesh.attributes.new("scale", "FLOAT_VECTOR", "POINT")
+        flat = [c for vec in adj_scales for c in vec]
+        mesh.attributes["scale"].data.foreach_set("vector", flat)
+    except Exception as e:
+        print("failed to create scale attribute",e)
+    try:
+        mesh.attributes.new("primary_color", "FLOAT_COLOR", "POINT")
+        flat = [c for rgba in primary_colors for c in rgba]
+        mesh.attributes["primary_color"].data.foreach_set("color", flat)
+    except Exception as e:
+        print("failed to create primary_color attribute",e)
+    try:
+        mesh.attributes.new("secondary_color", "FLOAT_COLOR", "POINT")
+        flat = [c for rgba in secondary_colors for c in rgba]
+        mesh.attributes["secondary_color"].data.foreach_set("color", flat)
+    except Exception as e:
+        print("failed to create secondary_color attribute",e)
+    try:    
+        mesh.attributes.new("paint_index", "INT", "POINT")
+        flat = [idx for idx in paint_type]
+        mesh.attributes["paint_index"].data.foreach_set("value", flat)
+    except Exception as e:
+        print("failed to create paint_index attribute",e)
     
-    mesh.attributes.new("paint_index", "INT", "POINT")
-    flat = [idx for idx in paint_type]
-    mesh.attributes["paint_index"].data.foreach_set("value", flat)
 
     #node_group = bpy.data.node_groups["Buildables from Points"]
     #mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
     #mod.node_group = node_group
-    if prop_attr:
+    if 'WidgetSign' in cls:
         node_group = bpy.data.node_groups["Buildables from Points(signs)"]
         mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
         mod.node_group = node_group
+        set_geonode_input(mod, "Use Default Object", True)
+        set_geonode_input(mod, "Text", False)
+        set_geonode_input(mod, "TextBlock_0", sign_text_col_list[0])
+        set_geonode_input(mod, "TextBlock_1", sign_text_col_list[1])
+        if len(sign_text_col_list) == 3:
+            set_geonode_input(mod, "TextBlock_2", sign_text_col_list[2])
+        sign_mat = bpy.data.materials.get("MI_SignBackground")
+        
+        if sign_mat:
+            set_geonode_input(mod, "Material", sign_mat)
     else:
         node_group = bpy.data.node_groups["Buildables from Points"]
         mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
@@ -445,6 +487,7 @@ def create_buildable_object(
 
     # map a buildable to an asset object, set the default object flag if None to let the geonode supply its fallback
     #asset_obj = buildable_class_to_object(cls)
+    
     result = buildable_class_to_object(cls)
     print(f"maping name: {result}")
     if result is not None:
@@ -457,13 +500,14 @@ def create_buildable_object(
     # apparently you cant test if Object is a None in the geonode so...
     set_geonode_input(mod, "Use Default Object", asset_obj is None)
 
+    if any(pole in cls for pole in POLE_BUILDS):
+        set_geonode_input(mod, "Is Pole", True)
 
     #pos_offset, rot_offset = buildable_to_mesh_offset(cls)
     set_geonode_input(mod, "Mesh Pos", pos_offset)
     # remember to convert to rad for the socket input
     set_geonode_input(mod, "Mesh Rot", tuple(x for x in rot_offset))
     
-
 # end geonode
 
 def import_lightweights(save: s.SaveGame, color_map: dict):
@@ -487,8 +531,7 @@ def import_lightweights(save: s.SaveGame, color_map: dict):
         #    continue;
 
         if not instances:
-            continue
-        print(f"{name}: before")        
+            continue       
         verts, rotations, scales = map(
             list, zip(*(read_transform(i.Transform) for i in instances))
         )
@@ -501,12 +544,20 @@ def import_lightweights(save: s.SaveGame, color_map: dict):
             lengths = [l / 4.0 for l in lengths]
         else:
             lengths = [read_length(i) for i in instances]
+            
+        prop_attr = []
+        if "Build_Beam_Shelf_" in name:
+            beam_type = [1] * len(instances)
+            prop_attr.append({
+                "beam_type" : beam_type,
+                    "type":["INT","value"]
+            })
+            
+        
 
         create_buildable_object(
-            name, verts, rotations, scales, primary_colors, secondary_colors, paint_type, lengths
+            name, verts, rotations, scales, primary_colors, secondary_colors, paint_type, lengths, prop_attr
         )
-
-        print(f"{name}: {len(instances)}")
         
 def import_signs(name: str, instances: list[list]):
     
@@ -561,11 +612,9 @@ def import_signs(name: str, instances: list[list]):
                 ) 
                 aux_check = True
             if 'mEmissive' in prop.Name.Name:
-                #debug_inspect(prop.Value)
                 ems_attr.append(prop.Value)
                 ems_check = True
             if 'mGlossiness' in prop.Name.Name:
-                #debug_inspect(prop.Value)
                 glos_attr.append(prop.Value)
                 glos_check = True
         
@@ -588,9 +637,6 @@ def import_signs(name: str, instances: list[list]):
         verts, rotations, scales = map(
                 list, zip(*(read_transform(i) for i in instances[0]))
             )
-        
-        #colors = [read_sign_colors(color_attr)]
-        #foreground_color, background_colors, auxilary_type = zip(*colors)
         
     prop_attr.append({
         "foreground_color" : [(c["R"], c["G"], c["B"], c["A"]) for c in color_idx_f],
@@ -638,7 +684,12 @@ def import_signs(name: str, instances: list[list]):
         name, verts, rotations, scales,prop_attr = prop_attr
     )
 
-def import_conveyor_chain(obj: s.AFGConveyorChainActor, transform: s.FTransform3f, color_map: dict):
+def import_conveyor_chain(
+    actor: s.AFGConveyorChainActor, 
+    transform: s.FTransform3f, 
+    color_map: dict,
+    conveyor_dict,
+    passthroughs: list):
     #debug_inspect(obj)
      
     conv = lambda v: Vector((v.X/100, -v.Y/100, v.Z/100))
@@ -650,9 +701,61 @@ def import_conveyor_chain(obj: s.AFGConveyorChainActor, transform: s.FTransform3
     chain_belt_points = []
     chain_points = []
     chain_count = 1
-    for i, seg in enumerate(reversed(obj.mChainSplineSegments)):
-
-        is_belt = True if "Belt" in seg.ConveyorBase.PathName else False
+    conveyor_name = ""
+    conveyor_ref = ""
+    conveyor_mk = 0
+    conveyor_attr = [0,0]
+    lift_top_rot = []
+    lift_rot = []
+    belt_top_rot = []
+    belt_rot = []
+    rot_list = [(0.0,0.0,0.0)]
+    top_rot_list = [(0.0,0.0,0.0)]
+    colors = []
+    primary_colors = [(0.0, 0.0, 0.0, 1.0)]
+    secondary_colors = [(0.0, 0.0, 0.0, 1.0)]
+    paint_type = [0]
+    passthrough = []
+    passthrough_lift = [0,0]
+    type_mk = [0,0]
+    type_mk_lift = []
+    type_mk_belt = []
+    
+    for i, seg in enumerate(reversed(actor.mChainSplineSegments)):
+        conveyor_ref = seg.ConveyorBase.PathName
+        conveyor_name = seg.ConveyorBase.PathName.split('_')[2]
+        conveyor_mk = conveyor_name[-1:]
+        is_belt = True if "Belt" in conveyor_name else False
+        #conveyor_attr.append(0)
+        
+        
+        conveyor_inst = conveyor_dict.get(conveyor_ref)
+        conveyor_colors = conveyor_inst.get("Colors")
+        conveyor_top_rot = conveyor_inst.get("TopRotation")
+        conveyor_rot = conveyor_inst.get("Rotations")
+        conveyor_passthroughs = conveyor_inst.get("Passthroughs")
+        
+        quat = Quaternion((
+            -conveyor_rot['W'], 
+            conveyor_rot['X'], 
+            -conveyor_rot['Y'], 
+            conveyor_rot['Z']
+        ))
+        euler = quat.to_euler("XYZ")
+        rot = euler.x, euler.y, euler.z
+        
+        if conveyor_top_rot:
+            top_quat = Quaternion((
+                -conveyor_top_rot['W'], 
+                conveyor_top_rot['X'], 
+                -conveyor_top_rot['Y'], 
+                conveyor_top_rot['Z']
+            ))
+            top_euler = top_quat.to_euler("XYZ")
+            top_rot = top_euler.x, top_euler.y, top_euler.z
+            
+            
+        p_colors, s_colors, p_type = zip(*conveyor_colors)
         
         pts = seg.SplinePointData
         #if i > 0:
@@ -667,6 +770,23 @@ def import_conveyor_chain(obj: s.AFGConveyorChainActor, transform: s.FTransform3
                     conv(p.ArriveTangent),
                     conv(p.LeaveTangent)
                     ))
+            primary_colors.append(p_colors[0])
+            secondary_colors.append(s_colors[0])
+            paint_type.append(p_type[0])
+            lift_rot.append(rot)
+            if conveyor_top_rot:
+                lift_top_rot.append(top_rot)
+            else:
+                lift_top_rot.append((0.0,0.0,0.0))
+            if conveyor_passthroughs:
+                passthrough_lift.append(conveyor_passthroughs[0])
+                passthrough_lift.append(conveyor_passthroughs[1])
+            else:
+                passthrough_lift.append(0)
+                passthrough_lift.append(0)
+            type_mk_lift.append(int(is_belt))
+            type_mk_lift.append(int(conveyor_mk))
+            
         
         if is_belt: 
             for p in pts:
@@ -681,15 +801,34 @@ def import_conveyor_chain(obj: s.AFGConveyorChainActor, transform: s.FTransform3
                     conv(p.ArriveTangent),
                     conv(p.LeaveTangent)
                 ))
-                
+            primary_colors.append(p_colors[0])
+            secondary_colors.append(s_colors[0])
+            paint_type.append(p_type[0])
+            belt_rot.append(rot)
+            belt_top_rot.append((0.0,0.0,0.0))
+            passthrough.append(0)
+            passthrough.append(0)
+            type_mk_belt.append(int(is_belt))
+            type_mk_belt.append(int(conveyor_mk))
+                 
         chain_count += 1
         
         if chain_points and is_belt:
             chain_belt_points.append((chain_points))
+            
         if chain_points and not is_belt:
             chain_lift_points.append((chain_points))
-          
-    curve = bpy.data.curves.new("Spline", type='CURVE')
+    
+    passthrough.extend(passthrough_lift)
+    type_mk.extend(type_mk_belt) 
+    type_mk.extend(type_mk_lift) 
+    
+    rot_list.extend(belt_rot)
+    rot_list.extend(lift_rot)
+    top_rot_list.extend(belt_top_rot)    
+    top_rot_list.extend(lift_top_rot)
+    curve = bpy.data.curves.new(f"Spline", type='CURVE')
+    
     curve.dimensions = '3D'
     
     # todo remove visuals
@@ -698,7 +837,6 @@ def import_conveyor_chain(obj: s.AFGConveyorChainActor, transform: s.FTransform3
     curve.bevel_resolution = 2
     
     spline = curve.splines.new('BEZIER')
-    #spline = "test"
     spline.bezier_points.add(len(points) - 1)
     fmt = lambda v: f"({v.x:.3f}, {v.y:.3f}, {v.z:.3f})"
     #for i, (L, A, R) in enumerate(points):
@@ -711,8 +849,7 @@ def import_conveyor_chain(obj: s.AFGConveyorChainActor, transform: s.FTransform3
         bp.handle_right = L + (R * k)
         bp.handle_left_type = 'FREE'
         bp.handle_right_type = 'FREE'
-        
-    
+
     #plot belt points
     for belt in chain_belt_points:
         spline_belt = curve.splines.new('BEZIER')
@@ -745,14 +882,63 @@ def import_conveyor_chain(obj: s.AFGConveyorChainActor, transform: s.FTransform3
                 bp.handle_right = L + (R * k)
                 bp.handle_left_type = 'FREE'
                 bp.handle_right_type = 'FREE'
+
+    obj = bpy.data.objects.new(f"ConveyorChain", curve)
     
-    
-    obj = bpy.data.objects.new("ConveyorChain", curve)
-    
+    #obj.data.attributes.new(attr, prop['type'][0], "POINT")
     # move the whole actor cause the splines are relative to it
     pos, rot, scale = read_transform(transform)
     obj.location = pos
-    get_import_collection().objects.link(obj)
+    obj.rotation_euler = rot
+    get_or_create_collection("Heavyweights","Import")
+    get_or_create_collection("Splines","Heavyweights")
+    get_or_create_collection("ConveyorChain","Splines").objects.link(obj)
+    
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    bpy.ops.object.convert(target='CURVES')
+    curve_data = obj.data
+    
+    new_attribute = curve_data.attributes.new(name="conveyor_type_mk", type="FLOAT2", domain="CURVE")
+    new_attribute.data.foreach_set("vector", type_mk)
+    
+    #for i in top_rot_list:
+    #    i = i+rot
+    
+    if top_rot_list:
+        curve_data.attributes.new("lift_top_rot", "FLOAT_VECTOR", "CURVE")
+        flat = [c for vec in top_rot_list for c in vec]
+        curve_data.attributes["lift_top_rot"].data.foreach_set("vector", flat)
+        
+    if passthrough:
+        new_attribute = curve_data.attributes.new(name="passthrough", type="FLOAT2", domain="CURVE")
+        new_attribute.data.foreach_set("vector", passthrough)
+        
+    curve_data.attributes.new("lift_rot", "FLOAT_VECTOR", "CURVE")
+    flat = [c for vec in rot_list for c in vec]
+    curve_data.attributes["lift_rot"].data.foreach_set("vector", flat)
+    
+    curve_data.attributes.new("primary_color", "FLOAT_COLOR", "CURVE")
+    flat = [c for rgba in primary_colors for c in rgba]
+    
+    curve_data.attributes["primary_color"].data.foreach_set("color", flat)
+
+    curve_data.attributes.new("secondary_color", "FLOAT_COLOR", "CURVE")
+    flat = [c for rgba in secondary_colors for c in rgba]
+    curve_data.attributes["secondary_color"].data.foreach_set("color", flat)
+    
+    curve_data.attributes.new("paint_index", "INT", "CURVE")
+    flat = [idx for idx in paint_type]
+    curve_data.attributes["paint_index"].data.foreach_set("value", flat)
+    
+    node_group = bpy.data.node_groups["Conveyer Cains From Spline"]
+    mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
+    mod.node_group = node_group
+    
+    set_geonode_input(mod, "Lifts Collection", bpy.data.collections.get("Lifts"))
+    set_geonode_input(mod, "Lift Parts Collection", bpy.data.collections.get("LiftParts"))
+    set_geonode_input(mod, "Belts Collection", bpy.data.collections.get("ConveyorBelts"))
         
 def import_color_slots(cls: s.SaveGame) -> dict:
     with open(color_map_path, 'r', encoding='utf-8') as f:
@@ -799,9 +985,208 @@ def import_color_slots(cls: s.SaveGame) -> dict:
     return color_map
 
 def import_object_actors(cls):
-    ... 
+    pass
+    
+def import_spline_buildables(name: str,instances: list[list],color_map:dict):
+    transform = instances[0]
+    actors = instances[1]
     
     
+    for i,actor in enumerate(actors):
+        transform = instances[0][i]
+        passthroughs = []
+        flow_indicator = False
+        spline_points = []
+        conv = lambda v: Vector((v.X/100, -v.Y/100, v.Z/100))
+        
+        colors = [
+                read_colors(prop.Value.Data[0].Value.PathName,color_map) 
+                for prop in actor.Properties
+                if 'mCustomizationData' in prop.Name.Name
+                ]
+        primary_colors, secondary_colors, paint_type = zip(*colors)
+        
+        props = actor.Properties
+        for prop in props:
+            prop_name = prop.Name.Name
+            if 'mSnappedPassthroughs' in prop_name:
+                prop_data = prop.Value
+                for i in prop_data.Values:
+                    if i.PathName:
+                        passthroughs.append(1)
+                    else:
+                        passthroughs.append(0)
+            elif 'mFlowIndicator' in prop_name:
+                flow_indicator = True
+            elif 'mSplineData' in prop_name:
+                spline = prop.Value.Values
+                for data in spline:
+                    
+                    points = []
+                    for value in data.Data:
+                        point = value.Value.Data
+                        
+                        points.append(
+                            conv(point)
+                        )
+                    spline_points.append(tuple(points))
+                     
+        curve = bpy.data.curves.new(f"Spline", type='CURVE')
+                        
+        curve.dimensions = '3D'     
+        curve.bevel_depth = 0   
+        curve.twist_mode = "Z_UP"   
+        curve.bevel_resolution = 2 
+        
+        spline = curve.splines.new('BEZIER')
+        spline.bezier_points.add(len(spline_points) - 1)
+        fmt = lambda v: f"({v.x:.3f}, {v.y:.3f}, {v.z:.3f})"
+        k = 1.0 / 3.0  # hermite -> bezier scaler
+        for i, (L, A, R) in enumerate(spline_points):
+            bp = spline.bezier_points[i]
+            bp.co = L
+            bp.handle_left = L - (A * k) 
+            bp.handle_right = L + (R * k)
+            bp.handle_left_type = 'FREE'
+            bp.handle_right_type = 'FREE'
+        
+        obj = bpy.data.objects.new(name[:-2], curve)
+        pos, rot, scale = read_transform(transform)
+        obj.location = pos
+        get_or_create_collection("Heavyweights","Import")
+        get_or_create_collection("Splines","Heavyweights")
+        get_or_create_collection(name,"Splines").objects.link(obj)
+        
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+        bpy.ops.object.convert(target='CURVES')
+        curve_data = obj.data
+        if "PipeHyper" not in name:
+            curve_data.attributes.new("primary_color", "FLOAT_COLOR", "CURVE")
+            flat = [c for rgba in primary_colors for c in rgba]
+            curve_data.attributes["primary_color"].data.foreach_set("color", flat)
+
+            curve_data.attributes.new("secondary_color", "FLOAT_COLOR", "CURVE")
+            flat = [c for rgba in secondary_colors for c in rgba]
+            curve_data.attributes["secondary_color"].data.foreach_set("color", flat)
+            
+            curve_data.attributes.new("paint_index", "INT", "CURVE")
+            flat = [idx for idx in paint_type]
+            curve_data.attributes["paint_index"].data.foreach_set("value", flat)
+            
+        if passthroughs:
+            new_attribute = curve_data.attributes.new(name="passthroughs", type="FLOAT2", domain="CURVE")
+            new_attribute.data.foreach_set("vector", passthroughs)
+        if flow_indicator:
+            new_attribute = curve_data.attributes.new(name="flow_indicator", type="BOOLEAN", domain="CURVE")
+            new_attribute.data.foreach_set("value", [flow_indicator])
+        
+        f_indicator_result = None
+        if "Build_RailroadTrackIntegrated" in name:
+            result = buildable_class_to_object("Build_RailroadTrack_C")
+        elif "Pipeline_NoIndicator" in name:
+            result = buildable_class_to_object("Build_Pipeline_C")
+        elif "PipelineMK2_NoIndicator" in name:
+            result = buildable_class_to_object("Build_PipelineMK2_C")  
+        else:
+            result = buildable_class_to_object(name)
+            f_indicator_result = buildable_class_to_object("Build_PipelineFlowIndicator_C")
+        
+        if f_indicator_result is not None:
+            f_indicator_asset_obj, pos_offset, rot_offset = f_indicator_result
+        else:
+            f_indicator_asset_obj = None
+            
+        if result is not None:
+            asset_obj, pos_offset, rot_offset = result
+        else:
+            asset_obj = None
+            pos_offset = (0, 0, 0)
+            rot_offset = (0, 0, 0)
+        
+        node_group = bpy.data.node_groups["Buildables From Spline"]
+        mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
+        mod.node_group = node_group
+        
+        set_geonode_input(mod, "Collection", asset_obj)
+        set_geonode_input(mod, "Pipe Indicator", f_indicator_asset_obj)
+        set_geonode_input(mod, "Use Default Object", asset_obj is None)
+
+def import_powerlines(name: str,instances: list[list]):
+    transform = instances[0]
+    actors = instances[1]
+    
+    for i,actor in enumerate(actors):
+        transform = instances[0][i]
+        power_line_list = []
+        passthroughs = ""
+        flow_indicator = False
+        #spline_points = []
+        all_spline_points = []
+        inst_splines = []
+        conv = lambda v: Vector((v.X/100, -v.Y/100, v.Z/100))
+    
+        
+        props = actor.Properties
+        for prop in props:
+            prop_name = prop.Name.Name
+            if 'mWireInstances' in prop_name:
+                instance = prop.Value.Values
+                for line in instance:
+                    spline_points = []
+                    spline_point = []
+                    for loc in line.Data: #point
+                        points = []
+                        if loc.Name.Name.startswith("Ca"):
+                            point = loc.Value.Data
+                            points.append(
+                                    conv(point)
+                                )
+                            points.append(
+                                    Vector((0,0,0))
+                                )
+                            points.append(
+                                    Vector((0,0,0))
+                                )
+                            spline_point.append(tuple(points))
+                    for i in spline_point:
+                        spline_points.append(i)
+                    inst_splines.append(spline_points)    
+                    
+        curve = bpy.data.curves.new(f"Spline", type='CURVE')
+                        
+        curve.dimensions = '3D'     
+        curve.bevel_depth = 0   
+        curve.twist_mode = "Z_UP"   
+        curve.bevel_resolution = 2 
+        
+        for i in inst_splines:
+            spline = curve.splines.new('BEZIER')
+            spline.bezier_points.add(len(i) - 1)
+            fmt = lambda v: f"({v.x:.3f}, {v.y:.3f}, {v.z:.3f})"
+            k = 1.0 / 3.0  # hermite -> bezier scaler
+            for i, (L, A, R) in enumerate(i):
+                bp = spline.bezier_points[i]
+                bp.co = L
+                bp.handle_left = L - (A * k) 
+                bp.handle_right = L + (R * k)
+                bp.handle_left_type = 'FREE'
+                bp.handle_right_type = 'FREE'
+        
+        obj = bpy.data.objects.new(name[:-2], curve)
+        pos, rot, scale = read_transform(transform)
+        obj.location = pos
+        obj.rotation_euler = rot
+        get_or_create_collection("Heavyweights","Import")
+        get_or_create_collection("Splines","Heavyweights")
+        get_or_create_collection(name,"Splines").objects.link(obj)
+        
+        node_group = bpy.data.node_groups["Buildables From Spline"]
+        mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
+        mod.node_group = node_group
+        
+        set_geonode_input(mod, "Is Powerline", True)
 
 def import_heavyweights(save: s.SaveGame, color_map: dict):
     save_objects = save.allSaveObjects()
@@ -811,14 +1196,131 @@ def import_heavyweights(save: s.SaveGame, color_map: dict):
     exclude_factory = [ # exclude from default importing method 
         "Build_RailroadTrack",
         #"Build_RailroadTrackIntegrated_C_Points",
-        "Build_PowerLine_C",
-        "Build_ConveyorBeltMk",
+        #"Build_PowerLine_C",
+        "Build_ConveyorBelt",
         "Build_Pipeline_",
         "Build_PipelineMK2",
         "Build_PipeHyper_C",
         "Build_ConveyorLift",
+        "Build_PipelineFlowIndicator_C"
     ]   
+    spline_buildables = [
+        "Build_PipelineMK2_",
+        "Build_Pipeline_",
+        "Build_RailroadTrack",
+        "Build_PipeHyper_C",
+    ]
     
+    conveyor_dict = {}
+    
+    attributes = [
+        "mHeight",
+        "mHeightOfCabin",
+        "mLaunchAngle",
+        #"mPoleScale",
+        "mSnappedBuildingThickness",
+        "mSelectedPoleVersion",
+        "mHighlightEffectState",
+        "mVerticalAngle",
+        "mFixtureAngle"
+    ]
+    
+    EX_PROP_BUILDS = [
+        "Build_ConveyorPole_C",
+        "Build_PipelineSupport_C",
+        "Build_SignPole_",
+        "Build_PipeHyperSupport_C"
+    ]
+    
+    hub_stage = [0]
+    
+    for obj in save_objects:
+        if not obj.isActor():
+            continue    
+    
+        header = obj.Header
+        className =  header.ObjectHeader.ClassName
+        classRef =  header.ObjectHeader.Reference.PathName
+        actor = obj.Object  
+        
+        
+        if className.startswith('/Game/FactoryGame/Buildable/') and '.Build_' in className and className.endswith('_C') or '.BP_ElevatorCabin_C' in className:
+            all_classes.add(className.split('.')[-1])
+            factory_classes.append(obj)
+        
+        if className.startswith('/Game/FactoryGame/Prototype/') and '.Build_' in className and className.endswith('_C'):
+            all_classes.add(className.split('.')[-1])
+            factory_classes.append(obj)
+            
+        if className.startswith('/Game/FactoryGame/Buildable/Factory/Conveyor') and "Mk" in className:
+            conveyor_dict[classRef] = None
+            top_rotations = {}
+            passthroughs = []
+            rotations = {
+                'W':header.Transform.Rotation.W,
+                'X':header.Transform.Rotation.X,
+                'Y':header.Transform.Rotation.Y,
+                'Z':header.Transform.Rotation.Z
+            }
+            
+            colors = []
+            for prop in actor.Properties:
+                prop_name = prop.Name.Name
+                prop_data = None
+                if 'mSnappedPassthroughs' in prop_name:
+                    prop_data = prop.Value
+                    for i in prop_data.Values:
+                        if i.PathName:
+                            passthroughs.append(1)
+                        else:
+                            passthroughs.append(0)
+                if 'mTopTransform' in prop_name:
+                    for i in prop.Value.Data:
+                        if "Rotation" == i.Name.Name:
+                            prop_data = i.Value
+                    if prop_data:
+                        top_rotations = {
+                            'W':prop_data.Data.W,
+                            'X':prop_data.Data.X,
+                            'Y':prop_data.Data.Y,
+                            'Z':prop_data.Data.Z,
+                        }
+            colors = [
+                read_colors(prop.Value.Data[0].Value.PathName,color_map) 
+                for prop in actor.Properties
+                if 'mCustomizationData' in prop.Name.Name
+                ]
+            
+            conveyor_dict[classRef] = {
+                "Rotations":rotations,
+                "Colors":colors,
+                "TopRotation":top_rotations,
+                "Passthroughs":passthroughs
+            }
+    
+        if "BP_PlayerState_C" in classRef:
+            for prop in actor.Properties:  
+                prop_name = prop.Name.Name
+                if 'mPlayedMessages' in prop_name:
+                    for msg in prop.Value.Values:
+                        if "Tier" in msg.PathName:
+                            hub_stage = [5]
+                            break
+                        elif "MSG_Onboarding_HUB_Upgrade6" in msg.PathName:
+                            hub_stage = [5]
+                            break
+                        elif "MSG_Onboarding_HUB_Upgrade5" in msg.PathName:
+                            hub_stage = [4]
+                        elif "MSG_Onboarding_HUB_Upgrade4" in msg.PathName:
+                            hub_stage = [4]
+                        elif "MSG_Onboarding_HUB_Upgrade3" in msg.PathName:
+                            hub_stage = [3]
+                        elif "MSG_Onboarding_HUB_Upgrade2" in msg.PathName:
+                            hub_stage = [2]
+                        elif "MSG_Onboarding_HUB_Upgrade1" in msg.PathName:
+                            hub_stage = [1]
+
+    count = 0
     # conveyor belt chains
     for obj in save.mPersistentAndRuntimeData.SaveObjects:  
         
@@ -828,24 +1330,14 @@ def import_heavyweights(save: s.SaveGame, color_map: dict):
         header = obj.Header
         transform = header.Transform
         className =  header.ObjectHeader.ClassName
-        actor = obj.Object       
+        actor = obj.Object    
+        
+        
         
         if className.startswith( '/Script/FactoryGame.FGConveyorChainActor'):
-            import_conveyor_chain(actor, transform, color_map)
-            
-    for obj in save_objects:
-        if not obj.isActor():
-            continue    
-    
-        header = obj.Header
-        className =  header.ObjectHeader.ClassName
-        
-        if className.startswith('/Game/FactoryGame/Buildable/Factory/')and '.Build_' in className and className.endswith('_C'):
-            all_classes.add(className.split('.')[-1])
-            factory_classes.append(obj)
-            cls_name = obj.Header.ObjectHeader.Reference.PathName
-    
+            import_conveyor_chain(actor, transform, color_map,conveyor_dict,passthroughs)
     for factory in all_classes:
+        
         count = 0
         instances_transform = []
         instances = [[], []] # transforms, actors
@@ -862,30 +1354,129 @@ def import_heavyweights(save: s.SaveGame, color_map: dict):
                 instances[0].append(transform)
                 instances[1].append(actor)
                 
-        #todo: properties data
         if factory.startswith('Build_StandaloneWidgetSign_'):
             import_signs(factory, instances)
+        elif any(building in factory for building in spline_buildables):
+            import_spline_buildables(factory, instances,color_map)
+        elif factory.startswith('Build_PowerLine_'):
+            import_powerlines(factory, instances)
         else:
+            prop_attr = []
+            height_attr = []
+            passthorugh_thickness_attr = []
+            pole_scale_attr = []
+            attr_dict = {}
+            needs_attr = []
+            attr_used = set()
+            pole_scale_used = False
+            passthrough_type = []
+            
+            total_instances = len(instances[0])
+            
+            for i in attributes:
+                attr_dict.update({i:[]})
+            
+            
             skip = False
             for exc in exclude_factory:
                 if exc in factory:
-                    print(f"excluding {exc}")
+                    print(f"Excluding {exc}")
                     skip = True
             if skip:
                 continue
+            
             for actor in instances[1]:
                 print(factory)
-                # just color swatch data needed
+                height_check = False
+                pole_scale_check = False
+                attr_check = {}
+                attr_len = 0
+                if "Build_FoundationPassthrough_Hypertube_C" in factory:
+                    passthrough_type.append(1)
+                    
+                else:
+                    passthrough_type.append(0)
+                
+                
                 for prop in actor.Properties:
-                    if 'mCustomizationData' in prop.Name.Name:
-                        #print(f"Name: {prop.Value.Data[0].Value.PathName}")
-                        ...
-                        #colors = [read_colors(i,color_map) for i in instances[1]]
-                #print(f"just color swatch data needed: {factory}")
-                ...
+                    prop_name = prop.Name.Name
+                    attr_check[prop_name] = 0
+                    attr_value= None
+                    for i in attributes:
+                        if i == prop_name:
+                            attr_value = float(prop.Value)
+                            
+                    if attr_value:
+                        if not attr_dict.get(prop_name):
+                            attr_dict.update({prop_name:[]})
+                        attr_dict[prop_name].append(attr_value)
+                        attr_check[prop_name] = 1
+                        needs_attr.append(factory)
+                        attr_used.add(prop_name)
+                        
+                    else:
+                        if not attr_dict.get(prop_name):
+                            attr_dict.update({prop_name:[]})
+                        attr_dict[prop_name].append(0) 
+                        
+                    
+                    if 'mHeight' in prop_name:
+                        height_attr.append(prop.Value)
+                        height_check = True
+                    if 'mSnappedBuildingThickness' in prop_name:
+                        passthorugh_thickness_attr.append(prop.Value)
+                    if 'mPoleScale' in prop_name:
+                        pole_scale_attr.extend([
+                            prop.Value.Data.X,
+                            prop.Value.Data.Y
+                        ])
+                        pole_scale_used = True
+                        pole_scale_check = True
+                        
+                        
+                if not height_check:
+                    height_attr.append(100.0)
+                if not pole_scale_check:
+                    pole_scale_attr.extend([0.0,0.0])
+                
+                for i in attr_dict:
+                    check = attr_check.get(i,3)
+                    if check != 1:
+                        attr_dict[i].append(0.0)
+                        
                 verts, rotations, scales = map(
                     list, zip(*(read_transform(i) for i in instances[0]))
                 )
+            for att_u in attr_used:
+                if "mFixtureAngle" in att_u:
+                    f_angle = attr_dict[att_u]
+                    if len(f_angle) > total_instances:
+                        attr_dict[att_u].pop(len(f_angle) - 1)
+                prop_attr.append({
+                        att_u : attr_dict[att_u],
+                        "type":["FLOAT","value"]
+                    })
+                
+                
+            if pole_scale_used:
+                prop_attr.append({
+                        "pole_scale" : pole_scale_attr,
+                        "type":["FLOAT2","vector"]
+                    })
+
+            
+            if "Build_TradingPost" in factory:
+                prop_attr.append({
+                    "hub_stage" : hub_stage,
+                        "type":["INT","value"]
+                })
+            
+            if "Build_FoundationPassthrough_" in factory:
+                prop_attr.append({
+                    "passthrough_type" : passthrough_type,
+                        "type":["INT","value"]
+                })
+            
             
             colors = [
                 read_colors(prop.Value.Data[0].Value.PathName,color_map) 
@@ -893,18 +1484,27 @@ def import_heavyweights(save: s.SaveGame, color_map: dict):
                 for prop in i.Properties
                 if 'mCustomizationData' in prop.Name.Name
                 ]
-            primary_colors, secondary_colors, paint_type = zip(*colors)
+            
+            if colors:
+                primary_colors, secondary_colors, paint_type = zip(*colors)
             
             create_buildable_object(
-                factory, verts, rotations, scales, primary_colors, secondary_colors, paint_type
+                factory, 
+                verts, 
+                rotations, 
+                scales, 
+                primary_colors, 
+                secondary_colors, 
+                paint_type,
+                prop_attr = prop_attr,
+                is_heavy=True
             )
-    
 
 def import_save(path: str):
     # https://github.com/moritz-h/satisfactory-3d-map/blob/master/docs/SATISFACTORY_SAVE.md
     save = s.SaveGame(Path(path))
     saveHeader = save.mSaveHeader
-    
+    start_time = time.perf_counter()
     # print the session info to 'clear' the console    
     print(
         f"\n\n\n\n---\n{saveHeader.SessionName} {saveHeader.SaveDateTime.toString()}\n---\n"
@@ -921,17 +1521,20 @@ def import_save(path: str):
     cls = save.allSaveObjects()
     
     color_map = import_color_slots(cls)
+    
     #import_object_actors(save)
     import_heavyweights(save,color_map)
     import_lightweights(save,color_map)
+    
+    end_time = time.perf_counter()
+    execution_time = end_time - start_time
+    print(f"SF to Blender time: {execution_time:.6f} seconds")
 
 
 # IMPORTATNT: YOU HAVE TO SAVE AND RELOAD AND RESAVE THE FILE FOR THE BUILDABLES TO MATCH
 # I DONT KNOW WHY - perhaps the LBS is append only then it gets pruned on reload?
-#path = "sav_path"
-#mapping_path=r"mapping_path"
-#color_map_path = r"color_map.json"
 path = r"SAVE-PATH.sav"
-mapping_path=r"PROJECT-PATH\impot models\buildable_to_asset.json"
+mapping_path=r"PROJECT-PATH\import models\buildable_to_asset.json"
 color_map_path = r"PROJECT-PATH\color_map.json"
+
 import_save(path)

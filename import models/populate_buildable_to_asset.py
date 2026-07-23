@@ -1,9 +1,11 @@
 import json
 import os
 from pathlib import Path
+import time
 
 # path to build files
-BUILD_FILES_DIR = r"PATH-TO-FMODEL-EXPORTS\Content\FactoryGame\Buildable"
+BUILD_FILES_DIR = r"PATH-TO-FMODEL-EXPORTS\FactoryGame\Content\FactoryGame\Buildable"
+BEAM_BUILD_FILES_DIR = r"PATH-TO-FMODEL-EXPORTS\FactoryGame\Content\FactoryGame\Prototype\Buildable\Beams"
 
 # Output file location (in the script directory)
 OUTPUT_FILE = Path(__file__).parent / "buildable_to_asset.json"
@@ -12,23 +14,36 @@ OUTPUT_FILE = Path(__file__).parent / "buildable_to_asset.json"
 EXCLUDE_LIST = [
     "Cheat",
     "Build_VehiclePath",
-    "Build_TradingPost", # NOTE: excluded for now
-    "Integrate",
     "Build_HubTerminal_C",
     "Build_AutomatedWorkBench",
+    "BUILD_SingleDoor_Base_01",
+    "Build_RailroadTrackIntegrated",
+    #"Integrate",
+    #"Build_TradingPost",
     #"Build_Blueprint",
     #"Build_Pipeline_NoIndicator",
     #"Build_BlueprintDesigner",
 ]
 
+INTEGRATED_BUILD_LIST = [
+    "ProductionIndicatorInstanced",
+    "HubTerminal",
+    "Integrate",
+    "ElevatorCabin",
+    "StorageBlueprint",
+    "PipelineFlowIndicator"
+]
+
 EXCLUDE_MESH_LIST = [
-    "SM_BlenderLiquid_01",
+    #"SM_BlenderLiquid_01",
     "_proxy",
     "FactoryLegsProxy",
     "FogPlane",
     "_SKProxy_01",
     "FactoryLeg",
     "Plane",
+    "SM_TradingPostMeshBF_01",
+    "SM_Hub_Stg_01"
 ]
 
 MESH_TYPES = [
@@ -47,7 +62,8 @@ MESH_TYPES = [
     "mHeightSegment1m",
     "mHeightSegment4m",
     "mCapMesh",
-    "mLadderSegmentMesh"
+    "mLadderSegmentMesh",
+    "mButtonMesh"
 ]
 
 MESH_NODE_TYPES = [
@@ -64,7 +80,9 @@ MESH_NODE_TYPES = [
     "Build_FoundationPassthrough",
     "Build_PipeHyper",
     "Build_RailroadTrack",
-    "Build_Ladder_C"
+    "Build_Ladder_C",
+    "Build_TradingPost_C",
+    "BP_ElevatorCabin_C"
 ]
 
 CONVEYOR_LIFT_MESHES = [
@@ -88,8 +106,19 @@ SUPPORT_MESHES = [
     "Build_PipeHyperSupport",
 ]
 
+TRADING_POST_MESHES = [
+    #"mSkeletalMeshSoftPtr",
+    "mStages",
+    "mGenerator1Location",
+    "mGenerator2Location",
+    "mStorageLocation",
+    "mHubTerminalLocation",
+    "mWorkBenchLocation",
+    "mCalendarLocation",
+]
 
-def extract_build_data(json_file_path):
+
+def extract_build_data(json_file_path,PI_mesh):
     """Extract ObjectName and Translation data from a build JSON file."""
     #try:
     with open(json_file_path, 'r', encoding='utf-8') as f:
@@ -139,8 +168,8 @@ def extract_build_data(json_file_path):
                 root_node_component_m_type  = root_node_props['ComponentTemplate']['ObjectName'].split("'")[0]
                 root_node_component_name  = root_node_props['ComponentTemplate']['ObjectName'].split(":")[1][:-1]
                 root_node_child_nodes  = root_node_props.get('ChildNodes')
-                
-                if not any(m_type in root_node_component_m_type for m_type in MESH_NODE_TYPES):
+                print("Props" in root_node_props['ComponentTemplate']['ObjectName'])
+                if not any(m_type in root_node_component_m_type for m_type in MESH_NODE_TYPES) and not "Props" in root_node_props['ComponentTemplate']['ObjectName']:
                     print(f"{root_node_name} is not a mesh node")
                     continue
                 
@@ -159,7 +188,15 @@ def extract_build_data(json_file_path):
                     child_nodes.update({child_comp_name:child_atn_name})
                 
                 parent_nodes[root_node_component_name] = child_nodes
-                models[root_node_component_name] = None
+                
+                models[root_node_component_name] = {
+                    "Mesh": "Empty",
+                    "RelativeLocation": None,
+                    "RelativeRotation": None,
+                    "RelativeScale3D": None,
+                    "Props" : None
+                    
+                    }
                 child_nodes = {}
                 
                 # check if children nodes are parents
@@ -181,7 +218,13 @@ def extract_build_data(json_file_path):
                             child_nodes.update({child_child_comp_name:child_child_atn_name})
 
                         parent_nodes[child_node_name] = child_nodes
-                        models[child_node_name] = None
+                        models[child_node_name] = {
+                            "Mesh": "Empty",
+                            "RelativeLocation": None,
+                            "RelativeRotation": None,
+                            "RelativeScale3D": None,
+                            "Props" : None
+                            }
                         child_nodes = {}
                         
                         
@@ -203,8 +246,41 @@ def extract_build_data(json_file_path):
         if "FloorMesh" in node_name:# or "PoleMeshProxy" in node_name:
             continue
         
+        #if "Props" in node_name:
+        #    if node_props:
+        #        model_translation = node_props.get("RelativeLocation")
+        #        model_rotation = node_props.get("RelativeRotation")
+        #        model_scale = node_props.get("RelativeScale3D")
+        #        models_list = {
+        #            #"Mesh": "Empty",
+        #            "RelativeLocation": model_translation,
+        #            "RelativeRotation": model_rotation,
+        #            "RelativeScale3D": model_scale
+        #        }
+        #    
+        #    #models.update({node_name:models_list})
         
-        if "AbstractInstanceDataObject" in node_type:
+        if "Build_TradingPost_C" in node_type:
+            if node_props:
+                models_list,stage_list = get_TradingPostComponents(node_props,data)
+                
+            models.update({"TP_Stage":stage_list})
+            models.update({node_name:models_list})
+        
+        elif "Props" in node_name:
+            if node_props:
+                model_translation = node_props.get("RelativeLocation")
+                model_rotation = node_props.get("RelativeRotation")
+                model_scale = node_props.get("RelativeScale3D")
+                models_list = {
+                    "Mesh": "Empty",
+                    "RelativeLocation": model_translation,
+                    "RelativeRotation": model_rotation,
+                    "RelativeScale3D": model_scale
+                }
+            
+            models.update({node_name:models_list})        
+        elif "AbstractInstanceDataObject" in node_type:
             if "PowerPole" in entry_name:
                 continue
             
@@ -227,23 +303,34 @@ def extract_build_data(json_file_path):
             models.update({node_name:models_list})
         elif "BP_ProductionIndicatorInstanced_C" in node_type:
             if node_props:
-                model = get_ProIndicatorComponents(node_props)
+                model = get_ProIndicatorComponents(node_props,PI_mesh)
             
             models.update({node_name:model})  
         elif any(st in node_type for st in MESH_NODE_TYPES):
             if node_props:
                 models_list = get_Components(node_props,node_name,parent_nodes)
             
+            
+            
             if models_list:
                 if len(models_list) == 1:
-                    models.update({node_name:models_list[0]})
+                    if models_list[0].get("Parent"):
+                        if "Props" in models_list[0].get("Parent"):
+                            if models[models_list[0].get("Parent")].get("Props"):
+                                models[models_list[0].get("Parent")].get("Props").update({node_name:models_list[0]})
+                            else:
+                                models[models_list[0].get("Parent")]["Props"] = {node_name:models_list[0]}
+                            if mesh.get(node_name):
+                                mesh.pop(node_name)
+                                models.pop(node_name)
+                        else:
+                            models.update({node_name:models_list[0]})
+                    else:
+                        models.update({node_name:models_list[0]})
                 else:
                     models.update({node_name:models_list})
         else:
             continue
-        
-        # TODO: get rot and pos for FoundationPassthrough buildables
-        # TODO: get correct models for TradingPost buildable for each phase
         
         print(f"{len(models)} models found")
         if not models:
@@ -251,8 +338,39 @@ def extract_build_data(json_file_path):
         
         if models:
             mesh.update(models)
-                
-                
+            
+    if "WidgetSign" in entry_name:
+        if "FGColoredInstanceMeshProxy_GEN_VARIABLE" in mesh and "SignMeshProxy" in mesh:
+            object_name = mesh['ObjectName']
+            sign = mesh["SignMeshProxy"]
+            pole_holder = mesh["FGColoredInstanceMeshProxy_GEN_VARIABLE"]
+            update_pole_holder = {
+                "Parent": "SignMeshProxy",
+                "Mesh":pole_holder["Mesh"],
+                "RelativeLocation":pole_holder["RelativeLocation"],
+                "RelativeRotation":pole_holder["RelativeRotation"],
+                "RelativeScale3D":pole_holder["RelativeScale3D"]
+            }
+            mesh = {
+                "ObjectName": object_name,
+                "SignMeshProxy":sign,
+                "FGColoredInstanceMeshProxy_GEN_VARIABLE":update_pole_holder
+            }
+    
+    if "Build_DroneStation_C" in entry_name:
+        if "FGColoredInstanceMeshProxy_GEN_VARIABLE" in mesh and "BP_ProductionIndicatorInstanced_GEN_VARIABLE" in mesh:
+            object_name = mesh['ObjectName']
+            station = mesh["FGColoredInstanceMeshProxy_GEN_VARIABLE"]    
+            indicator = mesh["BP_ProductionIndicatorInstanced_GEN_VARIABLE"]    
+            update_indicator = {
+                "Parent": "FGColoredInstanceMeshProxy_GEN_VARIABLE",
+                "Mesh":indicator["Mesh"],
+                "RelativeLocation":indicator["RelativeLocation"],
+                "RelativeRotation":indicator["RelativeRotation"],
+                "RelativeScale3D":indicator["RelativeScale3D"]
+            }
+            mesh["BP_ProductionIndicatorInstanced_GEN_VARIABLE"] = update_indicator
+            
         
     #print(mesh)
     remove_mesh = []
@@ -270,11 +388,73 @@ def extract_build_data(json_file_path):
     if 1 == len(mesh):
         return None 
     
+    
+    
     return entries
 
+def get_TradingPostComponents(
+    node_props: dict,
+    data
+):
+    m_type = []
+    model_mesh = ""
+    model_translation = None
+    model_rotation = None
+    model_scale = None
+    models_list = []
+    stage_list = []
+    models_p_list = []
+    
+    for prop in node_props:
+        for tp_mesh_type in TRADING_POST_MESHES:
+            if prop == tp_mesh_type:
+                m_type.append(prop)
+                #break
+                
+    if not m_type:
+        return None
+    
+    for m in m_type:
+        if "mStages" in m:
+            stages = node_props["mStages"]
+            for stg in range(len(stages)):
+                model_mesh = stages[stg].get("AssetPathName")[6:].split(".")[0]
+                model_translation = node_props.get("RelativeLocation")
+                model_rotation = node_props.get("RelativeRotation")
+                model_scale = node_props.get("RelativeScale3D")
+
+                stage_list.append({
+                    "Mesh": model_mesh,
+                    "RelativeLocation": model_translation,
+                    "RelativeRotation": model_rotation,
+                    "RelativeScale3D": model_scale
+                })
+            if len(stage_list) == 7:
+                if stage_list[4] == stage_list [5]:
+                    stage_list.pop(5)
+                ...
+        else:
+            mesh_idx = int(node_props.get(m)["ObjectPath"].split('.')[1])
+            model_mesh = node_props.get(m)["ObjectName"].split(':')[1][:-1]
+            print(mesh_idx)
+            mesh_data = data[mesh_idx].get("Properties")
+            model_translation = mesh_data.get("RelativeLocation")
+            model_rotation = mesh_data.get("RelativeRotation")
+            model_scale = mesh_data.get("RelativeScale3D")
+            
+            models_list.append({
+                "Mesh": model_mesh,
+                "RelativeLocation": model_translation,
+                "RelativeRotation": model_rotation,
+                "RelativeScale3D": model_scale
+            })
+                
+    return models_list, stage_list
+    
+
 def get_ProIndicatorComponents(
-    node_props: dict):
-    model_mesh = "SM_ProductionLight_01"
+    node_props: dict,PI_mesh):
+    model_mesh = PI_mesh
     model_translation = None
     model_rotation = None
     model_scale = None
@@ -283,6 +463,9 @@ def get_ProIndicatorComponents(
     model_translation = node_props.get("RelativeLocation")
     model_rotation = node_props.get("RelativeRotation")
     model_scale = node_props.get("RelativeScale3D")
+    
+    if node_props.get("StaticMesh"):
+        model_mesh = node_props["StaticMesh"]["ObjectPath"][6:].split(".")[0]
         
     model.update({
         "Mesh": model_mesh,
@@ -314,10 +497,20 @@ def get_Components(
         return None
         
     for m in m_type:
-        model_mesh = node_props[m]["ObjectName"].split("'")[1]
+        model_mesh = node_props[m]["ObjectPath"][6:].split(".")[0]
         model_translation = node_props.get("RelativeLocation")
         model_rotation = node_props.get("RelativeRotation")
         model_scale = node_props.get("RelativeScale3D")
+        if m == "mCapMesh":
+            model_translation = node_props.get("mEndCapTranslation")
+            model_rotation = node_props.get("mEndCapRotation")
+        if m == "mMidMesh" and "mCapMesh" in m_type:
+            model_rotation = node_props.get("mMidMeshRotation")
+            if model_rotation:
+                model_rotation['Pitch'] = model_rotation['Pitch']*-1
+                if model_rotation['Pitch'] == -180:
+                    model_rotation['Pitch'] = 0
+            
     
         if any(ex in model_mesh for ex in EXCLUDE_MESH_LIST):
             print(f"excluding {model_mesh}")
@@ -373,7 +566,7 @@ def get_AbstractInstanceComponent(
                     #break
         if m_type:
             node_idx = j
-            model_mesh = node_props[j].get(m_type)["ObjectName"].split("'")[1]
+            model_mesh = node_props[j].get(m_type)["ObjectPath"][6:].split(".")[0]
             model_translation = node_props[j].get("RelativeTransform").get("Translation")
             model_rotation = node_props[j].get("RelativeTransform").get("Rotation")
             model_scale = node_props[j].get("RelativeTransform").get("Scale3D")
@@ -409,7 +602,7 @@ def get_PoleComponents(
     pole_height = 0.0
     
     if node_support_mesh:
-        model_mesh = node_support_mesh["StaticMesh"]["ObjectName"].split("'")[1]
+        model_mesh = node_support_mesh["StaticMesh"]["ObjectPath"][6:].split(".")[0]
         RelativeTransform = node_support_mesh.get("RelativeTransform")
         if RelativeTransform:
             model_translation = RelativeTransform.get("Translation")
@@ -460,21 +653,33 @@ def get_PoleComponents(
     
 def main():
     """Scan all build_*.json files and populate buildable_to_asset.json."""
+    start_time = time.perf_counter()
     all_data = {}
-    
+    PI_build = "BP_ProductionIndicatorInstanced"
     build_dir = Path(BUILD_FILES_DIR)
+    beam_build_dir = Path(BEAM_BUILD_FILES_DIR)
     
     if not build_dir.exists():# or not build_beam_dir.exists():
         print(f"Error: Directory does not exist: {build_dir}")# or {build_beam_dir}")
         return
     
     # Find all build_*.json files recursively
-    build_files = list(build_dir.rglob("build_*.json"))
+    integrated_builds = []
+    for i in INTEGRATED_BUILD_LIST:
+        if list(build_dir.rglob(f"BP_*{i}.json")):
+            integrated_builds.extend(build_dir.rglob(f"BP_*{i}.json"))
+        else:
+            integrated_builds.extend(build_dir.rglob(f"build_*{i}*.json"))
+        print(integrated_builds)
+    build_files = integrated_builds + list(build_dir.rglob("build_*.json"))
+    build_files = build_files + list(beam_build_dir.rglob("build_*.json"))
+    #build_files(list(build_dir.rglob("BP_ProductionIndicatorInstanced.json"))[0])
     print(f"Found {len(build_files)} build files")
     count = 0
     ex_count = 0
     ex_list = []
     failed_list = {}
+    PI_mesh = ""
     for build_file in build_files:
         print(f"Processing: {build_file.name}")
         try:
@@ -485,7 +690,11 @@ def main():
                 ex_count+=1
                 continue
                 
-            data = extract_build_data(build_file)
+            data = extract_build_data(build_file,PI_mesh)
+            
+            if data.get(f"{PI_build}_C") and build_file.stem == PI_build:
+                PI_mesh = data.get(f"{PI_build}_C")[f"Default__{PI_build}_C"]["Mesh"]
+            
             if data:
                 count+=1
                 
@@ -495,6 +704,41 @@ def main():
                 elif data.get("Build_PipelineMK2_C"):
                     data["Build_PipelineMK2_NoIndicator"] = data.get("Build_PipelineMK2_C")
                     count+=1
+                if data.get("Build_PowerTowerPlatform_C"):
+                    if all_data.get("Build_PowerTower_C"):
+                        Build_PowerTower_C = all_data["Build_PowerTower_C"]
+                        if Build_PowerTower_C.get("PoleMeshProxy"):
+                            tower_data = all_data["Build_PowerTower_C"]["PoleMeshProxy"]
+                            data["Build_PowerTowerPlatform_C"].update({
+                                "PoleMeshProxy":tower_data
+                                })
+                if data.get("Build_MinerMk3_C"):
+                    if all_data.get("Build_MinerMk2_C"):
+                        Build_MinerMk2_C = all_data["Build_MinerMk2_C"]
+                        if Build_MinerMk2_C.get("MainMesh_GEN_VARIABLE"):
+                            minermk2_data = all_data["Build_MinerMk2_C"]["MainMesh_GEN_VARIABLE"]
+                            data["Build_MinerMk3_C"].update({
+                                "MainMesh_GEN_VARIABLE":minermk2_data
+                                })
+                #for i in data:
+                #    if "WidgetSign" in i:
+                #        if "FGColoredInstanceMeshProxy_GEN_VARIABLE" in data[i] and "SignMeshProxy" in data[i]:
+                #            object_name = data[i]["ObjectName"]
+                #            sign = data[i]["SignMeshProxy"]
+                #            pole_holder = data[i]["FGColoredInstanceMeshProxy_GEN_VARIABLE"]
+                #            update_pole_holder = {
+                #                "Parent": "SignMeshProxy",
+                #                "Mesh":pole_holder["Mesh"],
+                #                "RelativeLocation":pole_holder["RelativeLocation"],
+                #                "RelativeRotation":pole_holder["RelativeRotation"],
+                #                "RelativeScale3D":pole_holder["RelativeScale3D"]
+                #            }
+                #            data[i] = {
+                #                "ObjectName": object_name,
+                #                "SignMeshProxy":sign,
+                #                "FGColoredInstanceMeshProxy_GEN_VARIABLE":update_pole_holder
+                #            }
+                #            ...
                 all_data.update(data)
             else:
                 print(f"No models processed for {build_file.name}")
@@ -516,6 +760,9 @@ def main():
     #    json.dump(failed_list, f, indent=2)
     
     print(f"\nPopulated {len(all_data)} entries in {OUTPUT_FILE}")
+    end_time = time.perf_counter()
+    execution_time = end_time - start_time
+    print(f"Iimporting models time: {execution_time:.6f} seconds")
 
 
 if __name__ == "__main__":
