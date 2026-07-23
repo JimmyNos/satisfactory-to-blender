@@ -1442,7 +1442,10 @@ def import_heavyweights(save: s.SaveGame, color_map: dict):
                 for i in attr_dict:
                     check = attr_check.get(i,3)
                     if check != 1:
-                        attr_dict[i].append(0.0)
+                        if "mFixtureAngle" in i:
+                            attr_dict[i].append(45.0)
+                        else:
+                            attr_dict[i].append(0.0)
                         
                 verts, rotations, scales = map(
                     list, zip(*(read_transform(i) for i in instances[0]))
