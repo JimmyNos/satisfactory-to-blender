@@ -2159,7 +2159,7 @@ class VIEW3D_PT_SF_Importer_panel(bpy.types.Panel):
 
 # IMPORTANT: YOU HAVE TO SAVE AND RELOAD AND RESAVE THE FILE FOR THE BUILDABLES TO MATCH
 # I DONT KNOW WHY - perhaps the LBS is append only then it gets pruned on reload?
-path = r"SAVE-PATH.sav"
+#path = r"SAVE-PATH.sav" # no logner use in script
 mapping_path=r"PROJECT-PATH\import models\buildable_to_asset.json"
 color_map_path = r"PROJECT-PATH\color_map.json"
 
