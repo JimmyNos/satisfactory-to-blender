@@ -570,9 +570,9 @@ def main():
     print(f"Importing models time: {execution_time:.6f} seconds")
 
 EXPORT_FILE_DIR = r"PATH-TO-FMODEL-EXPORTS"
-BASE_FILE_DIR = r"F:\blenber\SF to blend\fmodel export\FactoryGame\Content\FactoryGame\Buildable"
-EVENT_FILE_DIR = r"F:\blenber\SF to blend\fmodel export\FactoryGame\Content\FactoryGame\Events"
-BUILD_TO_ASSET_DIR = r"F:\blenber\SF to blend\SF-2-Blender addon\satisfactory-to-blender\import models\buildable_to_asset.json"   
+BASE_FILE_DIR = r"PATH-TO-FMODEL-EXPORTS\fmodel export\FactoryGame\Content\FactoryGame\Buildable"
+EVENT_FILE_DIR = r"PATH-TO-FMODEL-EXPORTS\fmodel export\FactoryGame\Content\FactoryGame\Events"
+BUILD_TO_ASSET_DIR = r"PROJECT-PATH\import models\buildable_to_asset.json"   
 
 INTEGRATED_BUILD_LIST = [
     "ProductionIndicatorInstanced",
