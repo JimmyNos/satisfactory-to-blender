@@ -268,6 +268,7 @@ def import_model(
         if ob_sk_mesh != None and col not in ob_sk_mesh.users_collection and is_SK_Tradingpost == False:
             col.objects.link(ob_sk_mesh)
     
+    col.asset_mark()
     return ob.name
         
 def import_empty(
@@ -341,17 +342,19 @@ def main():
     is_pskx = "ALL"
     clear_asset_col = True
     
+    a_coll = get_or_create_collection('Assets')
+    u_coll = get_or_create_collection('Utility')
     if clear_asset_col:
-        col = get_or_create_collection('Assets')
-        for obj in list(col.objects):
+        for obj in list(a_coll.objects):
             bpy.data.objects.remove(obj, do_unlink=True)
-        for col in list(col.children):
+        for col in list(a_coll.children):
+            for b_col in list(col.children):
+                b_col.asset_clear()
             bpy.data.collections.remove(col, do_unlink=True)
         
-        col = get_or_create_collection('Utility')
-        for obj in list(col.objects):
+        for obj in list(u_coll.objects):
             bpy.data.objects.remove(obj, do_unlink=True)
-        for col in list(col.children):
+        for col in list(u_coll.children):
             bpy.data.collections.remove(col, do_unlink=True)
             
     else:
@@ -368,7 +371,7 @@ def main():
         
         count += 1
         if count > 5:
-            #break
+            break
             ...
         asset_list = {}
         support_name = ""
@@ -564,15 +567,51 @@ def main():
                 
                 asset_list[component] = ob_name
                 #print(asset_list)
-                
+    
+    
+    folder = Path(bpy.data.filepath).parent
+
+    target_catalogs = {
+    "Assets-Factory":"",
+    "Assets-Building":"",
+    "Utility":""
+}
+    with (folder / "blender_assets.cats.txt").open() as f:
+        for line in f.readlines():
+            if line.startswith(("#", "VERSION", "\n")):
+                continue
+            # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
+            name = line.split(":")[2].split("\n")[0]
+            for cat in target_catalogs:
+                if name == cat:
+                    uuid = line.split(":")[0]
+                    target_catalogs[name] = uuid
+                    
+    for col in list(a_coll.children):
+        catalog_id = target_catalogs.get(col.name)
+        for b_col in list(col.children):
+            a_coll.asset_clear()
+            b_col.asset_mark()
+            b_col.asset_generate_preview()
+            asset_data = b_col.asset_data
+            asset_data.catalog_id = catalog_id
+    
+    for col in list(u_coll.children):
+        catalog_id = target_catalogs.get(u_coll.name)
+        col.asset_clear()
+        col.asset_mark()
+        col.asset_generate_preview()
+        asset_data = col.asset_data 
+        asset_data.catalog_id = catalog_id
+            
     end_time = time.perf_counter()
     execution_time = end_time - start_time
     print(f"Importing models time: {execution_time:.6f} seconds")
 
 EXPORT_FILE_DIR = r"PATH-TO-FMODEL-EXPORTS"
-BASE_FILE_DIR = r"PATH-TO-FMODEL-EXPORTS\fmodel export\FactoryGame\Content\FactoryGame\Buildable"
-EVENT_FILE_DIR = r"PATH-TO-FMODEL-EXPORTS\fmodel export\FactoryGame\Content\FactoryGame\Events"
-BUILD_TO_ASSET_DIR = r"PROJECT-PATH\import models\buildable_to_asset.json"   
+BASE_FILE_DIR = r"F:\blenber\SF to blend\fmodel export\FactoryGame\Content\FactoryGame\Buildable"
+EVENT_FILE_DIR = r"F:\blenber\SF to blend\fmodel export\FactoryGame\Content\FactoryGame\Events"
+BUILD_TO_ASSET_DIR = r"F:\blenber\SF to blend\SF-2-Blender addon\satisfactory-to-blender\import models\buildable_to_asset.json"   
 
 INTEGRATED_BUILD_LIST = [
     "ProductionIndicatorInstanced",

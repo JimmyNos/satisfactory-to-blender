@@ -18,6 +18,7 @@ EXCLUDE_LIST = [
     "Build_AutomatedWorkBench",
     "BUILD_SingleDoor_Base_01",
     "Build_RailroadTrackIntegrated",
+    "Concave",
     #"Integrate",
     #"Build_TradingPost",
     #"Build_Blueprint",
