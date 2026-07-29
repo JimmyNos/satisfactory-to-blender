@@ -1,5 +1,5 @@
 import json
-
+from rich.progress import Progress
 import bpy
 from mathutils import Quaternion, Matrix, Vector
 from pathlib import Path
@@ -323,7 +323,7 @@ def create_buildable_object(
     lengths: list[float] = [],
     prop_attr: list[dict] = [],
     is_heavy:bool = False
-):
+    ):
     
     
                     
@@ -373,59 +373,65 @@ def create_buildable_object(
             for attr in prop_attr[i]:
                 if 'type' == attr:
                     continue
-                if 'color' in attr:
-                    mesh.attributes.new(attr, prop['type'][0], "POINT")
-                    flat = [c for att in prop[attr] for c in att]
-                    mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
-                if 'ems' in attr or 'glos' in attr:# or 'length' in attr:
-                    mesh.attributes.new(attr, prop['type'][0], "POINT")
-                    mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
-                if 'icons' in attr:
-                    mesh.attributes.new(attr, prop['type'][0], "POINT")
-                    flat = [c for att in prop[attr] for c in att]
-                    mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
-                if 'text' in attr:
-                    text1 = []
-                    text2 = []
-                    text3 = []
-                    text_id = 0
-                    for att in prop[attr]:
-                        if len(att) == 3:
-                            text1.append(att[0])
-                            text_id += 1
-                            text2.append(att[1])
-                            text3.append(att[2])
-                        else:
-                            text1.append(att[0])
-                            text_id += 1
-                            text2.append(att[1])
-                    sign_name = f"{cls}"#_{text_id}"
-                    text_1_id,text_col = add_text_splines_to_curve( text1,sign_name,0)
-                    sign_text_col_list.append(text_col)
-                    text_2_id,text_col = add_text_splines_to_curve( text2,sign_name,1)
-                    sign_text_col_list.append(text_col)
-                    text_3_id,text_col = add_text_splines_to_curve( text3,sign_name,2)
-                    sign_text_col_list.append(text_col)
-                    text_ids = []
-                    for i in range(text_id):
-                        if text_3_id:
-                            text_ids.append(
-                                (text_1_id[i],
-                                text_2_id[i],
-                                text_3_id[i])
-                            )
-                        else:
-                            text_ids.append(
-                                (text_1_id[i],
-                                text_2_id[i],
-                                0)
-                            )
-                    flat = [c for vec in text_ids for c in vec]
-                    mesh.attributes.new("text_id", "FLOAT_VECTOR", "POINT")
-                    mesh.attributes["text_id"].data.foreach_set('vector', flat)
-                    #flat = [c for att in prop[attr] for c in att]
-                    ##print(flat)
-                    #mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
+                
+                try:
+                    if 'color' in attr:
+                        mesh.attributes.new(attr, prop['type'][0], "POINT")
+                        flat = [c for att in prop[attr] for c in att]
+                        mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
+                    if 'ems' in attr or 'glos' in attr:# or 'length' in attr:
+                        mesh.attributes.new(attr, prop['type'][0], "POINT")
+                        mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
+                    if 'icons' in attr:
+                        mesh.attributes.new(attr, prop['type'][0], "POINT")
+                        flat = [c for att in prop[attr] for c in att]
+                        mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
+                    if 'text' in attr:
+                        text1 = []
+                        text2 = []
+                        text3 = []
+                        text_id = 0
+                        for att in prop[attr]:
+                            if len(att) == 3:
+                                text1.append(att[0])
+                                text_id += 1
+                                text2.append(att[1])
+                                text3.append(att[2])
+                            else:
+                                text1.append(att[0])
+                                text_id += 1
+                                text2.append(att[1])
+                        sign_name = f"{cls}"#_{text_id}"
+                        text_1_id,text_col = add_text_splines_to_curve( text1,sign_name,0)
+                        sign_text_col_list.append(text_col)
+                        text_2_id,text_col = add_text_splines_to_curve( text2,sign_name,1)
+                        sign_text_col_list.append(text_col)
+                        text_3_id,text_col = add_text_splines_to_curve( text3,sign_name,2)
+                        sign_text_col_list.append(text_col)
+                        text_ids = []
+                        for i in range(text_id):
+                            if text_3_id:
+                                text_ids.append(
+                                    (text_1_id[i],
+                                    text_2_id[i],
+                                    text_3_id[i])
+                                )
+                            else:
+                                text_ids.append(
+                                    (text_1_id[i],
+                                    text_2_id[i],
+                                    0)
+                                )
+                        flat = [c for vec in text_ids for c in vec]
+                        mesh.attributes.new("text_id", "FLOAT_VECTOR", "POINT")
+                        mesh.attributes["text_id"].data.foreach_set('vector', flat)
+                        #flat = [c for att in prop[attr] for c in att]
+                        ##print(flat)
+                        #mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
+                    
+                except Exception as e:
+                    print(f"failed to create attribute for {cls}: {e}")
+                                               
                 if not 'WidgetSign' in cls:
                     
                     if prop['type'][0] == "FLOAT2" or prop['type'][0] == "FLOAT" or prop['type'][0] == "INT" or prop['type'][0] == "BOOLEAN":
@@ -435,7 +441,6 @@ def create_buildable_object(
                             
                         except Exception as e:
                             print(f"failed to create {attr} {prop['type'][0]} attribute for {cls}: {e}")
-                            afs
                            
     try:
         mesh.attributes.new("scale", "FLOAT_VECTOR", "POINT")
@@ -507,59 +512,77 @@ def create_buildable_object(
     set_geonode_input(mod, "Mesh Pos", pos_offset)
     # remember to convert to rad for the socket input
     set_geonode_input(mod, "Mesh Rot", tuple(x for x in rot_offset))
+    print(f"Imported {cls} from save file")
+    
+    bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
     
 # end geonode
 
 def import_lightweights(save: s.SaveGame, color_map: dict):
     cls = save.allSaveObjects()
-    
     # get the lightweight buildable subsystem
     lbs = get_lbs(save)
     instances_by_class_ref = lbs.mBuildableClassToInstanceArray
-
-    for class_ref in list(instances_by_class_ref.Keys):
-        class_path = class_ref.PathName
-
+    
+    total_lightweights = 0
+    for buildable in list(instances_by_class_ref.Keys):
+        class_path = buildable.PathName
         if not class_path:
             raise Exception("Missing class path, how can this happen?")
-
-        instances = instances_by_class_ref[class_ref]
-
-        name = class_path.split(".")[-1]
-
-        # if 'Beam' not in name:
-        #    continue;
-
+        instances = instances_by_class_ref[buildable]
         if not instances:
-            continue       
-        verts, rotations, scales = map(
-            list, zip(*(read_transform(i.Transform) for i in instances))
-        )
+            continue    
+        total_lightweights += 1
 
-        colors = [read_colors(i,color_map) for i in instances]
-        primary_colors, secondary_colors, paint_type = zip(*colors)   
+    
+    with Progress() as p:
+        t = p.add_task(f"Processing lightweights ({total_lightweights})...", total=total_lightweights)
+        for class_ref in list(instances_by_class_ref.Keys):
+            class_path = class_ref.PathName
 
-        if 'Build_Beam_Painted_C' in name or 'Build_Beam_C' == name:
-            lengths = [read_length(i) for i in instances]
-            lengths = [l / 4.0 for l in lengths]
-        else:
-            lengths = [read_length(i) for i in instances]
+            if not class_path:
+                raise Exception("Missing class path, how can this happen?")
+
+            instances = instances_by_class_ref[class_ref]
+
+            name = class_path.split(".")[-1]
+
+            # if 'Beam' not in name:
+            #    continue;
+
+            if not instances:
+                p.update(t, advance=1)
+                continue       
+            verts, rotations, scales = map(
+                list, zip(*(read_transform(i.Transform) for i in instances))
+            )
+
+            colors = [read_colors(i,color_map) for i in instances]
+            primary_colors, secondary_colors, paint_type = zip(*colors)   
+
+            if 'Build_Beam_Painted_C' in name or 'Build_Beam_C' == name:
+                lengths = [read_length(i) for i in instances]
+                lengths = [l / 4.0 for l in lengths]
+            else:
+                lengths = [read_length(i) for i in instances]
+                
+            prop_attr = []
+            if "Build_Beam_Shelf_" in name:
+                beam_type = [1] * len(instances)
+                prop_attr.append({
+                    "beam_type" : beam_type,
+                        "type":["INT","value"]
+                })
+                
             
-        prop_attr = []
-        if "Build_Beam_Shelf_" in name:
-            beam_type = [1] * len(instances)
-            prop_attr.append({
-                "beam_type" : beam_type,
-                    "type":["INT","value"]
-            })
-            
-        
 
-        create_buildable_object(
-            name, verts, rotations, scales, primary_colors, secondary_colors, paint_type, lengths, prop_attr
-        )
+            create_buildable_object(
+                name, verts, rotations, scales, primary_colors, secondary_colors, paint_type, lengths, prop_attr
+            )
+            #print("",end="\r",flush=True)
+            p.update(t, advance=1)
         
-def import_signs(name: str, instances: list[list]):
+def import_signs(name: str, instances: list[list],p,t):
     
     prop_attr = []
     color_attr = []
@@ -683,6 +706,8 @@ def import_signs(name: str, instances: list[list]):
     create_buildable_object(
         name, verts, rotations, scales,prop_attr = prop_attr
     )
+    p.update(t, advance=1)
+
 
 def import_conveyor_chain(
     actor: s.AFGConveyorChainActor, 
@@ -720,7 +745,7 @@ def import_conveyor_chain(
     type_mk = [0,0]
     type_mk_lift = []
     type_mk_belt = []
-    
+     
     for i, seg in enumerate(reversed(actor.mChainSplineSegments)):
         conveyor_ref = seg.ConveyorBase.PathName
         conveyor_name = seg.ConveyorBase.PathName.split('_')[2]
@@ -914,23 +939,34 @@ def import_conveyor_chain(
     if passthrough:
         new_attribute = curve_data.attributes.new(name="passthrough", type="FLOAT2", domain="CURVE")
         new_attribute.data.foreach_set("vector", passthrough)
-        
-    curve_data.attributes.new("lift_rot", "FLOAT_VECTOR", "CURVE")
-    flat = [c for vec in rot_list for c in vec]
-    curve_data.attributes["lift_rot"].data.foreach_set("vector", flat)
     
-    curve_data.attributes.new("primary_color", "FLOAT_COLOR", "CURVE")
-    flat = [c for rgba in primary_colors for c in rgba]
+    try:
+        curve_data.attributes.new("lift_rot", "FLOAT_VECTOR", "CURVE")
+        flat = [c for vec in rot_list for c in vec]
+        curve_data.attributes["lift_rot"].data.foreach_set("vector", flat)
+    except Exception as e:
+            print("failed to create scale attribute",e)
     
-    curve_data.attributes["primary_color"].data.foreach_set("color", flat)
-
-    curve_data.attributes.new("secondary_color", "FLOAT_COLOR", "CURVE")
-    flat = [c for rgba in secondary_colors for c in rgba]
-    curve_data.attributes["secondary_color"].data.foreach_set("color", flat)
+    try:   
+        curve_data.attributes.new("primary_color", "FLOAT_COLOR", "CURVE")
+        flat = [c for rgba in primary_colors for c in rgba]
+        curve_data.attributes["primary_color"].data.foreach_set("color", flat)
+    except Exception as e:
+        print("failed to create scale attribute",e)
     
-    curve_data.attributes.new("paint_index", "INT", "CURVE")
-    flat = [idx for idx in paint_type]
-    curve_data.attributes["paint_index"].data.foreach_set("value", flat)
+    try:   
+        curve_data.attributes.new("secondary_color", "FLOAT_COLOR", "CURVE")
+        flat = [c for rgba in secondary_colors for c in rgba]
+        curve_data.attributes["secondary_color"].data.foreach_set("color", flat)
+    except Exception as e:
+        print("failed to create scale attribute",e)
+    
+    try:
+        curve_data.attributes.new("paint_index", "INT", "CURVE")
+        flat = [idx for idx in paint_type]
+        curve_data.attributes["paint_index"].data.foreach_set("value", flat)
+    except Exception as e:
+        print("failed to create scale attribute",e)
     
     node_group = bpy.data.node_groups["Conveyer Cains From Spline"]
     mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
@@ -939,10 +975,15 @@ def import_conveyor_chain(
     set_geonode_input(mod, "Lifts Collection", bpy.data.collections.get("Lifts"))
     set_geonode_input(mod, "Lift Parts Collection", bpy.data.collections.get("LiftParts"))
     set_geonode_input(mod, "Belts Collection", bpy.data.collections.get("ConveyorBelts"))
+    print(f"Imported Conveyor chain from save file")
+    bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
         
 def import_color_slots(cls: s.SaveGame) -> dict:
     with open(color_map_path, 'r', encoding='utf-8') as f:
         color_map = json.load(f)
+    
+    print("Getting color swatch data")
+    
     for obj in cls:
         try:
             ong_name = obj.Header.ObjectHeader.Reference.PathName
@@ -978,19 +1019,18 @@ def import_color_slots(cls: s.SaveGame) -> dict:
                                         color_map[swatch_name]["PaintFinish"] = str(path_attr).split('.')[-1]
                                         
                                 except Exception as e:                    
-                                    print(f"  Error inspecting property value (import_color_slots): {e}")
+                                    print(f"Error inspecting property value (import_color_slots): {e}")
         except Exception as e:
-            print(f"  Error inspecting object (import_color_slots): {e}")
+            print(f"Error inspecting object (import_color_slots): {e}")
     
     return color_map
 
 def import_object_actors(cls):
     pass
     
-def import_spline_buildables(name: str,instances: list[list],color_map:dict):
+def import_spline_buildables(name: str,instances: list[list],color_map:dict,p,t):
     transform = instances[0]
     actors = instances[1]
-    
     
     for i,actor in enumerate(actors):
         transform = instances[0][i]
@@ -1112,8 +1152,13 @@ def import_spline_buildables(name: str,instances: list[list],color_map:dict):
         set_geonode_input(mod, "Collection", asset_obj)
         set_geonode_input(mod, "Pipe Indicator", f_indicator_asset_obj)
         set_geonode_input(mod, "Use Default Object", asset_obj is None)
+        
+        print(f"Imported {name} from save file")
+        bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+        p.update(t, advance=1)
+        
 
-def import_powerlines(name: str,instances: list[list]):
+def import_powerlines(name: str,instances: list[list],p,t):
     transform = instances[0]
     actors = instances[1]
     
@@ -1187,6 +1232,9 @@ def import_powerlines(name: str,instances: list[list]):
         mod.node_group = node_group
         
         set_geonode_input(mod, "Is Powerline", True)
+        print(f"Imported {name} from save file")
+        bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+        p.update(t, advance=1)
 
 def import_heavyweights(save: s.SaveGame, color_map: dict):
     save_objects = save.allSaveObjects()
@@ -1233,6 +1281,7 @@ def import_heavyweights(save: s.SaveGame, color_map: dict):
     ]
     
     hub_stage = [0]
+    
     
     for obj in save_objects:
         if not obj.isActor():
@@ -1320,188 +1369,219 @@ def import_heavyweights(save: s.SaveGame, color_map: dict):
                         elif "MSG_Onboarding_HUB_Upgrade1" in msg.PathName:
                             hub_stage = [1]
 
-    count = 0
-    # conveyor belt chains
-    for obj in save.mPersistentAndRuntimeData.SaveObjects:  
-        
+    tot_chains = 0
+    for obj in save.mPersistentAndRuntimeData.SaveObjects:
         if not obj.isActor():
             continue
-        
         header = obj.Header
-        transform = header.Transform
         className =  header.ObjectHeader.ClassName
-        actor = obj.Object    
-        
-        
         
         if className.startswith( '/Script/FactoryGame.FGConveyorChainActor'):
-            import_conveyor_chain(actor, transform, color_map,conveyor_dict,passthroughs)
+            tot_chains += 1
+    # conveyor belt chains
+    with Progress() as p:
+        t = p.add_task(f"Processing conveyor chains ({tot_chains})...", total=tot_chains)
+        for obj in save.mPersistentAndRuntimeData.SaveObjects:  
+            
+            if not obj.isActor():
+                continue
+            
+            header = obj.Header
+            transform = header.Transform
+            className =  header.ObjectHeader.ClassName
+            actor = obj.Object    
+            
+            
+            
+            if className.startswith( '/Script/FactoryGame.FGConveyorChainActor'):
+                import_conveyor_chain(actor, transform, color_map,conveyor_dict,passthroughs)
+                p.update(t, advance=1)
+    
+    total_fact_instances = 0
     for factory in all_classes:
-        
-        count = 0
-        instances_transform = []
-        instances = [[], []] # transforms, actors
-        
         # group buildable instances by buildable class 
         for factory_class in factory_classes:
             header = factory_class.Header
-            transform = header.Transform
-            actor = factory_class.Object
             cls_name = header.ObjectHeader.Reference.PathName
-            
-            if factory in cls_name:
-                count += 1
-                instances[0].append(transform)
-                instances[1].append(actor)
-                
-        if factory.startswith('Build_StandaloneWidgetSign_'):
-            import_signs(factory, instances)
-        elif any(building in factory for building in spline_buildables):
-            import_spline_buildables(factory, instances,color_map)
-        elif factory.startswith('Build_PowerLine_'):
-            import_powerlines(factory, instances)
-        else:
-            prop_attr = []
-            height_attr = []
-            passthorugh_thickness_attr = []
-            pole_scale_attr = []
-            attr_dict = {}
-            needs_attr = []
-            attr_used = set()
-            pole_scale_used = False
-            passthrough_type = []
-            
-            total_instances = len(instances[0])
-            
-            for i in attributes:
-                attr_dict.update({i:[]})
-            
-            
-            skip = False
+            ex = False
             for exc in exclude_factory:
                 if exc in factory:
-                    print(f"Excluding {exc}")
-                    skip = True
-            if skip:
-                continue
+                    ex = True
+            if factory in cls_name and not ex:
+                total_fact_instances += 1
             
-            for actor in instances[1]:
-                print(factory)
-                height_check = False
-                pole_scale_check = False
-                attr_check = {}
-                attr_len = 0
-                if "Build_FoundationPassthrough_Hypertube_C" in factory:
-                    passthrough_type.append(1)
-                    
-                else:
-                    passthrough_type.append(0)
+    #total_fact_instances -= tot_chains
+    with Progress() as p:
+        t = p.add_task(f"Processing heavyweights ({total_fact_instances})...", total=total_fact_instances)
+        for factory in all_classes:
+            
+            count = 0
+            instances_transform = []
+            instances = [[], []] # transforms, actors
+            
+            # group buildable instances by buildable class 
+            for factory_class in factory_classes:
+                header = factory_class.Header
+                transform = header.Transform
+                actor = factory_class.Object
+                cls_name = header.ObjectHeader.Reference.PathName
+                
+                if factory in cls_name:
+                    count += 1
+                    instances[0].append(transform)
+                    instances[1].append(actor)
+            
+            total_instances = len(instances[0])
+        
+            #with Progress() as p:
+            #    t = p.add_task(f"Processing {factory} ({len(instances[0])})...", total=len(instances[0]))        
+            if factory.startswith('Build_StandaloneWidgetSign_'):
+                import_signs(factory, instances,p,t)
+            elif any(building in factory for building in spline_buildables):
+                import_spline_buildables(factory, instances,color_map,p,t)
+            elif factory.startswith('Build_PowerLine_'):
+                import_powerlines(factory, instances,p,t)
+            else:
+                prop_attr = []
+                height_attr = []
+                passthorugh_thickness_attr = []
+                pole_scale_attr = []
+                attr_dict = {}
+                needs_attr = []
+                attr_used = set()
+                pole_scale_used = False
+                passthrough_type = []
+                                
+                for i in attributes:
+                    attr_dict.update({i:[]})
                 
                 
-                for prop in actor.Properties:
-                    prop_name = prop.Name.Name
-                    attr_check[prop_name] = 0
-                    attr_value= None
-                    for i in attributes:
-                        if i == prop_name:
-                            attr_value = float(prop.Value)
-                            
-                    if attr_value:
-                        if not attr_dict.get(prop_name):
-                            attr_dict.update({prop_name:[]})
-                        attr_dict[prop_name].append(attr_value)
-                        attr_check[prop_name] = 1
-                        needs_attr.append(factory)
-                        attr_used.add(prop_name)
+                skip = False
+                for exc in exclude_factory:
+                    if exc in factory:
+                        print(f"Excluding {exc}")
+                        skip = True
+                if skip:
+                    continue
+                
+                print(factory,f" has {len(instances[1])} instances")
+                for actor in instances[1]:
+                    height_check = False
+                    pole_scale_check = False
+                    attr_check = {}
+                    attr_len = 0
+                    if "Build_FoundationPassthrough_Hypertube_C" in factory:
+                        passthrough_type.append(1)
                         
                     else:
-                        if not attr_dict.get(prop_name):
-                            attr_dict.update({prop_name:[]})
-                        attr_dict[prop_name].append(0) 
-                        
+                        passthrough_type.append(0)
                     
-                    if 'mHeight' in prop_name:
-                        height_attr.append(prop.Value)
-                        height_check = True
-                    if 'mSnappedBuildingThickness' in prop_name:
-                        passthorugh_thickness_attr.append(prop.Value)
-                    if 'mPoleScale' in prop_name:
-                        pole_scale_attr.extend([
-                            prop.Value.Data.X,
-                            prop.Value.Data.Y
-                        ])
-                        pole_scale_used = True
-                        pole_scale_check = True
-                        
-                        
-                if not height_check:
-                    height_attr.append(100.0)
-                if not pole_scale_check:
-                    pole_scale_attr.extend([0.0,0.0])
-                
-                for i in attr_dict:
-                    check = attr_check.get(i,3)
-                    if check != 1:
-                        if "mFixtureAngle" in i:
-                            attr_dict[i].append(45.0)
+                    
+                    for prop in actor.Properties:
+                        prop_name = prop.Name.Name
+                        attr_check[prop_name] = 0
+                        attr_value= None
+                        for i in attributes:
+                            if i == prop_name:
+                                attr_value = float(prop.Value)
+                                
+                        if attr_value:
+                            if not attr_dict.get(prop_name):
+                                attr_dict.update({prop_name:[]})
+                            attr_dict[prop_name].append(attr_value)
+                            attr_check[prop_name] = 1
+                            needs_attr.append(factory)
+                            attr_used.add(prop_name)
+                            
                         else:
-                            attr_dict[i].append(0.0)
+                            if not attr_dict.get(prop_name):
+                                attr_dict.update({prop_name:[]})
+                            attr_dict[prop_name].append(0) 
+                            
                         
-                verts, rotations, scales = map(
-                    list, zip(*(read_transform(i) for i in instances[0]))
-                )
-            for att_u in attr_used:
-                if "mFixtureAngle" in att_u:
-                    f_angle = attr_dict[att_u]
-                    if len(f_angle) > total_instances:
-                        attr_dict[att_u].pop(len(f_angle) - 1)
-                prop_attr.append({
-                        att_u : attr_dict[att_u],
-                        "type":["FLOAT","value"]
-                    })
-                
-                
-            if pole_scale_used:
-                prop_attr.append({
-                        "pole_scale" : pole_scale_attr,
-                        "type":["FLOAT2","vector"]
-                    })
+                        if 'mHeight' in prop_name:
+                            height_attr.append(prop.Value)
+                            height_check = True
+                        if 'mSnappedBuildingThickness' in prop_name:
+                            passthorugh_thickness_attr.append(prop.Value)
+                        if 'mPoleScale' in prop_name:
+                            pole_scale_attr.extend([
+                                prop.Value.Data.X,
+                                prop.Value.Data.Y
+                            ])
+                            pole_scale_used = True
+                            pole_scale_check = True
+                            
+                            
+                    if not height_check:
+                        height_attr.append(100.0)
+                    if not pole_scale_check:
+                        pole_scale_attr.extend([0.0,0.0])
+                    
+                    for i in attr_dict:
+                        check = attr_check.get(i,3)
+                        if check != 1:
+                            if "mFixtureAngle" in i:
+                                attr_dict[i].append(45.0)
+                            else:
+                                attr_dict[i].append(0.0)
+                            
+                    verts, rotations, scales = map(
+                        list, zip(*(read_transform(i) for i in instances[0]))
+                    )
+                for att_u in attr_used:
+                    if "mFixtureAngle" in att_u:
+                        f_angle = attr_dict[att_u]
+                        if len(f_angle) > total_instances:
+                            attr_dict[att_u].pop(len(f_angle) - 1)
+                    prop_attr.append({
+                            att_u : attr_dict[att_u],
+                            "type":["FLOAT","value"]
+                        })
+                    
+                    
+                if pole_scale_used:
+                    prop_attr.append({
+                            "pole_scale" : pole_scale_attr,
+                            "type":["FLOAT2","vector"]
+                        })
 
-            
-            if "Build_TradingPost" in factory:
-                prop_attr.append({
-                    "hub_stage" : hub_stage,
-                        "type":["INT","value"]
-                })
-            
-            if "Build_FoundationPassthrough_" in factory:
-                prop_attr.append({
-                    "passthrough_type" : passthrough_type,
-                        "type":["INT","value"]
-                })
-            
-            
-            colors = [
-                read_colors(prop.Value.Data[0].Value.PathName,color_map) 
-                for i in instances[1]
-                for prop in i.Properties
-                if 'mCustomizationData' in prop.Name.Name
-                ]
-            
-            if colors:
-                primary_colors, secondary_colors, paint_type = zip(*colors)
-            
-            create_buildable_object(
-                factory, 
-                verts, 
-                rotations, 
-                scales, 
-                primary_colors, 
-                secondary_colors, 
-                paint_type,
-                prop_attr = prop_attr,
-                is_heavy=True
-            )
+                
+                if "Build_TradingPost" in factory:
+                    prop_attr.append({
+                        "hub_stage" : hub_stage,
+                            "type":["INT","value"]
+                    })
+                
+                if "Build_FoundationPassthrough_" in factory:
+                    prop_attr.append({
+                        "passthrough_type" : passthrough_type,
+                            "type":["INT","value"]
+                    })
+                
+                
+                colors = [
+                    read_colors(prop.Value.Data[0].Value.PathName,color_map) 
+                    for i in instances[1]
+                    for prop in i.Properties
+                    if 'mCustomizationData' in prop.Name.Name
+                    ]
+                
+                if colors:
+                    primary_colors, secondary_colors, paint_type = zip(*colors)
+                
+                create_buildable_object(
+                    factory, 
+                    verts, 
+                    rotations, 
+                    scales, 
+                    primary_colors, 
+                    secondary_colors, 
+                    paint_type,
+                    prop_attr = prop_attr,
+                    is_heavy=True
+                )
+                p.update(t, advance=len(instances[0]))
 
 def import_save(path: str):
     # https://github.com/moritz-h/satisfactory-3d-map/blob/master/docs/SATISFACTORY_SAVE.md
@@ -1525,9 +1605,10 @@ def import_save(path: str):
     
     color_map = import_color_slots(cls)
     
+    
     #import_object_actors(save)
-    import_heavyweights(save,color_map)
     import_lightweights(save,color_map)
+    import_heavyweights(save,color_map)
     
     end_time = time.perf_counter()
     execution_time = end_time - start_time
@@ -1539,5 +1620,9 @@ def import_save(path: str):
 path = r"SAVE-PATH.sav"
 mapping_path=r"PROJECT-PATH\import models\buildable_to_asset.json"
 color_map_path = r"PROJECT-PATH\color_map.json"
+
+path = r"C:\Users\Micha\AppData\Local\FactoryGame\Saved\SaveGames\76561198359501502\sound_200726-204516.sav"#assets2.sav"
+mapping_path=r"F:\blenber\SF to blend\SF-2-Blender addon\satisfactory-to-blender\import models\buildable_to_asset.json"
+color_map_path = r"F:\blenber\SF to blend\SF-2-Blender addon\satisfactory-to-blender\color_map.json"
 
 import_save(path)
