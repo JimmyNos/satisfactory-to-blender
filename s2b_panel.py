@@ -304,8 +304,10 @@ def create_buildable_object(
     prop_attr: list[dict] = [],
     is_heavy:bool = False
     ):
+    global progress_in
     
-    
+    use_proxy = bpy.context.scene.sf_importer_props.use_proxy
+    hide_buildable = bpy.context.scene.sf_importer_props.hide_buildable
                     
     POLE_BUILDS = [
         "Build_ConveyorPole_C",
@@ -412,6 +414,7 @@ def create_buildable_object(
                         else:
                             mesh.attributes.new(attr, prop['type'][0], "POINT")
                             mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
+                        
                 except Exception as e:
                     print(f"failed to create {{attr}} attribute for {cls}: {e}")
 
@@ -423,31 +426,31 @@ def create_buildable_object(
                             mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
                         except Exception as e:
                             print(f"failed to create {attr} {prop['type'][0]} attribute for {cls}: {e}")
-                           
+                    
     try:
         mesh.attributes.new("scale", "FLOAT_VECTOR", "POINT")
         flat = [c for vec in adj_scales for c in vec]
         mesh.attributes["scale"].data.foreach_set("vector", flat)
     except Exception as e:
-        print("failed to create scale attribute",e)
+        print(f"failed to create scale attribute for {cls}",e)
     try:
         mesh.attributes.new("primary_color", "FLOAT_COLOR", "POINT")
         flat = [c for rgba in primary_colors for c in rgba]
         mesh.attributes["primary_color"].data.foreach_set("color", flat)
     except Exception as e:
-        print("failed to create primary_color attribute",e)
+        print(f"failed to create primary_color attribute for {cls}",e)
     try:
         mesh.attributes.new("secondary_color", "FLOAT_COLOR", "POINT")
         flat = [c for rgba in secondary_colors for c in rgba]
         mesh.attributes["secondary_color"].data.foreach_set("color", flat)
     except Exception as e:
-        print("failed to create secondary_color attribute",e)
+        print(f"failed to create secondary_color attribute for {cls}",e)
     try:    
         mesh.attributes.new("paint_index", "INT", "POINT")
         flat = [idx for idx in paint_type]
         mesh.attributes["paint_index"].data.foreach_set("value", flat)
     except Exception as e:
-        print("failed to create paint_index attribute",e)
+        print(f"failed to create paint_index attribute for {cls}",e)
     
     #node_group = bpy.data.node_groups["Buildables from Points"]
     #mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
@@ -462,15 +465,24 @@ def create_buildable_object(
         set_geonode_input(mod, "TextBlock_1", sign_text_col_list[1])
         if len(sign_text_col_list) == 3:
             set_geonode_input(mod, "TextBlock_2", sign_text_col_list[2])
-        sign_mat = bpy.data.materials.get("MI_SignBackground")
         
+        try:
+            if sign_text_col_list:
+                view_layer = bpy.context.view_layer
+                sc_col = view_layer.layer_collection.children["Import"].children["Heavyweights"].children["Signs"]
+                sign_col = sc_col.children[cls]
+                for sc in sign_text_col_list:
+                    sign_col.children[sc.name].exclude = True
+        except Exception as e:
+            print(f"failed to exclude {cls} text collections from viewport",e)
+        
+        sign_mat = bpy.data.materials.get("MI_SignBackground")
         if sign_mat:
             set_geonode_input(mod, "Material", sign_mat)
     else:
         node_group = bpy.data.node_groups["Buildables from Points"]
         mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
         mod.node_group = node_group
-
     # map a buildable to an asset object, set the default object flag if None to let the geonode supply its fallback
     #asset_obj = buildable_class_to_object(cls)
     
@@ -486,6 +498,11 @@ def create_buildable_object(
     # apparently you cant test if Object is a None in the geonode so...
     set_geonode_input(mod, "Use Default Object", asset_obj is None)
 
+    if use_proxy:
+        set_geonode_input(mod, "Use Proxy Mesh", True)
+    else:
+        set_geonode_input(mod, "Use Proxy Mesh", False)
+    
     if any(pole in cls for pole in POLE_BUILDS):
         set_geonode_input(mod, "Is Pole", True)
 
@@ -493,70 +510,20 @@ def create_buildable_object(
     set_geonode_input(mod, "Mesh Pos", pos_offset)
     # remember to convert to rad for the socket input
     set_geonode_input(mod, "Mesh Rot", tuple(x for x in rot_offset))
+    
+    if hide_buildable:
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+        obj.hide_viewport = True
+    
+    progress_in = 100
     print(f"Imported {cls} from save file")
+    
     
     #bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
     
 # end geonode
-
-def import_lightweights(save: s.SaveGame, color_map: dict):
-    cls = save.allSaveObjects()
-    # get the lightweight buildable subsystem
-    lbs = get_lbs(save)
-    instances_by_class_ref = lbs.mBuildableClassToInstanceArray
-    
-    total_lightweights = 0
-    for buildable in list(instances_by_class_ref.Keys):
-        class_path = buildable.PathName
-        if not class_path:
-            raise Exception("Missing class path, how can this happen?")
-        instances = instances_by_class_ref[buildable]
-        if not instances:
-            continue    
-        total_lightweights += 1
-
-    for class_ref in list(instances_by_class_ref.Keys):
-        class_path = class_ref.PathName
-
-        if not class_path:
-            raise Exception("Missing class path, how can this happen?")
-
-        instances = instances_by_class_ref[class_ref]
-
-        name = class_path.split(".")[-1]
-
-        # if 'Beam' not in name:
-        #    continue;
-
-        if not instances:
-            p.update(t, advance=1)
-            continue       
-        verts, rotations, scales = map(
-            list, zip(*(read_transform(i.Transform) for i in instances))
-        )
-
-        colors = [read_colors(i,color_map) for i in instances]
-        primary_colors, secondary_colors, paint_type = zip(*colors)   
-
-        if 'Build_Beam_Painted_C' in name or 'Build_Beam_C' == name:
-            lengths = [read_length(i) for i in instances]
-            lengths = [l / 4.0 for l in lengths]
-        else:
-            lengths = [read_length(i) for i in instances]
-            
-        prop_attr = []
-        if "Build_Beam_Shelf_" in name:
-            beam_type = [1] * len(instances)
-            prop_attr.append({
-                "beam_type" : beam_type,
-                    "type":["INT","value"]
-            })
-            
-        
-        return name, verts, rotations, scales, primary_colors, secondary_colors, paint_type, lengths, prop_attr
-        #create_buildable_object(
-        #    name, verts, rotations, scales, primary_colors, secondary_colors, paint_type, lengths, prop_attr
-        #)
 
 def import_color_slots(cls: s.SaveGame) -> dict:
     with open(color_map_path, 'r', encoding='utf-8') as f:
@@ -605,65 +572,14 @@ def import_color_slots(cls: s.SaveGame) -> dict:
     
     return color_map
 
-def import_save(path: str):
-    global is_scanning, stop_requested
-    # https://github.com/moritz-h/satisfactory-3d-map/blob/master/docs/SATISFACTORY_SAVE.md
-    save = s.SaveGame(Path(path))
-    saveHeader = save.mSaveHeader
-    start_time = time.perf_counter()
-    # print the session info to 'clear' the console    
-    print(
-        f"\n\n\n\n---\n{saveHeader.SessionName} {saveHeader.SaveDateTime.toString()}\n---\n"
-    )
-    
-    # clear the import collection before adding to it
-    for obj in list(get_or_create_collection('Import').objects):
-        bpy.data.objects.remove(obj, do_unlink=True)
-    for col in list(get_or_create_collection('Import').children):
-        bpy.data.collections.remove(col, do_unlink=True)
-    # clear out all the orphans
-    bpy.ops.outliner.orphans_purge(do_recursive=True)
-    
-    cls = save.allSaveObjects()
-    
-    color_map = import_color_slots(cls)
-    
-    if not is_scanning:
-        is_scanning = True
-        run_once = False
-        lightweights_thread = threading.Thread(target=import_lightweights_task,args=(save,color_map))
-        lightweights_thread.start()
-        bpy.app.timers.register(update_ui)
-        #bpy.app.timers.register(test)
-        ImportSaveButton.bl_label = "Stop Scan"
-    else:
-        stop_requested = True
-        ImportSaveButton.bl_label = "Start Scan"
-    
-    #import_object_actors(save)
-    #t1 = threading.Thread(target=import_lightweights, args=(save,color_map))
-    #import_lightweights(save,color_map)
-    #import_heavyweights(save,color_map)
-    
-    end_time = time.perf_counter()
-    execution_time = end_time - start_time
-    print(f"SF to Blender time: {execution_time:.6f} seconds")
-
-# IMPORTATNT: YOU HAVE TO SAVE AND RELOAD AND RESAVE THE FILE FOR THE BUILDABLES TO MATCH
-# I DONT KNOW WHY - perhaps the LBS is append only then it gets pruned on reload?
-path = r"SAVE-PATH.sav"
-mapping_path=r"PROJECT-PATH\import models\buildable_to_asset.json"
-color_map_path = r"PROJECT-PATH\color_map.json"
-
-path = r"C:\Users\Micha\AppData\Local\FactoryGame\Saved\SaveGames\76561198359501502\sound_200726-204516.sav"#assets2.sav"
-mapping_path=r"F:\blenber\SF to blend\SF-2-Blender addon\satisfactory-to-blender\import models\buildable_to_asset.json"
-color_map_path = r"F:\blenber\SF to blend\SF-2-Blender addon\satisfactory-to-blender\color_map.json"
-
 # Global variables to save progress
+current_buildable = ""
 progress = 0.0
+progress_in = 0.0
 execution_time = 0.0
 total_buildables = 0
 total = 0
+total_instances = 0
 total_imported = 0
 is_scanning = False
 stop_requested = False
@@ -686,14 +602,11 @@ def update_ui():
     else:
         return None  # Stop the timer
 run_once = False
-def test(XYZcoord):
-    #XYZcoord = (random.random()*100, random.random()*100, random.random()*100)
-    bpy.ops.mesh.primitive_uv_sphere_add(location=XYZcoord)
-    #return None
         
 def import_lightweights_task(save: s.SaveGame, color_map: dict):
-    global progress, is_scanning, stop_requested,run_once,total,total_imported
+    global progress,progress_in, is_scanning, stop_requested,run_once,total,total_imported,total_instances,current_buildable
     progress = 0.0
+    progress_in = 0.0
     cls = save.allSaveObjects()
     # get the lightweight buildable subsystem
     lbs = get_lbs(save)
@@ -714,20 +627,23 @@ def import_lightweights_task(save: s.SaveGame, color_map: dict):
         if stop_requested:
             progress = 0.0
             break
+        progress_in = 0.0
         class_path = class_ref.PathName
     
         if not class_path:
             raise Exception("Missing class path, how can this happen?")
     
         instances = instances_by_class_ref[class_ref]
-    
+        total_instances = len(instances)
         name = class_path.split(".")[-1]
     
         # if 'Beam' not in name:
         #    continue;
     
         if not instances:
-            continue       
+            continue  
+        
+        current_buildable = f"{name}: {total_instances} instances"  
         verts, rotations, scales = map(
             list, zip(*(read_transform(i.Transform) for i in instances))
         )
@@ -749,6 +665,7 @@ def import_lightweights_task(save: s.SaveGame, color_map: dict):
                     "type":["INT","value"]
             })
         
+        progress_in = 50.0
         bpy.app.timers.register(functools.partial(
             create_buildable_object, 
             name,
@@ -774,9 +691,10 @@ def import_lightweights_task(save: s.SaveGame, color_map: dict):
     bpy.app.timers.register(update_ui)
     
 def import_heavyweights_task(save: s.SaveGame, color_map: dict):
-    global progress, is_scanning, stop_requested,run_once,total,total_imported
+    global progress, is_scanning, stop_requested,run_once,total,total_imported,current_buildable,total_instances,current_buildable,progress_in
     save_objects = save.allSaveObjects()
     progress = 0.0
+    progress_in = 0.0
     all_classes = set() # all buildable classes in the save
     factory_classes = [] # all factory buildable instances
     exclude_factory = [ # exclude from default importing method 
@@ -898,10 +816,12 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict):
             attr_used = set()
             pole_scale_used = False
             passthrough_type = []
+            progress_in = 0.0
+            
+            current_buildable = f"{factory}: {total_instances} instances" 
                             
             for i in float_attributes:
                 attr_dict.update({i:[]})
-            
             
             skip = False
             for exc in exclude_factory:
@@ -912,6 +832,8 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict):
                 continue
             
             print(factory,f" has {len(instances[1])} instances")
+            count_p = 0
+            total_instances = len(instances[0])
             for actor in instances[1]:
                 height_check = False
                 pole_scale_check = False
@@ -965,11 +887,21 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict):
                 verts, rotations, scales = map(
                     list, zip(*(read_transform(i) for i in instances[0]))
                 )
+                count_p += 1
+                progress_in = (count_p / total_instances) * 25
+            
             for att_u in attr_used:
-                if "mFixtureAngle" in att_u:
-                    f_angle = attr_dict[att_u]
-                    if len(f_angle) > total_instances:
-                        attr_dict[att_u].pop(len(f_angle) - 1)#[:total_instances]#.pop(len(f_angle) - 1) TODO: need a better way
+                if len(attr_dict[att_u]) > total_instances:
+                    attr_dict[att_u] = attr_dict[att_u][:total_instances]
+                elif len(attr_dict[att_u]) < total_instances:
+                    diff = total_instances - len(attr_dict[att_u])
+                    attr_dict[att_u].extend(attr_dict[att_u][:1]*diff)
+                #if "mFixtureAngle" in att_u:
+                #    f_angle = attr_dict[att_u]
+                #    if len(f_angle) > total_instances:
+                #        diff = len(f_angle) - total_instances
+                #        for i in range(diff):
+                #            attr_dict[att_u] = attr_dict[att_u][:total_instances]#.pop(len(f_angle) - 1) TODO: need a better way
                 prop_attr.append({
                         att_u : attr_dict[att_u],
                         "type":["FLOAT","value"]
@@ -1003,6 +935,7 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict):
             if colors:
                 primary_colors, secondary_colors, paint_type = zip(*colors)
             
+            progress_in = 50
             bpy.app.timers.register(functools.partial(
                 create_buildable_object, 
                 factory,
@@ -1018,6 +951,7 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict):
             time.sleep(0.1)
             count += 1
             total_imported += 1
+            
             progress = (total_imported / total) * 100
             
     #if not stop_requested:
@@ -1027,9 +961,10 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict):
     bpy.app.timers.register(update_ui)
 
 def import_signs_task(save: s.SaveGame, color_map: dict):
-    global progress, is_scanning, stop_requested,run_once,total,total_imported
+    global progress, is_scanning, stop_requested,run_once,total,total_imported,current_buildable,total_instances,current_buildable,progress_in
     save_objects = save.allSaveObjects()
     progress = 0.0
+    progress_in = 0.0
     all_classes = set() # all buildable classes in the save
     factory_classes = [] # all factory buildable instances
     exclude_factory = [ # exclude from default importing method 
@@ -1078,6 +1013,9 @@ def import_signs_task(save: s.SaveGame, color_map: dict):
         if stop_requested:
             progress = 0.0
             break
+        progress_in = 0.0
+        
+        current_buildable = f"{factory}: {total_instances} instances" 
         instances = [[], []] # --> [transforms], [actors]
         
         # group buildable instances by buildable class 
@@ -1103,6 +1041,7 @@ def import_signs_task(save: s.SaveGame, color_map: dict):
         color_idx_a = []
         verts, rotations, scales = [],[],[]
     
+        count_p = 0
         for actor in instances[1]:
             ems_check = False
             glos_check = False
@@ -1171,6 +1110,9 @@ def import_signs_task(save: s.SaveGame, color_map: dict):
                 list, zip(*(read_transform(i) for i in instances[0]))
                 )
             
+            count_p += 1
+            progress_in = (count_p / total_instances) * 25
+            
         prop_attr.append({
             "foreground_color" : [(c["R"], c["G"], c["B"], c["A"]) for c in color_idx_f],
             "type":["FLOAT_COLOR","color"]
@@ -1219,6 +1161,7 @@ def import_signs_task(save: s.SaveGame, color_map: dict):
             "type":["FLOAT","value"]
             })
         
+        progress_in = 50
         bpy.app.timers.register(functools.partial(
             create_buildable_object, 
             factory,
@@ -1239,10 +1182,14 @@ def import_spline_buildables(name: str,
                              transform:list,
                              passthroughs:list,
                              flow_indicator:bool,):
+    global progress_in
+    
+    use_proxy = bpy.context.scene.sf_importer_props.use_proxy
+    hide_buildable = bpy.context.scene.sf_importer_props.hide_buildable
     
     primary_colors, secondary_colors, paint_type = zip(*colors)
     curve = bpy.data.curves.new(f"{name}Spline", type='CURVE')
-                    
+    
     curve.dimensions = '3D'     
     curve.bevel_depth = 0   
     curve.twist_mode = "Z_UP"   
@@ -1265,7 +1212,7 @@ def import_spline_buildables(name: str,
     obj.location = pos
     get_or_create_collection("Heavyweights","Import")
     get_or_create_collection("Splines","Heavyweights")
-    get_or_create_collection(name,"Splines").objects.link(obj)
+    col = get_or_create_collection(name,"Splines").objects.link(obj)
     
     bpy.ops.object.select_all(action='DESELECT')
     bpy.context.view_layer.objects.active = obj
@@ -1284,7 +1231,7 @@ def import_spline_buildables(name: str,
         curve_data.attributes.new("paint_index", "INT", "CURVE")
         flat = [idx for idx in paint_type]
         curve_data.attributes["paint_index"].data.foreach_set("value", flat)
-        
+    
     if passthroughs:
         new_attribute = curve_data.attributes.new(name="passthroughs", type="FLOAT2", domain="CURVE")
         new_attribute.data.foreach_set("vector", passthroughs)
@@ -1307,7 +1254,7 @@ def import_spline_buildables(name: str,
         f_indicator_asset_obj, pos_offset, rot_offset = f_indicator_result
     else:
         f_indicator_asset_obj = None
-        
+    
     if result is not None:
         asset_obj, pos_offset, rot_offset = result
     else:
@@ -1322,10 +1269,24 @@ def import_spline_buildables(name: str,
     set_geonode_input(mod, "Collection", asset_obj)
     set_geonode_input(mod, "Pipe Indicator", f_indicator_asset_obj)
     set_geonode_input(mod, "Use Default Object", asset_obj is None)
+    if use_proxy:
+        set_geonode_input(mod, "Use Proxy Mesh", True)
+    else:
+        set_geonode_input(mod, "Use Proxy Mesh", False)
+        
+    if hide_buildable:
+        obj.hide_viewport = True
     
+    if hide_buildable:
+        obj.hide_viewport = True
+    progress_in = 100
     print(f"Imported {name} from save file")
 
 def import_powerlines(name: str,inst_splines: list,transform: list):       
+    global progress_in
+    
+    hide_buildable = bpy.context.scene.sf_importer_props.hide_buildable
+    
     curve = bpy.data.curves.new(f"Spline", type='CURVE')
                             
     curve.dimensions = '3D'     
@@ -1359,6 +1320,14 @@ def import_powerlines(name: str,inst_splines: list,transform: list):
     mod.node_group = node_group
 
     set_geonode_input(mod, "Is Powerline", True)
+    
+    if hide_buildable:
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+        obj.hide_viewport = True
+    
+    progress_in = 100
     print(f"Imported {name} from save file")
 
 def import_conveyor_chain( 
@@ -1372,7 +1341,12 @@ def import_conveyor_chain(
     rot_list:list,
     primary_colors:list,
     secondary_colors:list,
-    paint_type:list,):
+    paint_type:list):
+    global progress_in
+    
+    use_proxy = bpy.context.scene.sf_importer_props.use_proxy
+    hide_buildable = bpy.context.scene.sf_importer_props.hide_buildable
+    
     curve = bpy.data.curves.new(f"Spline", type='CURVE')
     
     curve.dimensions = '3D'
@@ -1496,12 +1470,22 @@ def import_conveyor_chain(
     set_geonode_input(mod, "Lifts Collection", bpy.data.collections.get("Lifts"))
     set_geonode_input(mod, "Lift Parts Collection", bpy.data.collections.get("LiftParts"))
     set_geonode_input(mod, "Belts Collection", bpy.data.collections.get("ConveyorBelts"))
+    if use_proxy:
+        set_geonode_input(mod, "Use Proxy Mesh", True)
+    else:
+        set_geonode_input(mod, "Use Proxy Mesh", False)
+        
+    if hide_buildable:
+        obj.hide_viewport = True
+    
+    progress_in = 100
     print(f"Imported Conveyor chain from save file")
 
 def import_splines_task(save: s.SaveGame, color_map: dict):
-    global progress, is_scanning, stop_requested,run_once,total,total_imported
+    global progress, is_scanning, stop_requested,run_once,total,total_imported,progress_in,total_instances,current_buildable
     save_objects = save.allSaveObjects()
     progress = 0.0
+    progress_in = 0.0
     all_classes = set() # all buildable classes in the save
     factory_classes = [] # all factory buildable instances
     exclude_factory = [ # exclude from default importing method 
@@ -1617,7 +1601,8 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
         header = obj.Header
         transform = header.Transform
         className =  header.ObjectHeader.ClassName
-        actor = obj.Object   
+        actor = obj.Object 
+        
         
         if className.startswith( '/Script/FactoryGame.FGConveyorChainActor'):
             conv = lambda v: Vector((v.X/100, -v.Y/100, v.Z/100))
@@ -1649,6 +1634,9 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             type_mk_lift = []
             type_mk_belt = []
             
+            total_cons = len(actor.mChainSplineSegments)
+            current_buildable = f"{className.split('.')[-1]}: {total_cons} segments" 
+            count_p = 0
             for i, seg in enumerate(reversed(actor.mChainSplineSegments)):
                 conveyor_ref = seg.ConveyorBase.PathName
                 conveyor_name = seg.ConveyorBase.PathName.split('_')[2]
@@ -1746,7 +1734,10 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
                     
                 if chain_points and not is_belt:
                     chain_lift_points.append((chain_points))
-            
+
+                count_p += 1
+                progress_in = (count_p / total_cons) * 25
+
             passthrough.extend(passthrough_lift)
             type_mk.extend(type_mk_belt) 
             type_mk.extend(type_mk_lift) 
@@ -1756,6 +1747,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             top_rot_list.extend(belt_top_rot)    
             top_rot_list.extend(lift_top_rot)
             
+            progress_in = 50
             bpy.app.timers.register(
                 functools.partial(
                     import_conveyor_chain,
@@ -1799,6 +1791,8 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             transform = instances[0]
             actors = instances[1]
             
+            current_buildable = f"{factory}: {total_instances} instances" 
+            progress_in = 0.0
             for i,actor in enumerate(actors):
                 if stop_requested:
                     progress = 0.0
@@ -1835,6 +1829,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
                                 spline_points.append(i)
                             inst_splines.append(spline_points)    
             
+                progress_in = 50
                 bpy.app.timers.register(
                     functools.partial(
                         import_powerlines,
@@ -1851,7 +1846,8 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
         if any(building in factory for building in spline_buildables):
             transform = instances[0]
             actors = instances[1]
-            
+            current_buildable = f"{factory}: {total_instances} instances" 
+            progress_in = 0.0
             for i,actor in enumerate(actors):
                 if stop_requested:
                     progress = 0.0
@@ -1870,6 +1866,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
                 #primary_colors, secondary_colors, paint_type = zip(*colors)
                 
                 props = actor.Properties
+                count_p = 0
                 for prop in props:
                     prop_name = prop.Name.Name
                     if 'mSnappedPassthroughs' in prop_name:
@@ -1893,7 +1890,10 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
                                     conv(point)
                                 )
                             spline_points.append(tuple(points))
-                        
+                    count_p += 1
+                    progress_in = (count_p / total_instances) * 25
+                
+                progress_in = 50        
                 bpy.app.timers.register(
                     functools.partial(
                         import_spline_buildables,
@@ -2056,7 +2056,7 @@ class ImportSaveButton(bpy.types.Operator):
     
 class SF_Importer_Properties(PropertyGroup):
     save_path: bpy.props.StringProperty( #type: ignore
-        name="Save path",
+        name="Save Path",
         description="The save file you want to import factory data from",
         subtype = "FILE_PATH",
         options = {"LIBRARY_EDITABLE"},
@@ -2065,39 +2065,51 @@ class SF_Importer_Properties(PropertyGroup):
     )
     
     get_lightweight: bpy.props.BoolProperty(
-        name="Lieghtweight buildables",  # This will appear as the checkbox label
-        description="Get lieghtweight buildables used in save file. e.g. foundations, walls, pillers, etc ",
+        name="Lightweight Buildables",  # This will appear as the checkbox label
+        description="Get lightweight buildables used in save file. e.g. foundations, walls, pillers, etc ",
         default=False
     ) # type: ignore
     
     get_heavyweight: bpy.props.BoolProperty(
-        name="Heavyweight buildables",  # This will appear as the checkbox label
+        name="Heavyweight Buildables",  # This will appear as the checkbox label
         description="Get heavyweigh buildables used in save file. e.g. construtor, smelter, pipeHyperSupport, etc ",
         default=False
     ) # type: ignore
     
     get_signs: bpy.props.BoolProperty(
-        name="Sign buildables",  # This will appear as the checkbox label
+        name="Sign Buildables",  # This will appear as the checkbox label
         description="Get sign buildables used in save file. e.g. medium signs, large signs, etc ",
         default=False
     ) # type: ignore
     
     get_splines: bpy.props.BoolProperty(
-        name="Spline buildables",  # This will appear as the checkbox label
+        name="Spline Buildables",  # This will appear as the checkbox label
         description="Get spline buildables used in save file. e.g. conveyor belts, pipes, powerlines, etc ",
+        default=False
+    ) # type: ignore
+    
+    hide_buildable: bpy.props.BoolProperty(
+        name="Hide Buildables",  # This will appear as the checkbox label
+        description="Hide buildable on import for buildables with a lot of instances for viewport proformace",
+        default=False
+    ) # type: ignore
+    
+    use_proxy: bpy.props.BoolProperty(
+        name="Use Proxy Mesh",  # This will appear as the checkbox label
+        description="Use proxy mesh for viewport proformance. Use main mesh for render",
         default=False
     ) # type: ignore
     
 class VIEW3D_PT_SF_Importer_panel(bpy.types.Panel):
     bl_idname = "SF_IMPORTER"
-    bl_label = "SF_Importer"
+    bl_label = "SF Importer"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'SF Importer'
     
 
     def draw(self, context):
-        global progress, is_scanning,total,total_imported,execution_time
+        global progress,progress_in, is_scanning,total,total_imported,execution_time, current_buildable
         layout = self.layout
         scene = context.scene
         props = scene.sf_importer_props
@@ -2108,6 +2120,12 @@ class VIEW3D_PT_SF_Importer_panel(bpy.types.Panel):
         save_button.operator("button.import_save", text="Stop Scan" if is_scanning else "Start Scan")
         save_col = layout.column()
         save_col.prop(props, "save_path", text="Save Path")
+        
+        # TODO: button to swap all to proxy mesh
+        
+        pro_col = layout.column()
+        pro_col.prop(props, "use_proxy")
+        pro_col.prop(props, "hide_buildable", text="Hide Buildable")
         
         choose_box = layout.box()
         choose_col = choose_box.column()
@@ -2125,10 +2143,25 @@ class VIEW3D_PT_SF_Importer_panel(bpy.types.Panel):
         row_box_l = row.box()
         row_box_r = row.box()
         value = remap(progress, 0, 100, 0, 1)
+        value_in = remap(progress_in, 0, 100, 0, 1)
         row_box_l.label(text=f"{total_imported}/{total}")
         row_box_r.scale_x = 6.0
-        row_box_r.progress(factor=value, text=f"{progress:.1f}%")
+        
+        bar_box_r = row_box_r.column(align=True)
+        bar_box_r.progress(factor=value, text=f"{progress:.1f}%")
+        if current_buildable:
+            row_box_l.scale_y = 2.5
+            bar_sub = bar_box_r.row(align=True)
+            bar_sub.scale_y = 0.5
+            bar_sub.progress(factor=value_in, text=f"{progress_in:.1f}%")
+            bar_box_r.label(text=f"{current_buildable or "stuff"}")
         save_box.label(text=f"Execution Time: {str(execution_time)[:-4]}")
+
+# IMPORTANT: YOU HAVE TO SAVE AND RELOAD AND RESAVE THE FILE FOR THE BUILDABLES TO MATCH
+# I DONT KNOW WHY - perhaps the LBS is append only then it gets pruned on reload?
+path = r"SAVE-PATH.sav"
+mapping_path=r"PROJECT-PATH\import models\buildable_to_asset.json"
+color_map_path = r"PROJECT-PATH\color_map.json"
 
 classes = (
     SF_Importer_Properties,
@@ -2140,9 +2173,8 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.Scene.sf_importer_props = bpy.props.PointerProperty(type=SF_Importer_Properties)
-    #bpy.utils.register_class(HelloWorld)
-    #bpy.utils.register_class(ImportSaveButton)
     bpy.types.Scene.scan_progress = bpy.props.FloatProperty(name="Save Import Progress", min=0, max=100, default=0.0, get=lambda self: progress)
+    bpy.types.Scene.scan_progress = bpy.props.FloatProperty(name="Instance Progress", min=0, max=100, default=0.0, get=lambda self: progress_in)
 
 def unregister():
     bpy.utils.unregister_class(VIEW3D_PT_SF_Importer_panel)
