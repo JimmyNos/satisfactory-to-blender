@@ -490,7 +490,6 @@ def main():
                     
                     asset_list[prop] = ob_name
                     #print(asset_list)
-
             else:   
                 
                 asset_name = asset.get('Mesh')
@@ -499,7 +498,7 @@ def main():
                 if '/' in asset_name:
                     asset_dir =Path(asset_name)
                     
-                    asset_name = asset_name.split('/')[-1]
+                    asset_name = asset_name.split('/')[-1] # type: str
                     
                 if "mSupportMeshInstanceData" in component:
                     support_name = asset_name
@@ -510,8 +509,17 @@ def main():
                         if os.fspath(asset_dir) in os.fspath(asset_file):
                             if asset_file.name.startswith(asset_name+'.'):
                                 buildable_file = asset_file
+                                print(buildable_file)
+                        
+                        if asset_dir.name in asset_file.parent.name:
+                            asset_file_l = asset_file.stem.lower()
+                            if asset_file_l == asset_name.lower():
+                                buildable_file = asset_file
+                                print(buildable_file)
                 else:
                     buildable_file = [asset_file for asset_file in asset_files if asset_file.name.startswith(asset_name+'.')]
+                    print(buildable_file)
+                    
                     
                 if buildable_file:
                     #if type(buildable_file) == list:
@@ -562,9 +570,9 @@ def main():
     print(f"Importing models time: {execution_time:.6f} seconds")
 
 EXPORT_FILE_DIR = r"PATH-TO-FMODEL-EXPORTS"
-BASE_FILE_DIR = r"PATH-TO-FMODEL-EXPORTS\FactoryGame\Content\FactoryGame\Buildable"
-EVENT_FILE_DIR = r"PATH-TO-FMODEL-EXPORTS\FactoryGame\Content\FactoryGame\Events"
-BUILD_TO_ASSET_DIR = r"PROJECT-PATH\import models\buildable_to_asset.json"   
+BASE_FILE_DIR = r"F:\blenber\SF to blend\fmodel export\FactoryGame\Content\FactoryGame\Buildable"
+EVENT_FILE_DIR = r"F:\blenber\SF to blend\fmodel export\FactoryGame\Content\FactoryGame\Events"
+BUILD_TO_ASSET_DIR = r"F:\blenber\SF to blend\SF-2-Blender addon\satisfactory-to-blender\import models\buildable_to_asset.json"   
 
 INTEGRATED_BUILD_LIST = [
     "ProductionIndicatorInstanced",
