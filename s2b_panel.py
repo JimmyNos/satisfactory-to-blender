@@ -2162,6 +2162,7 @@ class VIEW3D_PT_SF_Importer_panel(bpy.types.Panel):
 #path = r"SAVE-PATH.sav" # no logner use in script
 mapping_path=r"PROJECT-PATH\import models\buildable_to_asset.json"
 color_map_path = r"PROJECT-PATH\color_map.json"
+sign_map_path = "" # TODO
 
 classes = (
     SF_Importer_Properties,
