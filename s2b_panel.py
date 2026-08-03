@@ -533,7 +533,10 @@ def import_color_slots(cls: s.SaveGame) -> dict:
     
     for obj in cls:
         try:
-            ong_name = obj.Header.ObjectHeader.Reference.PathName
+            try:
+                ong_name = obj.Header.ObjectHeader.Reference.PathName
+            except Exception as e:
+                continue
             if 'BuildableSubsystem' in ong_name:
                 for prop in obj.Object.Properties:
                     if 'mColorSlots_Data' in prop.Name.Name:
@@ -576,13 +579,21 @@ def import_color_slots(cls: s.SaveGame) -> dict:
 current_buildable = ""
 progress = 0.0
 progress_in = 0.0
+start_process = 0.0
 execution_time = 0.0
+per_time = []
 total_buildables = 0
 total = 0
 total_instances = 0
+total_all_instances = 0
 total_imported = 0
 is_scanning = False
+is_get_scanning = False
 stop_requested = False
+stop_get_requested = False
+x_corr = -500.0
+y_corr = 2800.0
+distance = 1000.0
 
 def remap(value, from_min, from_max, to_min, to_max):
     from_span = from_max - from_min
@@ -599,9 +610,10 @@ def update_ui():
     
     if is_scanning:
         return 0.1  # Call every 0.1 seconds
+    elif is_get_scanning:
+        return 0.1  # Call every 0.1 seconds
     else:
         return None  # Stop the timer
-run_once = False
         
 def import_lightweights_task(save: s.SaveGame, color_map: dict):
     global progress,progress_in, is_scanning, stop_requested,run_once,total,total_imported,total_instances,current_buildable
@@ -642,6 +654,11 @@ def import_lightweights_task(save: s.SaveGame, color_map: dict):
     
         if not instances:
             continue  
+        
+        #tmp_instances = []
+        #for ints in instances:
+        #    if x_corr <= ints.X <= x_corr + distance:
+        #        tmp_instances.append(ints)
         
         current_buildable = f"{name}: {total_instances} instances"  
         verts, rotations, scales = map(
@@ -835,6 +852,9 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict):
             count_p = 0
             total_instances = len(instances[0])
             for actor in instances[1]:
+                if stop_requested:
+                    progress = 0.0
+                    break
                 height_check = False
                 pole_scale_check = False
                 attr_check = {}
@@ -888,7 +908,7 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict):
                     list, zip(*(read_transform(i) for i in instances[0]))
                 )
                 count_p += 1
-                progress_in = (count_p / total_instances) * 25
+                progress_in = (count_p / total_instances) * 98
             
             for att_u in attr_used:
                 if len(attr_dict[att_u]) > total_instances:
@@ -935,7 +955,7 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict):
             if colors:
                 primary_colors, secondary_colors, paint_type = zip(*colors)
             
-            progress_in = 50
+            progress_in = 99
             bpy.app.timers.register(functools.partial(
                 create_buildable_object, 
                 factory,
@@ -1043,6 +1063,9 @@ def import_signs_task(save: s.SaveGame, color_map: dict):
     
         count_p = 0
         for actor in instances[1]:
+            if stop_requested:
+                progress = 0.0
+                break
             ems_check = False
             glos_check = False
             aux_check = False
@@ -1111,7 +1134,7 @@ def import_signs_task(save: s.SaveGame, color_map: dict):
                 )
             
             count_p += 1
-            progress_in = (count_p / total_instances) * 25
+            progress_in = (count_p / total_instances) * 98
             
         prop_attr.append({
             "foreground_color" : [(c["R"], c["G"], c["B"], c["A"]) for c in color_idx_f],
@@ -1161,7 +1184,7 @@ def import_signs_task(save: s.SaveGame, color_map: dict):
             "type":["FLOAT","value"]
             })
         
-        progress_in = 50
+        progress_in = 99
         bpy.app.timers.register(functools.partial(
             create_buildable_object, 
             factory,
@@ -1182,7 +1205,7 @@ def import_spline_buildables(name: str,
                              transform:list,
                              passthroughs:list,
                              flow_indicator:bool,):
-    global progress_in
+    #global progress_in
     
     use_proxy = bpy.context.scene.sf_importer_props.use_proxy
     hide_buildable = bpy.context.scene.sf_importer_props.hide_buildable
@@ -1279,7 +1302,7 @@ def import_spline_buildables(name: str,
     
     if hide_buildable:
         obj.hide_viewport = True
-    progress_in = 100
+    #progress_in = 100
     print(f"Imported {name} from save file")
 
 def import_powerlines(name: str,inst_splines: list,transform: list):       
@@ -1517,8 +1540,8 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
         actor = obj.Object  
         
         if className.startswith('/Game/FactoryGame/Buildable/') and '.Build_' in className and className.endswith('_C'):
-            all_classes.add(className.split('.')[-1])
-            factory_classes.append(obj)
+            all_classes.add(className.split('.')[-1]) # instances
+            factory_classes.append(obj) # buildables
         
         if className.startswith('/Game/FactoryGame/Buildable/Factory/Conveyor') and "Mk" in className:
            conveyor_dict[classRef] = None
@@ -1577,6 +1600,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             tot_chains += 1
     
     total_spline_instances = 0
+    total_spline_buildables = 0
     for factory in all_classes:
         for factory_class in factory_classes:
             header = factory_class.Header
@@ -1588,7 +1612,11 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             if factory in cls_name and not ex:
                 if any(building in factory for building in spline_buildables) or factory.startswith('Build_PowerLine_'):
                     total_spline_instances += 1
-    total = total_spline_instances + tot_chains
+        ex = any(exc in factory for exc in exclude_factory)
+        if not ex:
+            if any(building in factory for building in spline_buildables) or factory.startswith('Build_PowerLine_'):
+                total_spline_buildables += 1
+    total = total_spline_buildables + tot_chains
     
     # conveyor belt chains       
     for obj in save.mPersistentAndRuntimeData.SaveObjects:
@@ -1638,6 +1666,9 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             current_buildable = f"{className.split('.')[-1]}: {total_cons} segments" 
             count_p = 0
             for i, seg in enumerate(reversed(actor.mChainSplineSegments)):
+                if stop_requested:
+                    progress = 0.0
+                    break
                 conveyor_ref = seg.ConveyorBase.PathName
                 conveyor_name = seg.ConveyorBase.PathName.split('_')[2]
                 conveyor_mk = conveyor_name[-1:]
@@ -1736,7 +1767,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
                     chain_lift_points.append((chain_points))
 
                 count_p += 1
-                progress_in = (count_p / total_cons) * 25
+                progress_in = (count_p / total_cons) * 98
 
             passthrough.extend(passthrough_lift)
             type_mk.extend(type_mk_belt) 
@@ -1747,7 +1778,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             top_rot_list.extend(belt_top_rot)    
             top_rot_list.extend(lift_top_rot)
             
-            progress_in = 50
+            progress_in = 99
             bpy.app.timers.register(
                 functools.partial(
                     import_conveyor_chain,
@@ -1791,7 +1822,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             transform = instances[0]
             actors = instances[1]
             
-            current_buildable = f"{factory}: {total_instances} instances" 
+            current_buildable = f"{factory}: {total_instances} splines" 
             progress_in = 0.0
             for i,actor in enumerate(actors):
                 if stop_requested:
@@ -1838,17 +1869,18 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
                         transform
                         ), first_interval=0)
                 time.sleep(0.1)
-                count += 1
-                total_imported += 1#count
-                progress = (total_imported / total) * 100
+            count += 1
+            total_imported += 1#count
+            progress = (total_imported / total) * 100
                 #import_powerlines(factory, instances)
                     
         if any(building in factory for building in spline_buildables):
             transform = instances[0]
             actors = instances[1]
-            current_buildable = f"{factory}: {total_instances} instances" 
+            current_buildable = f"{factory}: {total_instances} splines" 
             progress_in = 0.0
-            for i,actor in enumerate(actors):
+            count_p = 0
+            for i,actor in enumerate(actors): # per spline/instance
                 if stop_requested:
                     progress = 0.0
                     break
@@ -1866,8 +1898,10 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
                 #primary_colors, secondary_colors, paint_type = zip(*colors)
                 
                 props = actor.Properties
-                count_p = 0
                 for prop in props:
+                    if stop_requested:
+                        progress = 0.0
+                        break
                     prop_name = prop.Name.Name
                     if 'mSnappedPassthroughs' in prop_name:
                         prop_data = prop.Value
@@ -1890,10 +1924,8 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
                                     conv(point)
                                 )
                             spline_points.append(tuple(points))
-                    count_p += 1
-                    progress_in = (count_p / total_instances) * 25
                 
-                progress_in = 50        
+                    
                 bpy.app.timers.register(
                     functools.partial(
                         import_spline_buildables,
@@ -1905,20 +1937,123 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
                         flow_indicator
                         ), first_interval=0)
                 time.sleep(0.1)
-                count += 1
-                total_imported += 1#count
-                progress = (total_imported / total) * 100
+                
+                count_p += 1
+                progress_in = (count_p / total_instances) * 100
+                
+            count += 1
+            total_imported += 1#count
+            progress = (total_imported / total) * 100
     bpy.app.timers.register(update_ui)
 
+def get_total_instances_task(save: s.SaveGame):
+    global total_all_instances,is_get_scanning,stop_get_requested
+    lbs = get_lbs(save)
+    instances_by_class_ref = lbs.mBuildableClassToInstanceArray
+    
+    l_total = 0
+    for buildable in list(instances_by_class_ref.Keys):
+        if stop_get_requested:
+            break
+        class_path = buildable.PathName
+        if not class_path:
+            raise Exception("Missing class path, how can this happen?")
+        instances = instances_by_class_ref[buildable]
+        if not instances: 
+            continue  
+        l_total += 1
+        total_all_instances = l_total
+    print(l_total)
+    
+    all_classes = set() # all buildable classes in the save
+    factory_classes = [] # all factory buildable instances
+    exclude_factory = [ # exclude from default importing method 
+        #"Build_RailroadTrack",
+        #"Build_RailroadTrackIntegrated_C_Points",
+        #"Build_PowerLine_C",
+        #"Build_ConveyorBelt",
+        #"Build_Pipeline_",
+        #"Build_PipelineMK2",
+        #"Build_PipeHyper_C",
+        #"Build_ConveyorLift",
+        "Build_PipelineFlowIndicator_C"
+    ]   
+    spline_buildables = [
+        "Build_PipelineMK2_",
+        "Build_Pipeline_",
+        "Build_RailroadTrack",
+        "Build_PipeHyper_C",
+    ]
+    
+    save_objects = save.allSaveObjects()
+    
+    for obj in save_objects:
+        if stop_get_requested:
+            break
+        if not obj.isActor():
+            continue    
+    
+        header = obj.Header
+        className =  header.ObjectHeader.ClassName  
+        
+        if className.startswith('/Game/FactoryGame/Buildable/') and '.Build_' in className and className.endswith('_C') or '.BP_ElevatorCabin_C' in className:
+            all_classes.add(className.split('.')[-1])
+            factory_classes.append(obj)
+        
+        if className.startswith('/Game/FactoryGame/Prototype/') and '.Build_' in className and className.endswith('_C'):
+            all_classes.add(className.split('.')[-1])
+            factory_classes.append(obj)
+    
+    tot_chains = 0
+    for obj in save.mPersistentAndRuntimeData.SaveObjects:
+        if stop_get_requested:
+            break
+        if not obj.isActor():
+            continue
+        header = obj.Header
+        className =  header.ObjectHeader.ClassName
+        
+        if className.startswith( '/Script/FactoryGame.FGConveyorChainActor'):
+            tot_chains += 1
+    
+    h_total = 0
+    for factory in all_classes:
+        if stop_get_requested:
+            break
+        # group buildable instances by buildable class 
+        ex = any(exc in factory for exc in exclude_factory)
+        if ex:
+            continue
+        for factory_class in factory_classes:
+            header = factory_class.Header
+            cls_name = header.ObjectHeader.Reference.PathName
+            
+            if factory in cls_name:
+                h_total += 1
+                total_all_instances += 1
+    
+    if not stop_get_requested:
+        total_all_instances = l_total + h_total
+    is_get_scanning = False
+    stop_get_requested = False
+    bpy.app.timers.register(update_ui)
+    
+    
 def import_task(save: s.SaveGame, color_map: dict):
-    global progress,total,total_imported,is_scanning,stop_requested,execution_time
+    global progress,total,total_imported,is_scanning,stop_requested,execution_time,per_time
     start_time = datetime.now()
     execution_time = 0.0
     progress = 0.0
     final_total = 0
     total = 0
-    curent_imported = 0
+    current_imported = 0
     total_imported = 0
+    
+    light_end_time = None
+    heavy_end_time = None
+    sign_end_time = None
+    spline_end_time = None
+    partial_time = [""]*4
     
     get_lightweight = bpy.context.scene.sf_importer_props.get_lightweight
     get_heavyweight = bpy.context.scene.sf_importer_props.get_heavyweight
@@ -1928,10 +2063,12 @@ def import_task(save: s.SaveGame, color_map: dict):
     if get_lightweight:
         import_lightweights_task(save, color_map)
         final_total = total
-        curent_imported = total_imported
+        current_imported = total_imported
         #progress = 0.0
         total_imported = 0
         #total = 0
+        light_end_time = datetime.now() - start_time
+        partial_time[0] = f"Lightweight {str(light_end_time)[:-4]}"
     if get_heavyweight:
         import_heavyweights_task(save, color_map)
         if final_total == 0:
@@ -1939,9 +2076,14 @@ def import_task(save: s.SaveGame, color_map: dict):
         else:
             final_total += total
         #total = final_total
-        curent_imported += total_imported
+        current_imported += total_imported
         total_imported = 0
         #progress = 0.0
+        heavy_end_time = datetime.now() - start_time
+        if light_end_time:
+            partial_time[1] = f"Heavyweight {str(heavy_end_time-light_end_time)[:-4]}"
+        else:
+            partial_time[1] = f"Heavyweight {str(heavy_end_time)[:-4]}"
     
     if get_signs:
         import_signs_task(save, color_map)
@@ -1950,10 +2092,19 @@ def import_task(save: s.SaveGame, color_map: dict):
         else:
             final_total += total
         #total = final_total
-        curent_imported += total_imported
+        current_imported += total_imported
         total_imported = 0
         #progress = 0.0
-        
+        sign_end_time = datetime.now() - start_time
+        if heavy_end_time and light_end_time:
+            partial_time[2] = f"Signs {str(sign_end_time - heavy_end_time)[:-4]}"
+        elif heavy_end_time:
+            partial_time[2] = f"Signs {str(sign_end_time - heavy_end_time)[:-4]}"
+        elif light_end_time:
+            partial_time[2] = f"Signs {str(sign_end_time - light_end_time)[:-4]}"
+        else:
+            partial_time[2] = f"Signs {str(sign_end_time)[:-4]}"
+            
     if get_splines:    
         import_splines_task(save, color_map)
         if final_total == 0:
@@ -1961,29 +2112,75 @@ def import_task(save: s.SaveGame, color_map: dict):
         else:
             final_total += total
         #total = final_total
-        curent_imported += total_imported
+        current_imported += total_imported
         total_imported = 0
         #progress = 0.0
+        spline_end_time = datetime.now() - start_time
+        if heavy_end_time and light_end_time and sign_end_time:
+            partial_time[3] = f"Spline {str(spline_end_time - sign_end_time)[:-4]}"
+        if heavy_end_time and light_end_time:
+            partial_time[3] = f"Spline {str(spline_end_time - heavy_end_time)[:-4]}"
+        if heavy_end_time:
+            partial_time[3] = f"Spline {str(spline_end_time - heavy_end_time)[:-4]}"
+        if light_end_time:
+            partial_time[3] = f"Spline {str(spline_end_time - light_end_time)[:-4]}"
+        if sign_end_time:
+            partial_time[3] = f"Spline {str(spline_end_time - sign_end_time)[:-4]}"
+        else:
+            partial_time[3] = f"Spline {str(spline_end_time)[:-4]}"
+
 
     total = final_total
     if not stop_requested:
         total_imported = final_total
     else:
-        total_imported = curent_imported
+        total_imported = current_imported
     
     is_scanning = False
     stop_requested = False
     end_time = datetime.now()
-    execution_time = end_time - start_time    
+    execution_time = end_time - start_time   
+    per_time = partial_time
     print(f"SF to Blender time: {execution_time} seconds")
     bpy.app.timers.register(update_ui)
+
+class GetTotIntButton(bpy.types.Operator):
+    bl_idname = "button.total_instances"
+    bl_label = "Get Total Instances"
+
+    def execute(self, context):
+        global total_all_instances,is_scanning,is_get_scanning,stop_get_requested
+        save_path = bpy.context.scene.sf_importer_props.save_path
+        
+        #get_lightweight = bpy.context.scene.sf_importer_props.get_lightweight
+        #get_heavyweight = bpy.context.scene.sf_importer_props.get_heavyweight
+        #get_signs = bpy.context.scene.sf_importer_props.get_signs
+        #get_splines = bpy.context.scene.sf_importer_props.get_splines
+        
+        if not is_get_scanning and not is_scanning:
+            save = s.SaveGame(Path(save_path))
+            saveHeader = save.mSaveHeader
+        
+            is_get_scanning = True
+            self.report({'INFO'}, "Calculating total instances...")
+            t1_thread = threading.Thread(target=get_total_instances_task,args=(save,))
+            t1_thread.start()
+            
+            bpy.app.timers.register(update_ui)
+            GetTotIntButton.bl_label = "Stop Calculations"
+        else:
+            self.report({'INFO'}, "Stopping Calculations...")
+            stop_get_requested = True
+            GetTotIntButton.bl_label = "Get Total Instances"
+        
+        return {'FINISHED'}
     
 class ImportSaveButton(bpy.types.Operator):
     bl_idname = "button.import_save"
     bl_label = "Start Save Import"
 
     def execute(self, context):
-        global is_scanning, stop_requested,execution_time
+        global is_scanning, stop_requested,execution_time,start_process
         save_path = bpy.context.scene.sf_importer_props.save_path
         
         get_lightweight = bpy.context.scene.sf_importer_props.get_lightweight
@@ -1994,6 +2191,7 @@ class ImportSaveButton(bpy.types.Operator):
         if not is_scanning:
         #if not stop_requested:
             # https://github.com/moritz-h/satisfactory-3d-map/blob/master/docs/SATISFACTORY_SAVE.md
+            start_process = datetime.now()
             save = s.SaveGame(Path(save_path))
             saveHeader = save.mSaveHeader
             #start_time = time.perf_counter()
@@ -2109,7 +2307,7 @@ class VIEW3D_PT_SF_Importer_panel(bpy.types.Panel):
     
 
     def draw(self, context):
-        global progress,progress_in, is_scanning,total,total_imported,execution_time, current_buildable
+        global progress,progress_in,per_time, is_scanning,total,total_imported,execution_time, current_buildable,start_process,total_all_instances,is_get_scanning
         layout = self.layout
         scene = context.scene
         props = scene.sf_importer_props
@@ -2118,8 +2316,22 @@ class VIEW3D_PT_SF_Importer_panel(bpy.types.Panel):
         save_button = layout.column()
         save_button.scale_y = 1.5
         save_button.operator("button.import_save", text="Stop Scan" if is_scanning else "Start Scan")
+        if is_get_scanning:
+            save_button.active = False
+        else:
+            save_button.active = True
         save_col = layout.column()
         save_col.prop(props, "save_path", text="Save Path")
+        
+        get_i_button = layout.column(align=True)
+        get_i_button.operator("button.total_instances", text="Stop Calculating" if is_get_scanning else "Get Total Instances")
+        if is_scanning:
+            get_i_button.active = False
+        else:
+            get_i_button.active = True
+        if total_all_instances:
+            get_i_box = get_i_button.box()
+            get_i_box.label(text=f"Total Instances: {total_all_instances}")
         
         # TODO: button to swap all to proxy mesh
         
@@ -2142,11 +2354,11 @@ class VIEW3D_PT_SF_Importer_panel(bpy.types.Panel):
         row = save_box.row(align=True)
         row_box_l = row.box()
         row_box_r = row.box()
-        value = remap(progress, 0, 100, 0, 1)
-        value_in = remap(progress_in, 0, 100, 0, 1)
         row_box_l.label(text=f"{total_imported}/{total}")
         row_box_r.scale_x = 6.0
         
+        value = remap(progress, 0, 100, 0, 1)
+        value_in = remap(progress_in, 0, 100, 0, 1)
         bar_box_r = row_box_r.column(align=True)
         bar_box_r.progress(factor=value, text=f"{progress:.1f}%")
         if current_buildable:
@@ -2155,7 +2367,12 @@ class VIEW3D_PT_SF_Importer_panel(bpy.types.Panel):
             bar_sub.scale_y = 0.5
             bar_sub.progress(factor=value_in, text=f"{progress_in:.1f}%")
             bar_box_r.label(text=f"{current_buildable or "stuff"}")
+        save_box.label(text=f"Start Time: {str(start_process)[:-4]}")
         save_box.label(text=f"Execution Time: {str(execution_time)[:-4]}")
+        if per_time:
+            for per in per_time:
+                if per:
+                    save_box.label(text=per)
 
 # IMPORTANT: YOU HAVE TO SAVE AND RELOAD AND RESAVE THE FILE FOR THE BUILDABLES TO MATCH
 # I DONT KNOW WHY - perhaps the LBS is append only then it gets pruned on reload?
@@ -2163,11 +2380,15 @@ class VIEW3D_PT_SF_Importer_panel(bpy.types.Panel):
 mapping_path=r"PROJECT-PATH\import models\buildable_to_asset.json"
 color_map_path = r"PROJECT-PATH\color_map.json"
 sign_map_path = "" # TODO
+path = r"C:\Users\Micha\AppData\Local\FactoryGame\Saved\SaveGames\76561198359501502\sound_200726-204516.sav"#assets2.sav"
+mapping_path=r"F:\blenber\SF to blend\SF-2-Blender addon\satisfactory-to-blender\import models\buildable_to_asset.json"
+color_map_path = r"F:\blenber\SF to blend\SF-2-Blender addon\satisfactory-to-blender\color_map.json"
 
 classes = (
     SF_Importer_Properties,
     VIEW3D_PT_SF_Importer_panel,
-    ImportSaveButton
+    ImportSaveButton,
+    GetTotIntButton
 )
 
 def register():
@@ -2178,8 +2399,10 @@ def register():
     bpy.types.Scene.scan_progress = bpy.props.FloatProperty(name="Instance Progress", min=0, max=100, default=0.0, get=lambda self: progress_in)
 
 def unregister():
-    bpy.utils.unregister_class(VIEW3D_PT_SF_Importer_panel)
-    bpy.utils.unregister_class(ImportSaveButton)
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+    #bpy.utils.unregister_class(VIEW3D_PT_SF_Importer_panel)
+    #bpy.utils.unregister_class(ImportSaveButton)
     del bpy.types.Scene.scan_progress
 
 if __name__ == "__main__":
