@@ -1,0 +1,33 @@
+schema_version = "1.0.0"
+
+id = "satisfactory_importer_extension"
+version = "0.1.0"
+name = "Satisfactory Importer"
+tagline = "Imports Satisfactory assets and save data into Blender"
+maintainer = "Michael Mosako (JimmyNoStar)"
+type = "add-on"
+website = "https://github.com/JimmyNos/satisfactory-to-blender"
+tags = ["Import-Export","User Interface"] # blender extension tags
+blender_version_min = "5.2.0"
+
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+
+platforms = ["windows-x64", "linux-x64"]
+wheels = [
+  "./wheels/satisfactory_save-0.10.0-cp313-cp313-win_amd64.whl",
+]
+
+[permissions]
+files = "Import PSK from disk"
+
+# Optional: advanced build settings.
+# https://docs.blender.org/manual/en/dev/advanced/extensions/command_line_arguments.html#command-line-args-extension-build
+[build]
+paths_exclude_pattern = [
+  "__pycache__/",
+  "/.git/",
+  "/*.zip",
+  ".vscode",
+]
