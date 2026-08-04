@@ -243,8 +243,9 @@ def read_length(i: s.FRuntimeBuildableInstanceData) -> float:
 # start geonode
 
 # map make buildable classes to corrisponding asset
-def buildable_class_to_object(cls: str) -> [bpy.types.Object,Vec3,Vec3]:# | None:
-    json_file_path = mapping_path
+def buildable_class_to_object(cls: str,buildable_to_asset_path: str) -> [bpy.types.Object,Vec3,Vec3]:# | None:
+    json_file_path = buildable_to_asset_path
+    print(json_file_path)
     with open(json_file_path, 'r', encoding='utf-8') as f:
         map = json.load(f)
 
@@ -286,14 +287,15 @@ def create_buildable_object(
     positions: list[Vec3],
     rotations: list[Vec4],
     scales: list[Vec3],
-    primary_colors: list[Vec4] = [],
-    secondary_colors: list[Vec4] = [],
-    paint_type: list[int] = [],
+    primary_colors: tuple = (),
+    secondary_colors: tuple = (),
+    paint_type: tuple[int] = (0,),
     lengths: list[float] = [],
     prop_attr: list[dict] = [],
-    is_heavy:bool = False
+    is_heavy:bool = False,
+    buildable_to_asset_path: str = ""
     ):
-    global progress_in
+    #global progress_in
     
     use_proxy = bpy.context.scene.sf_importer_props.use_proxy
     hide_buildable = bpy.context.scene.sf_importer_props.hide_buildable
@@ -422,24 +424,26 @@ def create_buildable_object(
         mesh.attributes["scale"].data.foreach_set("vector", flat)
     except Exception as e:
         print(f"failed to create scale attribute for {cls}",e)
-    try:
-        mesh.attributes.new("primary_color", "FLOAT_COLOR", "POINT")
-        flat = [c for rgba in primary_colors for c in rgba]
-        mesh.attributes["primary_color"].data.foreach_set("color", flat)
-    except Exception as e:
-        print(f"failed to create primary_color attribute for {cls}",e)
-    try:
-        mesh.attributes.new("secondary_color", "FLOAT_COLOR", "POINT")
-        flat = [c for rgba in secondary_colors for c in rgba]
-        mesh.attributes["secondary_color"].data.foreach_set("color", flat)
-    except Exception as e:
-        print(f"failed to create secondary_color attribute for {cls}",e)
-    try:    
-        mesh.attributes.new("paint_index", "INT", "POINT")
-        flat = [idx for idx in paint_type]
-        mesh.attributes["paint_index"].data.foreach_set("value", flat)
-    except Exception as e:
-        print(f"failed to create paint_index attribute for {cls}",e)
+    
+    if not 'WidgetSign' in cls:
+        try:
+            mesh.attributes.new("primary_color", "FLOAT_COLOR", "POINT")
+            flat = [c for rgba in primary_colors for c in rgba]
+            mesh.attributes["primary_color"].data.foreach_set("color", flat)
+        except Exception as e:
+            print(f"failed to create primary_color attribute for {cls}",e)
+        try:
+            mesh.attributes.new("secondary_color", "FLOAT_COLOR", "POINT")
+            flat = [c for rgba in secondary_colors for c in rgba]
+            mesh.attributes["secondary_color"].data.foreach_set("color", flat)
+        except Exception as e:
+            print(f"failed to create secondary_color attribute for {cls}",e)
+        try:    
+            mesh.attributes.new("paint_index", "INT", "POINT")
+            flat = [idx for idx in paint_type]
+            mesh.attributes["paint_index"].data.foreach_set("value", flat)
+        except Exception as e:
+            print(f"failed to create paint_index attribute for {cls}",e)
     
     #node_group = bpy.data.node_groups["Buildables from Points"]
     #mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
@@ -475,7 +479,7 @@ def create_buildable_object(
     # map a buildable to an asset object, set the default object flag if None to let the geonode supply its fallback
     #asset_obj = buildable_class_to_object(cls)
     
-    result = buildable_class_to_object(cls)
+    result = buildable_class_to_object(cls,buildable_to_asset_path)
     print(f"maping name: {result}")
     if result is not None:
         asset_obj, pos_offset, rot_offset = result
@@ -506,7 +510,7 @@ def create_buildable_object(
         obj.select_set(True)
         obj.hide_viewport = True
     
-    progress_in = 100
+    #progress_in = 100
     print(f"Imported {cls} from save file")
     
     
@@ -515,6 +519,7 @@ def create_buildable_object(
 # end geonode
 
 def import_color_slots(cls: s.SaveGame) -> dict:
+    color_map_path = Path(__file__).parent / "color_map.json"
     with open(color_map_path, 'r', encoding='utf-8') as f:
         color_map = json.load(f)
     
@@ -564,3 +569,310 @@ def import_color_slots(cls: s.SaveGame) -> dict:
     
     return color_map
 
+def import_spline_buildables(name: str,
+                             colors: list,
+                             spline_points:list,
+                             transform:list,
+                             passthroughs:list,
+                             flow_indicator:bool,
+                             buildable_to_asset_path: str
+                             ):
+    #global progress_in
+    
+    use_proxy = bpy.context.scene.sf_importer_props.use_proxy
+    hide_buildable = bpy.context.scene.sf_importer_props.hide_buildable
+    
+    primary_colors, secondary_colors, paint_type = zip(*colors)
+    curve = bpy.data.curves.new(f"{name}Spline", type='CURVE')
+    
+    curve.dimensions = '3D'     
+    curve.bevel_depth = 0   
+    curve.twist_mode = "Z_UP"   
+    curve.bevel_resolution = 2 
+    
+    spline = curve.splines.new('BEZIER')
+    spline.bezier_points.add(len(spline_points) - 1)
+    fmt = lambda v: f"({v.x:.3f}, {v.y:.3f}, {v.z:.3f})"
+    k = 1.0 / 3.0  # hermite -> bezier scaler
+    for i, (L, A, R) in enumerate(spline_points):
+        bp = spline.bezier_points[i]
+        bp.co = L
+        bp.handle_left = L - (A * k) 
+        bp.handle_right = L + (R * k)
+        bp.handle_left_type = 'FREE'
+        bp.handle_right_type = 'FREE'
+    
+    obj = bpy.data.objects.new(name[:-2], curve)
+    pos, rot, scale = read_transform(transform)
+    obj.location = pos
+    get_or_create_collection("Heavyweights","Import")
+    get_or_create_collection("Splines","Heavyweights")
+    col = get_or_create_collection(name,"Splines").objects.link(obj)
+    
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    bpy.ops.object.convert(target='CURVES')
+    curve_data = obj.data
+    if "PipeHyper" not in name:
+        curve_data.attributes.new("primary_color", "FLOAT_COLOR", "CURVE")
+        flat = [c for rgba in primary_colors for c in rgba]
+        curve_data.attributes["primary_color"].data.foreach_set("color", flat)
+
+        curve_data.attributes.new("secondary_color", "FLOAT_COLOR", "CURVE")
+        flat = [c for rgba in secondary_colors for c in rgba]
+        curve_data.attributes["secondary_color"].data.foreach_set("color", flat)
+        
+        curve_data.attributes.new("paint_index", "INT", "CURVE")
+        flat = [idx for idx in paint_type]
+        curve_data.attributes["paint_index"].data.foreach_set("value", flat)
+    
+    if passthroughs:
+        new_attribute = curve_data.attributes.new(name="passthroughs", type="FLOAT2", domain="CURVE")
+        new_attribute.data.foreach_set("vector", passthroughs)
+    if flow_indicator:
+        new_attribute = curve_data.attributes.new(name="flow_indicator", type="BOOLEAN", domain="CURVE")
+        new_attribute.data.foreach_set("value", [flow_indicator])
+    
+    f_indicator_result = None
+    if "Build_RailroadTrackIntegrated" in name:
+        result = buildable_class_to_object("Build_RailroadTrack_C",buildable_to_asset_path)
+    elif "Pipeline_NoIndicator" in name:
+        result = buildable_class_to_object("Build_Pipeline_C",buildable_to_asset_path)
+    elif "PipelineMK2_NoIndicator" in name:
+        result = buildable_class_to_object("Build_PipelineMK2_C",buildable_to_asset_path)
+    else:
+        result = buildable_class_to_object(name,buildable_to_asset_path)
+        f_indicator_result = buildable_class_to_object("Build_PipelineFlowIndicator_C",buildable_to_asset_path)
+
+    if f_indicator_result is not None:
+        f_indicator_asset_obj, pos_offset, rot_offset = f_indicator_result
+    else:
+        f_indicator_asset_obj = None
+    
+    if result is not None:
+        asset_obj, pos_offset, rot_offset = result
+    else:
+        asset_obj = None
+        pos_offset = (0, 0, 0)
+        rot_offset = (0, 0, 0)
+    
+    node_group = bpy.data.node_groups["Buildables From Spline"]
+    mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
+    mod.node_group = node_group
+    
+    set_geonode_input(mod, "Collection", asset_obj)
+    set_geonode_input(mod, "Pipe Indicator", f_indicator_asset_obj)
+    set_geonode_input(mod, "Use Default Object", asset_obj is None)
+    if use_proxy:
+        set_geonode_input(mod, "Use Proxy Mesh", True)
+    else:
+        set_geonode_input(mod, "Use Proxy Mesh", False)
+        
+    if hide_buildable:
+        obj.hide_viewport = True
+    
+    if hide_buildable:
+        obj.hide_viewport = True
+    #progress_in = 100
+    print(f"Imported {name} from save file")
+
+def import_powerlines(name: str,inst_splines: list,transform: list):       
+    #global progress_in
+    
+    hide_buildable = bpy.context.scene.sf_importer_props.hide_buildable
+    
+    curve = bpy.data.curves.new(f"Spline", type='CURVE')
+                            
+    curve.dimensions = '3D'     
+    curve.bevel_depth = 0   
+    curve.twist_mode = "Z_UP"   
+    curve.bevel_resolution = 2 
+        
+    for i in inst_splines:
+        spline = curve.splines.new('BEZIER')
+        spline.bezier_points.add(len(i) - 1)
+        fmt = lambda v: f"({v.x:.3f}, {v.y:.3f}, {v.z:.3f})"
+        k = 1.0 / 3.0  # hermite -> bezier scaler
+        for i, (L, A, R) in enumerate(i):
+            bp = spline.bezier_points[i]
+            bp.co = L
+            bp.handle_left = L - (A * k) 
+            bp.handle_right = L + (R * k)
+            bp.handle_left_type = 'FREE'
+            bp.handle_right_type = 'FREE'
+        
+    obj = bpy.data.objects.new(name[:-2], curve)
+    pos, rot, scale = read_transform(transform)
+    obj.location = pos
+    obj.rotation_euler = rot
+    get_or_create_collection("Heavyweights","Import")
+    get_or_create_collection("Splines","Heavyweights")
+    get_or_create_collection(name,"Splines").objects.link(obj)
+    
+    node_group = bpy.data.node_groups["Buildables From Spline"]
+    mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
+    mod.node_group = node_group
+
+    set_geonode_input(mod, "Is Powerline", True)
+    
+    if hide_buildable:
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+        obj.hide_viewport = True
+    
+    #progress_in = 100
+    print(f"Imported {name} from save file")
+
+def import_conveyor_chain( 
+    transform: s.FTransform3f, 
+    points:list,
+    chain_belt_points:list,
+    chain_lift_points:list,
+    type_mk:list,
+    top_rot_list:list,
+    passthrough:list,
+    rot_list:list,
+    primary_colors:list,
+    secondary_colors:list,
+    paint_type:list
+    ):
+    #global progress_in
+    
+    use_proxy = bpy.context.scene.sf_importer_props.use_proxy
+    hide_buildable = bpy.context.scene.sf_importer_props.hide_buildable
+    
+    curve = bpy.data.curves.new(f"Spline", type='CURVE')
+    
+    curve.dimensions = '3D'
+    
+    # todo remove visuals
+    curve.bevel_depth = 0
+    curve.twist_mode = "Z_UP"
+    curve.bevel_resolution = 2
+    
+    spline = curve.splines.new('BEZIER')
+    spline.bezier_points.add(len(points) - 1)
+    fmt = lambda v: f"({v.x:.3f}, {v.y:.3f}, {v.z:.3f})"
+    #for i, (L, A, R) in enumerate(points):
+    #    print(f"{i:03d}  L={fmt(L)}  A={fmt(A)}  R={fmt(R)}")
+    k = 1.0 / 3.0  # hermite -> bezier scaler
+    for i, (L, A, R) in enumerate(points):
+        bp = spline.bezier_points[i]
+        bp.co = L
+        bp.handle_left = L - (A * k) 
+        bp.handle_right = L + (R * k)
+        bp.handle_left_type = 'FREE'
+        bp.handle_right_type = 'FREE'
+
+    #plot belt points
+    for belt in chain_belt_points:
+        spline_belt = curve.splines.new('BEZIER')
+        spline_belt.bezier_points.add(len(belt) - 1)
+        fmt = lambda v: f"({v.x:.3f}, {v.y:.3f}, {v.z:.3f})"
+        #for i, (L, A, R) in enumerate(belt):
+        #    print(f"{i:03d}  L={fmt(L)}  A={fmt(A)}  R={fmt(R)}")
+        k = 1.0 / 3.0  # hermite -> bezier scaler
+        for i, (L, A, R) in enumerate(belt):
+            bp = spline_belt.bezier_points[i]
+            bp.co = L
+            bp.handle_left = L - (A * k) 
+            bp.handle_right = L + (R * k)
+            bp.handle_left_type = 'FREE'
+            bp.handle_right_type = 'FREE'
+    
+    #plot lift points
+    if chain_lift_points:
+        for lift in chain_lift_points:
+            spline_lift = curve.splines.new('BEZIER')
+            spline_lift.bezier_points.add(len(lift) - 1)
+            fmt = lambda v: f"({v.x:.3f}, {v.y:.3f}, {v.z:.3f})"
+            #for i, (L, A, R) in enumerate(lift):
+            #    print(f"{i:03d}  L={fmt(L)}  A={fmt(A)}  R={fmt(R)}")
+            k = 1.0 / 3.0  # hermite -> bezier scaler
+            for i, (L, A, R) in enumerate(lift):
+                bp = spline_lift.bezier_points[i]
+                bp.co = L
+                bp.handle_left = L - (A * k) 
+                bp.handle_right = L + (R * k)
+                bp.handle_left_type = 'FREE'
+                bp.handle_right_type = 'FREE'
+
+    obj = bpy.data.objects.new(f"ConveyorChain", curve)
+    
+    #obj.data.attributes.new(attr, prop['type'][0], "POINT")
+    # move the whole actor cause the splines are relative to it
+    pos, rot, scale = read_transform(transform)
+    obj.location = pos
+    obj.rotation_euler = rot
+    get_or_create_collection("Heavyweights","Import")
+    get_or_create_collection("Splines","Heavyweights")
+    get_or_create_collection("ConveyorChain","Splines").objects.link(obj)
+    
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    bpy.ops.object.convert(target='CURVES')
+    curve_data = obj.data
+    
+    new_attribute = curve_data.attributes.new(name="conveyor_type_mk", type="FLOAT2", domain="CURVE")
+    new_attribute.data.foreach_set("vector", type_mk)
+    
+    #for i in top_rot_list:
+    #    i = i+rot
+    
+    if top_rot_list:
+        curve_data.attributes.new("lift_top_rot", "FLOAT_VECTOR", "CURVE")
+        flat = [c for vec in top_rot_list for c in vec]
+        curve_data.attributes["lift_top_rot"].data.foreach_set("vector", flat)
+        
+    if passthrough:
+        new_attribute = curve_data.attributes.new(name="passthrough", type="FLOAT2", domain="CURVE")
+        new_attribute.data.foreach_set("vector", passthrough)
+    
+    try:
+        curve_data.attributes.new("lift_rot", "FLOAT_VECTOR", "CURVE")
+        flat = [c for vec in rot_list for c in vec]
+        curve_data.attributes["lift_rot"].data.foreach_set("vector", flat)
+    except Exception as e:
+            print("failed to create scale attribute",e)
+    
+    try:   
+        curve_data.attributes.new("primary_color", "FLOAT_COLOR", "CURVE")
+        flat = [c for rgba in primary_colors for c in rgba]
+        curve_data.attributes["primary_color"].data.foreach_set("color", flat)
+    except Exception as e:
+        print("failed to create scale attribute",e)
+    
+    try:   
+        curve_data.attributes.new("secondary_color", "FLOAT_COLOR", "CURVE")
+        flat = [c for rgba in secondary_colors for c in rgba]
+        curve_data.attributes["secondary_color"].data.foreach_set("color", flat)
+    except Exception as e:
+        print("failed to create scale attribute",e)
+    
+    try:
+        curve_data.attributes.new("paint_index", "INT", "CURVE")
+        flat = [idx for idx in paint_type]
+        curve_data.attributes["paint_index"].data.foreach_set("value", flat)
+    except Exception as e:
+        print("failed to create scale attribute",e)
+    
+    node_group = bpy.data.node_groups["Conveyer Cains From Spline"]
+    mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
+    mod.node_group = node_group
+    
+    set_geonode_input(mod, "Lifts Collection", bpy.data.collections.get("Lifts"))
+    set_geonode_input(mod, "Lift Parts Collection", bpy.data.collections.get("LiftParts"))
+    set_geonode_input(mod, "Belts Collection", bpy.data.collections.get("ConveyorBelts"))
+    if use_proxy:
+        set_geonode_input(mod, "Use Proxy Mesh", True)
+    else:
+        set_geonode_input(mod, "Use Proxy Mesh", False)
+        
+    if hide_buildable:
+        obj.hide_viewport = True
+    
+    #progress_in = 100
+    print(f"Imported Conveyor chain from save file")

@@ -16,6 +16,7 @@ import time
 from .get_models import *
 from .import_save_data import *
 from .populate_buildable_to_asset import populate_buildable_to_asset
+from .get_lib_assets import get_lib_assets
 
 # Global variables to save progress
 total_entries = 0
@@ -36,6 +37,7 @@ is_asset_building = False
 stop_requested = False
 stop_get_requested = False
 stop_building_requested = False
+buildable_to_asset_path = ""
 x_corr = -500.0
 y_corr = 2800.0
 distance = 1000.0
@@ -83,7 +85,6 @@ def create_sign_text_collection(sign_name,parent_name = 'Import') -> bpy.types.C
 
 def create_weight_collection(buildable_name,parent_name = 'Import') -> bpy.types.Collection:
     return get_or_create_collection(buildable_name,parent_name)
-
 
 def remap(value, from_min, from_max, to_min, to_max):
     from_span = from_max - from_min
@@ -169,8 +170,8 @@ class SFImportPreferences(AddonPreferences):
     bl_idname = __package__
     
     sf_asset_lib_path: StringProperty( #type: ignore
-        name="SF asset Library path",
-        description="Path to the Satisfactory asset library folder. this is where the addon will copy the asset library files to. e.g. C:/Users/username/Documents/Blender/SF Asset Library. Note: if there is already an 'SF Asset Library' and 'blender_assets.cats.txt' file in the dir, it will be overwritten.",
+        name="SF Asset Library Path",
+        description="Path to the Satisfactory asset library folder. this is where the addon will copy the asset library files to. e.g. C:/Users/username/Documents/Blender/SF Asset Lib. Note: if there is already an 'SF Asset Lib' and 'blender_assets.cats.txt' file in the dir, it will be overwritten.",
         subtype = "DIR_PATH",
         options = {"LIBRARY_EDITABLE"},
         default = "",
@@ -178,7 +179,7 @@ class SFImportPreferences(AddonPreferences):
     )
     
     sf_asset_export_path: StringProperty( #type: ignore
-        name="SF asset export path",
+        name="SF Asset Export Path",
         description="Path to the folder where Fmodel exported Satisfactory assets.",
         subtype = "DIR_PATH",
         options = {"LIBRARY_EDITABLE"},
@@ -187,7 +188,7 @@ class SFImportPreferences(AddonPreferences):
     )
     
     custom_buildable_to_asset_path: StringProperty( #type: ignore
-        name="Buildable to Asset path",
+        name="Buildable To Asset Path",
         description="Path to the folder the custom buildable_to_asset.json file stored.",
         subtype = "DIR_PATH",
         options = {"LIBRARY_EDITABLE"},
@@ -227,7 +228,7 @@ class SFImportPreferences(AddonPreferences):
         lb_btt_text = "Copy asset library files to asset library path"
         if not self.sf_asset_lib_path:
             lb_btt_text = "Copy asset library files to asset library path (set path first)"
-        elif Path(self.sf_asset_lib_path,"SF_Asset_lib.blend").exists():
+        elif Path(self.sf_asset_lib_path,"SF_Asset_Lib.blend").exists():
             if not Path(self.sf_asset_lib_path,"blender_assets.cats.txt").exists():
                 lb_btt_text = "Overwrite asset library files in asset library path (blender_assets.cats.txt missing)"
             else:
@@ -245,32 +246,38 @@ class GenerateBuildableToAsset(Operator):
     bl_label = "Generate buildable_to_asset.json"
 
     def execute(self, context):
-        global total_entries
+        global total_entries,buildable_to_asset_path
         prefs = context.preferences.addons[__package__].preferences
         sf_asset_export_path = Path(prefs.sf_asset_export_path)
         
         buildable_to_asset_path = ""
         
+        if not prefs.sf_asset_export_path:
+            self.report({'ERROR'}, "SF asset export path is not set.")
+            return {'CANCELLED'}
+        if not sf_asset_export_path.exists():
+            self.report({'ERROR'}, f"SF asset export path does not exist: {sf_asset_export_path}")
+            return {'CANCELLED'}
+        
         if not prefs.custom_buildable_to_asset_path:
             total_entries = populate_buildable_to_asset(sf_asset_export_path)
-            buildable_to_asset_path = Path(__file__).parent / "buildable_to_asset.json"
         elif prefs.custom_buildable_to_asset_path:
             custom_buildable_to_asset_path = Path(prefs.custom_buildable_to_asset_path)
             if not custom_buildable_to_asset_path.exists():
                 self.report({'ERROR'}, f"Custom buildable_to_asset.json path does not exist: {custom_buildable_to_asset_path}")
                 return {'CANCELLED'}
             total_entries = populate_buildable_to_asset(sf_asset_export_path, custom_buildable_to_asset_path)
-            buildable_to_asset_path = Path(prefs.custom_buildable_to_asset_path, "buildable_to_asset.json")
+            buildable_to_asset_path = os.path.join(prefs.custom_buildable_to_asset_path, "buildable_to_asset.json")
 
         self.report({'INFO'}, f"buildable_to_asset.json file generated at: {buildable_to_asset_path}")
         return {'FINISHED'}
     
 def copy_blend_to_asset_lib(asset_lib_path: Path):
-    # Copy the SF_Asset_lib.blend and blender_assets.cats.txt files to the asset library path
-    source_blend = Path(__file__).parent / "SF asset lib" / "SF_Asset_lib.blend"
-    source_cats = Path(__file__).parent / "SF asset lib" / "blender_assets.cats.txt"
+    # Copy the SF_Asset_Lib.blend and blender_assets.cats.txt files to the asset library path
+    source_blend = Path(__file__).parent / "SF Asset Lib" / "SF_Asset_Lib.blend"
+    source_cats = Path(__file__).parent / "SF Asset Lib" / "blender_assets.cats.txt"
     
-    dest_blend = asset_lib_path / "SF_Asset_lib.blend"
+    dest_blend = asset_lib_path / "SF_Asset_Lib.blend"
     dest_cats = asset_lib_path / "blender_assets.cats.txt"
     
     if not source_blend.exists() or not source_cats.exists():
@@ -299,6 +306,1146 @@ class CopyBlendToAssetLib(Operator):
         self.report({'INFO'}, f"Asset library files copied to: {lib_path}")
         return {'FINISHED'}
 
+def import_lightweights_task(save: s.SaveGame, color_map: dict):
+    global progress,progress_in, is_scanning, stop_requested,run_once,total,total_imported,total_instances,current_buildable,buildable_to_asset_path
+    progress = 0.0
+    progress_in = 0.0
+    cls = save.allSaveObjects()
+    # get the lightweight buildable subsystem
+    lbs = get_lbs(save)
+    instances_by_class_ref = lbs.mBuildableClassToInstanceArray
+    
+    total = 0
+    for buildable in list(instances_by_class_ref.Keys):
+        class_path = buildable.PathName
+        if not class_path:
+            raise Exception("Missing class path, how can this happen?")
+        instances = instances_by_class_ref[buildable]
+        if not instances:
+            continue    
+        total += 1
+    
+    count = 0
+    for i,class_ref in enumerate(list(instances_by_class_ref.Keys),1):
+        if stop_requested:
+            progress = 0.0
+            break
+        progress_in = 0.0
+        class_path = class_ref.PathName
+    
+        if not class_path:
+            raise Exception("Missing class path, how can this happen?")
+    
+        instances = instances_by_class_ref[class_ref]
+        total_instances = len(instances)
+        name = class_path.split(".")[-1]
+    
+        # if 'Beam' not in name:
+        #    continue;
+    
+        if not instances:
+            continue  
+        
+        #tmp_instances = []
+        #for ints in instances:
+        #    if x_corr <= ints.X <= x_corr + distance:
+        #        tmp_instances.append(ints)
+        
+        current_buildable = f"{name}: {total_instances} instances"  
+        verts, rotations, scales = map(
+            list, zip(*(read_transform(i.Transform) for i in instances))
+        )
+    
+        colors = [read_colors(i,color_map) for i in instances]
+        primary_colors, secondary_colors, paint_type = zip(*colors)   
+    
+        if 'Build_Beam_Painted_C' in name or 'Build_Beam_C' == name:
+            lengths = [read_length(i) for i in instances]
+            lengths = [l / 4.0 for l in lengths]
+        else:
+            lengths = [read_length(i) for i in instances]
+            
+        prop_attr = []
+        if "Build_Beam_Shelf_" in name:
+            beam_type = [1] * len(instances)
+            prop_attr.append({
+                "beam_type" : beam_type,
+                    "type":["INT","value"]
+            })
+        
+        progress_in = 50.0
+        bpy.app.timers.register(functools.partial(
+            create_buildable_object, 
+            name,
+            verts,
+            rotations,
+            scales,
+            primary_colors,
+            secondary_colors,
+            paint_type,
+            lengths,
+            prop_attr,
+            buildable_to_asset_path=buildable_to_asset_path
+            ), first_interval=0)
+        progress_in = 100.0
+        #print(class_path.split('.')[1],len(instances))
+        time.sleep(0.1)
+        count += 1
+        total_imported += 1#count
+        progress = (total_imported / total) * 100
+        
+    #if not stop_requested:
+    #    progress = 100.0
+    #is_scanning = False
+    #stop_requested = False
+    bpy.app.timers.register(update_ui)
+
+def import_heavyweights_task(save: s.SaveGame, color_map: dict):
+    global progress, is_scanning, stop_requested,run_once,total,total_imported,current_buildable,total_instances,current_buildable,progress_in,buildable_to_asset_path
+    save_objects = save.allSaveObjects()
+    progress = 0.0
+    progress_in = 0.0
+    all_classes = set() # all buildable classes in the save
+    factory_classes = [] # all factory buildable instances
+    exclude_factory = [ # exclude from default importing method 
+        "Build_RailroadTrack",
+        #"Build_RailroadTrackIntegrated_C_Points",
+        #"Build_PowerLine_C",
+        "Build_ConveyorBelt",
+        "Build_Pipeline_",
+        "Build_PipelineMK2",
+        "Build_PipeHyper_C",
+        "Build_ConveyorLift",
+        "Build_PipelineFlowIndicator_C"
+    ]
+    spline_buildables = [
+        "Build_PipelineMK2_",
+        "Build_Pipeline_",
+        "Build_RailroadTrack",
+        "Build_PipeHyper_C",
+    ]
+    float_attributes = [
+        "mHeight",
+        "mHeightOfCabin",
+        "mLaunchAngle",
+        "mSnappedBuildingThickness",
+        "mSelectedPoleVersion",
+        "mHighlightEffectState",
+        "mVerticalAngle",
+        "mFixtureAngle"
+    ]
+    vec_attributes = [
+            "mPoleScale",
+        ]
+    EX_PROP_BUILDS = [
+        "Build_ConveyorPole_C",
+        "Build_PipelineSupport_C",
+        "Build_SignPole_",
+        "Build_PipeHyperSupport_C"
+    ]
+    hub_stage = [0]
+    
+    for obj in save_objects:
+        if not obj.isActor():
+            continue    
+    
+        header = obj.Header
+        className =  header.ObjectHeader.ClassName
+        classRef =  header.ObjectHeader.Reference.PathName
+        actor = obj.Object  
+        
+        if className.startswith('/Game/FactoryGame/Buildable/') and '.Build_' in className and className.endswith('_C') or '.BP_ElevatorCabin_C' in className:
+            all_classes.add(className.split('.')[-1])
+            factory_classes.append(obj)
+        
+        if className.startswith('/Game/FactoryGame/Prototype/') and '.Build_' in className and className.endswith('_C'):
+            all_classes.add(className.split('.')[-1])
+            factory_classes.append(obj)
+    
+        if "BP_PlayerState_C" in classRef:
+            for prop in actor.Properties:  
+                prop_name = prop.Name.Name
+                if 'mPlayedMessages' in prop_name:
+                    for msg in prop.Value.Values:
+                        if "Tier" in msg.PathName:
+                            hub_stage = [5]
+                            break
+                        elif "MSG_Onboarding_HUB_Upgrade6" in msg.PathName:
+                            hub_stage = [5]
+                            break
+                        elif "MSG_Onboarding_HUB_Upgrade5" in msg.PathName:
+                            hub_stage = [4]
+                        elif "MSG_Onboarding_HUB_Upgrade4" in msg.PathName:
+                            hub_stage = [4]
+                        elif "MSG_Onboarding_HUB_Upgrade3" in msg.PathName:
+                            hub_stage = [3]
+                        elif "MSG_Onboarding_HUB_Upgrade2" in msg.PathName:
+                            hub_stage = [2]
+                        elif "MSG_Onboarding_HUB_Upgrade1" in msg.PathName:
+                            hub_stage = [1]
+                        else:
+                            hub_stage = [5]
+
+    total_fact_instances = 0
+    for factory in all_classes:
+        ex = False
+        for exc in exclude_factory:
+            if exc in factory:
+                ex = True
+        if not ex and not factory.startswith('Build_StandaloneWidgetSign_') and not factory.startswith('Build_PowerLine_') and not any(building in factory for building in spline_buildables):
+            total_fact_instances += 1
+    total = total_fact_instances
+    
+    count = 0
+    for factory in all_classes:
+        if stop_requested:
+            progress = 0.0
+            break
+        instances = [[], []] # --> [transforms], [actors]
+        
+        # group buildable instances by buildable class 
+        for factory_class in factory_classes:
+            header = factory_class.Header
+            transform = header.Transform
+            actor = factory_class.Object
+            cls_name = header.ObjectHeader.Reference.PathName
+            
+            if factory in cls_name:
+                instances[0].append(transform)
+                instances[1].append(actor)
+        
+        total_instances = len(instances[0])
+        
+        if not factory.startswith('Build_StandaloneWidgetSign_') and not factory.startswith('Build_PowerLine_') and not any(building in factory for building in spline_buildables):
+            prop_attr = []
+            height_attr = []
+            passthorugh_thickness_attr = []
+            pole_scale_attr = []
+            attr_dict = {}
+            needs_attr = []
+            attr_used = set()
+            pole_scale_used = False
+            passthrough_type = []
+            progress_in = 0.0
+            
+            current_buildable = f"{factory}: {total_instances} instances" 
+                            
+            for i in float_attributes:
+                attr_dict.update({i:[]})
+            
+            skip = False
+            for exc in exclude_factory:
+                if exc in factory:
+                    print(f"Excluding {exc}")
+                    skip = True
+            if skip:
+                continue
+            
+            print(factory,f" has {len(instances[1])} instances")
+            count_p = 0
+            total_instances = len(instances[0])
+            for actor in instances[1]:
+                if stop_requested:
+                    progress = 0.0
+                    break
+                height_check = False
+                pole_scale_check = False
+                attr_check = {}
+                if "Build_FoundationPassthrough_Hypertube_C" in factory:
+                    passthrough_type.append(1)
+                else:
+                    passthrough_type.append(0)
+                
+                for prop in actor.Properties:
+                    prop_name = prop.Name.Name
+                    attr_check[prop_name] = 0
+                    attr_value= None
+                    for i in float_attributes:
+                        if i == prop_name:
+                            attr_value = float(prop.Value)
+                            
+                    if attr_value:
+                        if not attr_dict.get(prop_name):
+                            attr_dict.update({prop_name:[]})
+                        attr_dict[prop_name].append(attr_value)
+                        attr_check[prop_name] = 1
+                        needs_attr.append(factory)
+                        attr_used.add(prop_name)  
+                    else:
+                        if not attr_dict.get(prop_name):
+                            attr_dict.update({prop_name:[]})
+                        attr_dict[prop_name].append(0) 
+                        
+                    if 'mSnappedBuildingThickness' in prop_name:
+                        passthorugh_thickness_attr.append(prop.Value)
+                    if 'mPoleScale' in prop_name:
+                        pole_scale_attr.extend([
+                            prop.Value.Data.X,
+                            prop.Value.Data.Y
+                        ])
+                        pole_scale_used = True
+                        pole_scale_check = True
+                        
+                if not pole_scale_check:
+                    pole_scale_attr.extend([0.0,0.0])
+                
+                for i in attr_dict:
+                    check = attr_check.get(i,2)
+                    if check != 1:
+                        if "mFixtureAngle" in i:
+                            attr_dict[i].append(45.0)
+                        else:
+                            attr_dict[i].append(0.0)
+                        
+                verts, rotations, scales = map(
+                    list, zip(*(read_transform(i) for i in instances[0]))
+                )
+                count_p += 1
+                progress_in = (count_p / total_instances) * 98
+            
+            for att_u in attr_used:
+                if len(attr_dict[att_u]) > total_instances:
+                    attr_dict[att_u] = attr_dict[att_u][:total_instances]
+                elif len(attr_dict[att_u]) < total_instances:
+                    diff = total_instances - len(attr_dict[att_u])
+                    attr_dict[att_u].extend(attr_dict[att_u][:1]*diff)
+                #if "mFixtureAngle" in att_u:
+                #    f_angle = attr_dict[att_u]
+                #    if len(f_angle) > total_instances:
+                #        diff = len(f_angle) - total_instances
+                #        for i in range(diff):
+                #            attr_dict[att_u] = attr_dict[att_u][:total_instances]#.pop(len(f_angle) - 1) TODO: need a better way
+                prop_attr.append({
+                        att_u : attr_dict[att_u],
+                        "type":["FLOAT","value"]
+                    })
+                
+            if pole_scale_used:
+                prop_attr.append({
+                        "pole_scale" : pole_scale_attr,
+                        "type":["FLOAT2","vector"]
+                    })
+            
+            if "Build_TradingPost" in factory:
+                prop_attr.append({
+                    "hub_stage" : hub_stage,
+                        "type":["INT","value"]
+                })
+            
+            if "Build_FoundationPassthrough_" in factory:
+                prop_attr.append({
+                    "passthrough_type" : passthrough_type,
+                        "type":["INT","value"]
+                })
+            
+            colors = [
+                read_colors(prop.Value.Data[0].Value.PathName,color_map) 
+                for i in instances[1]
+                for prop in i.Properties
+                if 'mCustomizationData' in prop.Name.Name
+                ]
+            
+            if colors:
+                primary_colors, secondary_colors, paint_type = zip(*colors)
+            
+            progress_in = 99
+            bpy.app.timers.register(functools.partial(
+                create_buildable_object, 
+                factory,
+                verts,
+                rotations,
+                scales,
+                primary_colors,
+                secondary_colors,
+                paint_type,
+                prop_attr=prop_attr,
+                is_heavy = True,
+                buildable_to_asset_path=buildable_to_asset_path
+                ), first_interval=0)
+            progress_in = 100.0
+            time.sleep(0.1)
+            count += 1
+            total_imported += 1
+            
+            progress = (total_imported / total) * 100
+            
+    #if not stop_requested:
+    #    progress = 100.0
+    #is_scanning = False
+    #stop_requested = False
+    bpy.app.timers.register(update_ui)
+
+def import_signs_task(save: s.SaveGame, color_map: dict):
+    global progress, is_scanning, stop_requested,run_once,total,total_imported,current_buildable,total_instances,current_buildable,progress_in,buildable_to_asset_path
+    save_objects = save.allSaveObjects()
+    progress = 0.0
+    progress_in = 0.0
+    all_classes = set() # all buildable classes in the save
+    factory_classes = [] # all factory buildable instances
+    exclude_factory = [ # exclude from default importing method 
+        "Build_RailroadTrack",
+        #"Build_RailroadTrackIntegrated_C_Points",
+        #"Build_PowerLine_C",
+        "Build_ConveyorBelt",
+        "Build_Pipeline_",
+        "Build_PipelineMK2",
+        "Build_PipeHyper_C",
+        "Build_ConveyorLift",
+        "Build_PipelineFlowIndicator_C"
+    ]
+    
+    EX_PROP_BUILDS = [
+        "Build_ConveyorPole_C",
+        "Build_PipelineSupport_C",
+        "Build_SignPole_",
+        "Build_PipeHyperSupport_C"
+    ]
+    
+    for obj in save_objects:
+        if not obj.isActor():
+            continue    
+    
+        header = obj.Header
+        className =  header.ObjectHeader.ClassName
+        classRef =  header.ObjectHeader.Reference.PathName
+        actor = obj.Object  
+        
+        if className.startswith('/Game/FactoryGame/Buildable/') and '.Build_StandaloneWidgetSign_' in className and className.endswith('_C'):
+            all_classes.add(className.split('.')[-1])
+            factory_classes.append(obj)
+
+    total_sign_instances = 0
+    for factory in all_classes:
+        ex = False
+        for exc in exclude_factory:
+            if exc in factory:
+                ex = True
+        if not ex:
+            total_sign_instances += 1
+    total = total_sign_instances
+    
+    for factory in all_classes:
+        if stop_requested:
+            progress = 0.0
+            break
+        progress_in = 0.0
+        
+        current_buildable = f"{factory}: {total_instances} instances" 
+        instances = [[], []] # --> [transforms], [actors]
+        
+        # group buildable instances by buildable class 
+        for factory_class in factory_classes:
+            header = factory_class.Header
+            transform = header.Transform
+            actor = factory_class.Object
+            cls_name = header.ObjectHeader.Reference.PathName
+            
+            if factory in cls_name:
+                instances[0].append(transform)
+                instances[1].append(actor)
+        
+        total_instances = len(instances[0])
+        prop_attr = []
+        color_attr = []
+        text_attr= []
+        icons_attr = []
+        ems_attr = []
+        glos_attr = []
+        color_idx_f = []
+        color_idx_b = []
+        color_idx_a = []
+        verts, rotations, scales = [],[],[]
+    
+        count_p = 0
+        for actor in instances[1]:
+            if stop_requested:
+                progress = 0.0
+                break
+            ems_check = False
+            glos_check = False
+            aux_check = False
+            for prop in actor.Properties:
+                #if 'mSoftActivePrefabLayout' in prop.Name.Name:
+                #    #print(f"{prop.Name.Name}: {prop.Value.AssetPath.AssetName.Name}")
+                #    # TODO use a layout map
+                
+                if 'mPrefabTextElementSaveData' in prop.Name.Name:
+                    text_attr.append(tuple([idx.Data[1].Value for idx in prop.Value.Values]))
+                if 'mPrefabIconElementSaveData' in prop.Name.Name:
+                    icons_attr.append(tuple([idx.Data[1].Value for idx in prop.Value.Values])) 
+                if 'mForegroundColor' in prop.Name.Name:
+                    color_idx_f.append(
+                        {
+                            "R":prop.Value.Data.R,
+                            "G":prop.Value.Data.G,
+                            "B":prop.Value.Data.B,
+                            "A":prop.Value.Data.A
+                        }
+                    )
+                if 'mBackgroundColor' in prop.Name.Name:
+                    color_idx_b.append(
+                        {
+                            "R":prop.Value.Data.R,
+                            "G":prop.Value.Data.G,
+                            "B":prop.Value.Data.B,
+                            "A":prop.Value.Data.A
+                        }
+                    )  
+                if 'mAuxilaryColor' in prop.Name.Name:
+                    color_idx_a.append(
+                        {
+                            "R":prop.Value.Data.R,
+                            "G":prop.Value.Data.G,
+                            "B":prop.Value.Data.B,
+                            "A":prop.Value.Data.A
+                        }
+                    ) 
+                    aux_check = True
+                if 'mEmissive' in prop.Name.Name:
+                    ems_attr.append(prop.Value)
+                    ems_check = True
+                if 'mGlossiness' in prop.Name.Name:
+                    glos_attr.append(prop.Value)
+                    glos_check = True
+            
+            if not ems_check:
+                ems_attr.append(1.0)
+            
+            if not glos_check:
+                glos_attr.append(0.0)
+                
+            if not aux_check:
+                color_idx_a.append(
+                    {
+                            "R":0.0,
+                            "G":0.0,
+                            "B":0.0,
+                            "A":1.0
+                        }
+                )
+            
+            verts, rotations, scales = map(
+                list, zip(*(read_transform(i) for i in instances[0]))
+                )
+            
+            count_p += 1
+            progress_in = (count_p / total_instances) * 98
+            
+        prop_attr.append({
+            "foreground_color" : [(c["R"], c["G"], c["B"], c["A"]) for c in color_idx_f],
+            "type":["FLOAT_COLOR","color"]
+            })
+        prop_attr.append({
+            "background_color" : [(c["R"], c["G"], c["B"], c["A"]) for c in color_idx_b],
+            "type":["FLOAT_COLOR","color"]
+            })
+        prop_attr.append({
+            "auxilary_color" : [(c["R"], c["G"], c["B"], c["A"]) for c in color_idx_a],
+            "type":["FLOAT_COLOR","color"]
+            })
+        
+        #text_id = 0 
+        ## text attributes
+        #prop_attr.append({
+        #    "text_id" : [ (text_id + 1) if len(i) == 3 else (text_id + 1) for i in text_attr],
+        #    "type":["FLOAT","value"]
+        #    })
+        prop_attr.append({
+            "text" : [ (i[0],i[1],i[2]) if len(i) == 3 else (i[0],i[1],"") for i in text_attr],
+            "type":["FLOAT_VECTOR","vector"]
+            })
+        
+        icons_attr_final = []
+        for icons in icons_attr:
+            if len(icons) == 2:
+                icons_attr_final.extend([icons[0],icons[1],0])
+            else:
+                icons_attr_final.extend(icons)
+        # icon attributes
+        prop_attr.append({
+            "icons" : icons_attr_final,
+            "type":["FLOAT_VECTOR","vector"]
+            }) 
+        
+        # emission attributes
+        prop_attr.append({
+            "ems" : ems_attr,
+            "type":["FLOAT","value"]
+            })
+        
+        # glossiness attributes
+        prop_attr.append({
+            "glos" : glos_attr,
+            "type":["FLOAT","value"]
+            })
+        
+        progress_in = 99
+        bpy.app.timers.register(functools.partial(
+            create_buildable_object, 
+            factory,
+            verts,
+            rotations,
+            scales,
+            prop_attr=prop_attr,
+            buildable_to_asset_path=buildable_to_asset_path
+            ), first_interval=0)
+        progress_in = 100.0
+        time.sleep(0.1)
+        total_imported += 1
+        progress = (total_imported / total) * 100
+        
+    bpy.app.timers.register(update_ui)
+
+def import_splines_task(save: s.SaveGame, color_map: dict):
+    global progress, is_scanning, stop_requested,run_once,total,total_imported,progress_in,total_instances,current_buildable,buildable_to_asset_path
+    save_objects = save.allSaveObjects()
+    progress = 0.0
+    progress_in = 0.0
+    all_classes = set() # all buildable classes in the save
+    factory_classes = [] # all factory buildable instances
+    exclude_factory = [ # exclude from default importing method 
+        #"Build_RailroadTrack",
+        #"Build_RailroadTrackIntegrated_C_Points",
+        #"Build_PowerLine_C",
+        #"Build_ConveyorBelt",
+        #"Build_Pipeline_",
+        #"Build_PipelineMK2",
+        #"Build_PipeHyper_C",
+        #"Build_ConveyorLift",
+        "Build_PipelineFlowIndicator_C"
+    ]
+    spline_buildables = [
+        "Build_PipelineMK2_",
+        "Build_Pipeline_",
+        "Build_RailroadTrack",
+        "Build_PipeHyper_C",
+    ]
+    conveyor_dict = {}
+    
+    for obj in save_objects:
+        if not obj.isActor():
+            continue    
+    
+        header = obj.Header
+        className =  header.ObjectHeader.ClassName
+        classRef =  header.ObjectHeader.Reference.PathName
+        actor = obj.Object  
+        
+        if className.startswith('/Game/FactoryGame/Buildable/') and '.Build_' in className and className.endswith('_C'):
+            all_classes.add(className.split('.')[-1]) # instances
+            factory_classes.append(obj) # buildables
+        
+        if className.startswith('/Game/FactoryGame/Buildable/Factory/Conveyor') and "Mk" in className:
+           conveyor_dict[classRef] = None
+           top_rotations = {}
+           passthroughs = []
+           rotations = {
+               'W':header.Transform.Rotation.W,
+               'X':header.Transform.Rotation.X,
+               'Y':header.Transform.Rotation.Y,
+               'Z':header.Transform.Rotation.Z
+           }
+           
+           colors = []
+           for prop in actor.Properties:
+               prop_name = prop.Name.Name
+               prop_data = None
+               if 'mSnappedPassthroughs' in prop_name:
+                   prop_data = prop.Value
+                   for i in prop_data.Values:
+                       if i.PathName:
+                           passthroughs.append(1)
+                       else:
+                           passthroughs.append(0)
+               if 'mTopTransform' in prop_name:
+                   for i in prop.Value.Data:
+                       if "Rotation" == i.Name.Name:
+                           prop_data = i.Value
+                   if prop_data:
+                       top_rotations = {
+                           'W':prop_data.Data.W,
+                           'X':prop_data.Data.X,
+                           'Y':prop_data.Data.Y,
+                           'Z':prop_data.Data.Z,
+                       }
+           colors = [
+               read_colors(prop.Value.Data[0].Value.PathName,color_map) 
+               for prop in actor.Properties
+               if 'mCustomizationData' in prop.Name.Name
+               ]
+           
+           conveyor_dict[classRef] = {
+               "Rotations":rotations,
+               "Colors":colors,
+               "TopRotation":top_rotations,
+               "Passthroughs":passthroughs
+           }
+
+    tot_chains = 0
+    for obj in save.mPersistentAndRuntimeData.SaveObjects:
+        if not obj.isActor():
+            continue
+        header = obj.Header
+        className =  header.ObjectHeader.ClassName
+        
+        if className.startswith( '/Script/FactoryGame.FGConveyorChainActor'):
+            tot_chains += 1
+    
+    total_spline_instances = 0
+    total_spline_buildables = 0
+    for factory in all_classes:
+        for factory_class in factory_classes:
+            header = factory_class.Header
+            cls_name = header.ObjectHeader.Reference.PathName
+            ex = False
+            for exc in exclude_factory:
+                if exc in factory:
+                    ex = True
+            if factory in cls_name and not ex:
+                if any(building in factory for building in spline_buildables) or factory.startswith('Build_PowerLine_'):
+                    total_spline_instances += 1
+        ex = any(exc in factory for exc in exclude_factory)
+        if not ex:
+            if any(building in factory for building in spline_buildables) or factory.startswith('Build_PowerLine_'):
+                total_spline_buildables += 1
+    total = total_spline_buildables + tot_chains
+    
+    # conveyor belt chains       
+    for obj in save.mPersistentAndRuntimeData.SaveObjects:
+        if stop_requested:
+            progress = 0.0
+            break     
+        if not obj.isActor():
+            continue
+        
+        header = obj.Header
+        transform = header.Transform
+        className =  header.ObjectHeader.ClassName
+        actor = obj.Object 
+        
+        
+        if className.startswith( '/Script/FactoryGame.FGConveyorChainActor'):
+            conv = lambda v: Vector((v.X/100, -v.Y/100, v.Z/100))
+            
+            #collect the splines in reverse order
+            #i dont know why but the starsAtLength property suggest reversing the order and it worked
+            points = []
+            chain_lift_points = []
+            chain_belt_points = []
+            chain_points = []
+            chain_count = 1
+            conveyor_name = ""
+            conveyor_ref = ""
+            conveyor_mk = 0
+            conveyor_attr = [0,0]
+            lift_top_rot = []
+            lift_rot = []
+            belt_top_rot = []
+            belt_rot = []
+            rot_list = [(0.0,0.0,0.0)]
+            top_rot_list = [(0.0,0.0,0.0)]
+            colors = []
+            primary_colors = [(0.0, 0.0, 0.0, 1.0)]
+            secondary_colors = [(0.0, 0.0, 0.0, 1.0)]
+            paint_type = [0]
+            passthrough = []
+            passthrough_lift = [0,0]
+            type_mk = [0,0]
+            type_mk_lift = []
+            type_mk_belt = []
+            
+            total_cons = len(actor.mChainSplineSegments)
+            current_buildable = f"{className.split('.')[-1]}: {total_cons} segments" 
+            count_p = 0
+            for i, seg in enumerate(reversed(actor.mChainSplineSegments)):
+                if stop_requested:
+                    progress = 0.0
+                    break
+                conveyor_ref = seg.ConveyorBase.PathName
+                conveyor_name = seg.ConveyorBase.PathName.split('_')[2]
+                conveyor_mk = conveyor_name[-1:]
+                is_belt = True if "Belt" in conveyor_name else False
+                #conveyor_attr.append(0)
+                top_rot = None
+                
+                conveyor_inst = conveyor_dict.get(conveyor_ref,[])
+                conveyor_colors = conveyor_inst.get("Colors")
+                conveyor_top_rot = conveyor_inst.get("TopRotation")
+                conveyor_rot = conveyor_inst.get("Rotations")
+                conveyor_passthroughs = conveyor_inst.get("Passthroughs")
+                
+                quat = Quaternion((
+                    -conveyor_rot['W'], 
+                    conveyor_rot['X'], 
+                    -conveyor_rot['Y'], 
+                    conveyor_rot['Z']
+                ))
+                euler = quat.to_euler("XYZ")
+                rot = euler.x, euler.y, euler.z
+                
+                if conveyor_top_rot:
+                    top_quat = Quaternion((
+                        -conveyor_top_rot['W'], 
+                        conveyor_top_rot['X'], 
+                        -conveyor_top_rot['Y'], 
+                        conveyor_top_rot['Z']
+                    ))
+                    top_euler = top_quat.to_euler("XYZ")
+                    top_rot = top_euler.x, top_euler.y, top_euler.z
+                    
+                    
+                p_colors, s_colors, p_type = zip(*conveyor_colors)
+                
+                pts = seg.SplinePointData
+                #if i > 0:
+                #    pts = pts[1:]  # skip segment join
+                
+                chain_points = []
+                if not is_belt:  
+                    for p in pts:
+                        chain_count = 0
+                        chain_points.append((
+                            conv(p.Location),
+                            conv(p.ArriveTangent),
+                            conv(p.LeaveTangent)
+                            ))
+                    primary_colors.append(p_colors[0])
+                    secondary_colors.append(s_colors[0])
+                    paint_type.append(p_type[0])
+                    lift_rot.append(rot)
+                    if conveyor_top_rot:
+                        lift_top_rot.append(top_rot)
+                    else:
+                        lift_top_rot.append((0.0,0.0,0.0))
+                    if conveyor_passthroughs:
+                        passthrough_lift.append(conveyor_passthroughs[0])
+                        passthrough_lift.append(conveyor_passthroughs[1])
+                    else:
+                        passthrough_lift.append(0)
+                        passthrough_lift.append(0)
+                    type_mk_lift.append(int(is_belt))
+                    type_mk_lift.append(int(conveyor_mk))
+                    
+                
+                if is_belt: 
+                    for p in pts:
+                        if chain_count > 0:
+                            chain_points.append((
+                                conv(p.Location),
+                                conv(p.ArriveTangent),
+                                conv(p.LeaveTangent)
+                                ))
+                        points.append((
+                            conv(p.Location),
+                            conv(p.ArriveTangent),
+                            conv(p.LeaveTangent)
+                        ))
+                    primary_colors.append(p_colors[0])
+                    secondary_colors.append(s_colors[0])
+                    paint_type.append(p_type[0])
+                    belt_rot.append(rot)
+                    belt_top_rot.append((0.0,0.0,0.0))
+                    passthrough.append(0)
+                    passthrough.append(0)
+                    type_mk_belt.append(int(is_belt))
+                    type_mk_belt.append(int(conveyor_mk))
+                         
+                chain_count += 1
+                
+                if chain_points and is_belt:
+                    chain_belt_points.append((chain_points))
+                    
+                if chain_points and not is_belt:
+                    chain_lift_points.append((chain_points))
+
+                count_p += 1
+                progress_in = (count_p / total_cons) * 98
+
+            passthrough.extend(passthrough_lift)
+            type_mk.extend(type_mk_belt) 
+            type_mk.extend(type_mk_lift) 
+            
+            rot_list.extend(belt_rot)
+            rot_list.extend(lift_rot)
+            top_rot_list.extend(belt_top_rot)    
+            top_rot_list.extend(lift_top_rot)
+            
+            progress_in = 99
+            bpy.app.timers.register(
+                functools.partial(
+                    import_conveyor_chain,
+                    transform,
+                    points,
+                    chain_belt_points,
+                    chain_lift_points,
+                    type_mk,
+                    top_rot_list,
+                    passthrough,
+                    rot_list,
+                    primary_colors,
+                    secondary_colors,
+                    paint_type
+                    ), first_interval=0)
+            progress_in = 100.0
+            time.sleep(0.1)
+            total_imported += 1#count
+            progress = (total_imported / total) * 100
+            
+    count = 0
+    for factory in all_classes:
+        if stop_requested:
+            progress = 0.0
+            break
+        instances = [[], []] # --> [transforms], [actors]
+        
+        # group buildable instances by buildable class 
+        for factory_class in factory_classes:
+            header = factory_class.Header
+            transform = header.Transform
+            actor = factory_class.Object
+            cls_name = header.ObjectHeader.Reference.PathName
+            
+            if factory in cls_name:
+                instances[0].append(transform)
+                instances[1].append(actor)
+        
+        total_instances = len(instances[0])
+        
+        if factory.startswith('Build_PowerLine_'):
+            transform = instances[0]
+            actors = instances[1]
+            
+            current_buildable = f"{factory}: {total_instances} splines" 
+            progress_in = 0.0
+            for i,actor in enumerate(actors):
+                if stop_requested:
+                    progress = 0.0
+                    break
+                transform = instances[0][i]
+                passthroughs = ""
+                flow_indicator = False
+                inst_splines = []
+                conv = lambda v: Vector((v.X/100, -v.Y/100, v.Z/100))
+                
+                props = actor.Properties
+                for prop in props:
+                    prop_name = prop.Name.Name
+                    if 'mWireInstances' in prop_name:
+                        instance = prop.Value.Values
+                        for line in instance:
+                            spline_points = []
+                            spline_point = []
+                            for loc in line.Data: #point
+                                points = []
+                                if loc.Name.Name.startswith("Ca"):
+                                    point = loc.Value.Data
+                                    points.append(
+                                            conv(point)
+                                        )
+                                    points.append(
+                                            Vector((0,0,0))
+                                        )
+                                    points.append(
+                                            Vector((0,0,0))
+                                        )
+                                    spline_point.append(tuple(points))
+                            for i in spline_point:
+                                spline_points.append(i)
+                            inst_splines.append(spline_points)    
+            
+                progress_in = 50
+                bpy.app.timers.register(
+                    functools.partial(
+                        import_powerlines,
+                        factory,
+                        inst_splines,
+                        transform
+                        ), first_interval=0)
+                progress_in = 100.0
+                time.sleep(0.1)
+            count += 1
+            total_imported += 1#count
+            progress = (total_imported / total) * 100
+                #import_powerlines(factory, instances)
+                    
+        if any(building in factory for building in spline_buildables):
+            transform = instances[0]
+            actors = instances[1]
+            current_buildable = f"{factory}: {total_instances} splines" 
+            progress_in = 0.0
+            count_p = 0
+            for i,actor in enumerate(actors): # per spline/instance
+                if stop_requested:
+                    progress = 0.0
+                    break
+                transform = instances[0][i]
+                passthroughs = []
+                flow_indicator = False
+                spline_points = []
+                conv = lambda v: Vector((v.X/100, -v.Y/100, v.Z/100))
+                
+                colors = [
+                        read_colors(prop.Value.Data[0].Value.PathName,color_map) 
+                        for prop in actor.Properties
+                        if 'mCustomizationData' in prop.Name.Name
+                        ]
+                #primary_colors, secondary_colors, paint_type = zip(*colors)
+                
+                props = actor.Properties
+                for prop in props:
+                    if stop_requested:
+                        progress = 0.0
+                        break
+                    prop_name = prop.Name.Name
+                    if 'mSnappedPassthroughs' in prop_name:
+                        prop_data = prop.Value
+                        for i in prop_data.Values:
+                            if i.PathName:
+                                passthroughs.append(1)
+                            else:
+                                passthroughs.append(0)
+                    elif 'mFlowIndicator' in prop_name:
+                        flow_indicator = True
+                    elif 'mSplineData' in prop_name:
+                        spline = prop.Value.Values
+                        for data in spline:
+                            
+                            points = []
+                            for value in data.Data:
+                                point = value.Value.Data
+                                
+                                points.append(
+                                    conv(point)
+                                )
+                            spline_points.append(tuple(points))
+                
+                    
+                bpy.app.timers.register(
+                    functools.partial(
+                        import_spline_buildables,
+                        factory,
+                        colors,
+                        spline_points,
+                        transform,
+                        passthroughs,
+                        flow_indicator,
+                        buildable_to_asset_path
+                        ), first_interval=0)
+                progress_in = 100.0
+                time.sleep(0.1)
+                
+                count_p += 1
+                progress_in = (count_p / total_instances) * 100
+                
+            count += 1
+            total_imported += 1#count
+            progress = (total_imported / total) * 100
+    bpy.app.timers.register(update_ui)
+
+def import_task(save: s.SaveGame, color_map: dict):
+    global progress,total,total_imported,is_scanning,stop_requested,execution_time,per_time
+    start_time = datetime.now()
+    execution_time = 0.0
+    progress = 0.0
+    final_total = 0
+    total = 0
+    current_imported = 0
+    total_imported = 0
+    
+    light_end_time = None
+    heavy_end_time = None
+    sign_end_time = None
+    spline_end_time = None
+    partial_time = [""]*4
+    
+    get_lightweight = bpy.context.scene.sf_importer_props.get_lightweight
+    get_heavyweight = bpy.context.scene.sf_importer_props.get_heavyweight
+    get_signs = bpy.context.scene.sf_importer_props.get_signs
+    get_splines = bpy.context.scene.sf_importer_props.get_splines
+    
+    if get_lightweight:
+        import_lightweights_task(save, color_map)
+        final_total = total
+        current_imported = total_imported
+        #progress = 0.0
+        total_imported = 0
+        #total = 0
+        light_end_time = datetime.now() - start_time
+        partial_time[0] = f"Lightweight {str(light_end_time)[:-4]}"
+    if get_heavyweight:
+        import_heavyweights_task(save, color_map)
+        if final_total == 0:
+            final_total = total
+        else:
+            final_total += total
+        #total = final_total
+        current_imported += total_imported
+        total_imported = 0
+        #progress = 0.0
+        heavy_end_time = datetime.now() - start_time
+        if light_end_time:
+            partial_time[1] = f"Heavyweight {str(heavy_end_time-light_end_time)[:-4]}"
+        else:
+            partial_time[1] = f"Heavyweight {str(heavy_end_time)[:-4]}"
+    
+    if get_signs:
+        import_signs_task(save, color_map)
+        if final_total == 0:
+            final_total = total
+        else:
+            final_total += total
+        #total = final_total
+        current_imported += total_imported
+        total_imported = 0
+        #progress = 0.0
+        sign_end_time = datetime.now() - start_time
+        if heavy_end_time and light_end_time:
+            partial_time[2] = f"Signs {str(sign_end_time - heavy_end_time)[:-4]}"
+        elif heavy_end_time:
+            partial_time[2] = f"Signs {str(sign_end_time - heavy_end_time)[:-4]}"
+        elif light_end_time:
+            partial_time[2] = f"Signs {str(sign_end_time - light_end_time)[:-4]}"
+        else:
+            partial_time[2] = f"Signs {str(sign_end_time)[:-4]}"
+            
+    if get_splines:    
+        import_splines_task(save, color_map)
+        if final_total == 0:
+            final_total = total
+        else:
+            final_total += total
+        #total = final_total
+        current_imported += total_imported
+        total_imported = 0
+        #progress = 0.0
+        spline_end_time = datetime.now() - start_time
+        if heavy_end_time and light_end_time and sign_end_time:
+            partial_time[3] = f"Spline {str(spline_end_time - sign_end_time)[:-4]}"
+        if heavy_end_time and light_end_time:
+            partial_time[3] = f"Spline {str(spline_end_time - heavy_end_time)[:-4]}"
+        if heavy_end_time:
+            partial_time[3] = f"Spline {str(spline_end_time - heavy_end_time)[:-4]}"
+        if light_end_time:
+            partial_time[3] = f"Spline {str(spline_end_time - light_end_time)[:-4]}"
+        if sign_end_time:
+            partial_time[3] = f"Spline {str(spline_end_time - sign_end_time)[:-4]}"
+        else:
+            partial_time[3] = f"Spline {str(spline_end_time)[:-4]}"
+
+
+    total = final_total
+    if not stop_requested:
+        total_imported = final_total
+    else:
+        total_imported = current_imported
+    
+    is_scanning = False
+    stop_requested = False
+    end_time = datetime.now()
+    execution_time = end_time - start_time   
+    per_time = partial_time
+    print(f"SF to Blender time: {execution_time} seconds")
+    bpy.app.timers.register(update_ui)
 
 def get_total_instances_task(save: s.SaveGame):
     global total_all_instances,is_get_scanning,stop_get_requested
@@ -435,14 +1582,14 @@ class ImportSaveButton(bpy.types.Operator):
     bl_label = "Start Save Import"
 
     def execute(self, context):
-        global is_scanning,is_get_scanning,is_asset_building, stop_requested,execution_time,start_process
+        global is_scanning,is_get_scanning,is_asset_building, stop_requested,execution_time,start_process,buildable_to_asset_path
         
         sf_asset_lib_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_lib_path
         sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
         if not bpy.context.preferences.addons[__package__].preferences.custom_buildable_to_asset_path:
-            buildable_to_asset_path = Path(__file__).parent / "buildable_to_asset.json"
+            buildable_to_asset_path = os.path.join(os.path.dirname(__file__), "buildable_to_asset.json")
         else:
-            buildable_to_asset_path = bpy.context.preferences.addons[__package__].preferences.custom_buildable_to_asset_path
+            buildable_to_asset_path = os.path.join(bpy.context.preferences.addons[__package__].preferences.custom_buildable_to_asset_path, "buildable_to_asset.json")
         
         if not sf_asset_lib_path:
             self.report({'ERROR'}, "Please set the asset library path in the addon preferences.")
@@ -510,13 +1657,39 @@ class ImportSaveButton(bpy.types.Operator):
             cls = save.allSaveObjects()
             
             color_map = import_color_slots(cls)
-        
+            
+            #if get_lightweight or get_heavyweight:
+            #    get_lib_result = get_lib_assets(data_type="NodeTree",asset_name="Buildables from Points",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
+            #    
+            #    if get_lib_result:
+            #        self.report({'INFO'}, get_lib_result)
+            #if get_signs:
+            #    get_lib_result = get_lib_assets(data_type="NodeTree",asset_name="Buildables from Points(signs)",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
+            #    
+            #    if get_lib_result:
+            #        self.report({'INFO'}, get_lib_result)
+            #if get_splines:
+            #    get_lib_result = get_lib_assets(data_type="NodeTree",asset_name="Buildables From Spline",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
+            #    
+            #    if get_lib_result:
+            #        self.report({'INFO'}, get_lib_result)
+            #    
+            #    get_lib_result = get_lib_assets(data_type="NodeTree",asset_name="Conveyer Cains From Spline",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
+            #
+            #    if get_lib_result:
+            #        self.report({'INFO'}, get_lib_result)
+                
+            get_lib_result = get_lib_assets(data_type="NodeTree",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
+
+            if get_lib_result:
+                self.report({'INFO'}, get_lib_result)
+            
             is_scanning = True
             self.report({'INFO'}, "Starting scan...")
-            #t1_thread = threading.Thread(target=import_task,args=(save,color_map))
-            #t1_thread.start()
+            t1_thread = threading.Thread(target=import_task,args=(save,color_map))
+            t1_thread.start()
             
-            #bpy.app.timers.register(update_ui)
+            bpy.app.timers.register(update_ui)
             ImportSaveButton.bl_label = "Stop Scan"
         else:
             self.report({'INFO'}, "Stopping scan...")
@@ -537,7 +1710,7 @@ class BuildAssetsButton(bpy.types.Operator):
         if not bpy.context.preferences.addons[__package__].preferences.custom_buildable_to_asset_path:
             buildable_to_asset_path = Path(__file__).parent / "buildable_to_asset.json"
         else:
-            buildable_to_asset_path = bpy.context.preferences.addons[__package__].preferences.custom_buildable_to_asset_path
+            buildable_to_asset_path = os.path.join(bpy.context.preferences.addons[__package__].preferences.custom_buildable_to_asset_path, "buildable_to_asset.json")
         
         if not sf_asset_lib_path:
             self.report({'ERROR'}, "Please set the asset library path in the addon preferences.")
@@ -661,9 +1834,9 @@ class VIEW3D_PT_SF_Asset_Builder_panel(Panel):
         props = scene.sf_importer_props
         
         # check if currrent blend file is asset library file, if not, show a warning message
-        if not Path(bpy.data.filepath).name == "SF_Asset_lib.blend":
-            layout.label(text="Current blend file is not SF_Asset_lib.blend", icon='INFO')
-            layout.label(text="Please open SF_Asset_lib.blend to continue building asset library", icon='INFO')
+        if not Path(bpy.data.filepath).name == "SF_Asset_Lib.blend":
+            layout.label(text="Current blend file is not SF_Asset_Lib.blend", icon='INFO')
+            layout.label(text="Please open SF_Asset_Lib.blend to continue building asset library", icon='INFO')
 
         build_button = layout.column()
         build_button.scale_y = 1.5
