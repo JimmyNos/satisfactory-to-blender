@@ -15,6 +15,8 @@ import math
 import satisfactory_save as s
 import time
 
+from .get_lib_assets import get_lib_assets
+
 # start common types
 Vec3 = tuple[float, float, float]
 Vec4 = tuple[float, float, float, float]
@@ -243,13 +245,15 @@ def read_length(i: s.FRuntimeBuildableInstanceData) -> float:
 # start geonode
 
 # map make buildable classes to corrisponding asset
-def buildable_class_to_object(cls: str,buildable_to_asset_path: str) -> [bpy.types.Object,Vec3,Vec3]:# | None:
+def buildable_class_to_object(cls: str,buildable_to_asset_path: str,is_factory:bool = False) -> [bpy.types.Object,Vec3,Vec3]:# | None:
     json_file_path = buildable_to_asset_path
     print(json_file_path)
     with open(json_file_path, 'r', encoding='utf-8') as f:
         map = json.load(f)
 
     name = map.get(cls)
+    
+    get_models_from_library = False #bpy.context.scene.sf_importer_props.get_models_from_library
     
     if "Build_PipelinePumpMk2" in cls:
         name = map.get("Build_PipelinePumpMK2_C")
@@ -259,6 +263,15 @@ def buildable_class_to_object(cls: str,buildable_to_asset_path: str) -> [bpy.typ
     
     mesh = name.get("ObjectName")
     
+    if get_models_from_library:
+        #if bpy.data.collections.get(mesh):
+            
+        get_lib_result = get_lib_assets(data_type="Collection",asset_name=mesh,asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend",col_type=is_factory)
+
+        if get_lib_result:
+            print(get_lib_result)
+            
+
     print(f"found object mapping: {cls}")
     print(f"object mapping name: {mesh}")
     
@@ -478,8 +491,10 @@ def create_buildable_object(
         mod.node_group = node_group
     # map a buildable to an asset object, set the default object flag if None to let the geonode supply its fallback
     #asset_obj = buildable_class_to_object(cls)
-    
-    result = buildable_class_to_object(cls,buildable_to_asset_path)
+    is_factory = False
+    if is_heavy or 'WidgetSign' in cls:
+        is_factory = True
+    result = buildable_class_to_object(cls,buildable_to_asset_path,is_factory)
     print(f"maping name: {result}")
     if result is not None:
         asset_obj, pos_offset, rot_offset = result
@@ -512,7 +527,6 @@ def create_buildable_object(
     
     #progress_in = 100
     print(f"Imported {cls} from save file")
-    
     
     #bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
     
@@ -570,13 +584,13 @@ def import_color_slots(cls: s.SaveGame) -> dict:
     return color_map
 
 def import_spline_buildables(name: str,
-                             colors: list,
-                             spline_points:list,
-                             transform:list,
-                             passthroughs:list,
-                             flow_indicator:bool,
-                             buildable_to_asset_path: str
-                             ):
+                            colors: list,
+                            spline_points:list,
+                            transform:list,
+                            passthroughs:list,
+                            flow_indicator:bool,
+                            buildable_to_asset_path: str
+                            ):
     #global progress_in
     
     use_proxy = bpy.context.scene.sf_importer_props.use_proxy
@@ -636,14 +650,14 @@ def import_spline_buildables(name: str,
     
     f_indicator_result = None
     if "Build_RailroadTrackIntegrated" in name:
-        result = buildable_class_to_object("Build_RailroadTrack_C",buildable_to_asset_path)
+        result = buildable_class_to_object("Build_RailroadTrack_C",buildable_to_asset_path,True)
     elif "Pipeline_NoIndicator" in name:
-        result = buildable_class_to_object("Build_Pipeline_C",buildable_to_asset_path)
+        result = buildable_class_to_object("Build_Pipeline_C",buildable_to_asset_path,True)
     elif "PipelineMK2_NoIndicator" in name:
-        result = buildable_class_to_object("Build_PipelineMK2_C",buildable_to_asset_path)
+        result = buildable_class_to_object("Build_PipelineMK2_C",buildable_to_asset_path,True)
     else:
-        result = buildable_class_to_object(name,buildable_to_asset_path)
-        f_indicator_result = buildable_class_to_object("Build_PipelineFlowIndicator_C",buildable_to_asset_path)
+        result = buildable_class_to_object(name,buildable_to_asset_path,True)
+        f_indicator_result = buildable_class_to_object("Build_PipelineFlowIndicator_C",buildable_to_asset_path,True)
 
     if f_indicator_result is not None:
         f_indicator_asset_obj, pos_offset, rot_offset = f_indicator_result

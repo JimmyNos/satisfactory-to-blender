@@ -170,6 +170,12 @@ class SF_Importer_Properties(PropertyGroup):
         description="Build materials for the imported models",
         default=False
     ) # type: ignore
+    
+    get_models_from_library: bpy.props.BoolProperty(
+        name="Use Library Models",
+        description="Append models from SF_Asset_Lib file before import save data instead of using models in current blend file. NOTE: The more buildable types in the save, the longer it will take and blender UI will be while it appends. Uses default_mesh if no models in blend file or SF_Asset_Lib.",
+        default=False
+    ) # type: ignore
 
 class SFImportPreferences(AddonPreferences):
     bl_idname = __package__
@@ -394,6 +400,13 @@ def import_lightweights_task(save: s.SaveGame, color_map: dict):
         progress_in = 100.0
         #print(class_path.split('.')[1],len(instances))
         time.sleep(0.1)
+        
+        #while not bpy.data.objects.get(name+"_Points"):
+        #    if stop_building_requested:
+        #        break 
+        #    print("waiting for model to finish importing")
+        #    time.sleep(0.5)   
+        
         count += 1
         total_imported += 1#count
         progress = (total_imported / total) * 100
@@ -2048,6 +2061,102 @@ class GetTotIntButton(bpy.types.Operator):
             GetTotIntButton.bl_label = "Get Total Instances"
         
         return {'FINISHED'}
+
+def get_total_instances_task(save: s.SaveGame):
+    global buildable_to_asset_path
+    with open(buildable_to_asset_path, 'r', encoding='utf-8') as f:
+        map = json.load(f)
+    
+    get_models_from_library = bpy.context.scene.sf_importer_props.get_models_from_library
+    get_lightweight = bpy.context.scene.sf_importer_props.get_lightweight
+    get_heavyweight = bpy.context.scene.sf_importer_props.get_heavyweight
+    get_signs = bpy.context.scene.sf_importer_props.get_signs
+    get_splines = bpy.context.scene.sf_importer_props.get_splines
+    
+    if get_lightweight:
+        lbs = get_lbs(save)
+        instances_by_class_ref = lbs.mBuildableClassToInstanceArray
+        for buildable in list(instances_by_class_ref.Keys):
+            if stop_get_requested:
+                break
+            class_path = buildable.PathName
+            if not class_path:
+                raise Exception("Missing class path, how can this happen?")
+            instances = instances_by_class_ref[buildable]
+            if not instances: 
+                continue  
+            
+            cls = class_path.split(".")[-1]
+            name = map.get(cls)
+            mesh = name.get("ObjectName")
+            get_lib_result = get_lib_assets(data_type="Collection",asset_name=mesh,asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
+            
+            if get_lib_result:
+                print(get_lib_result)
+            
+    all_classes = set() # all buildable classes in the save
+    factory_classes = [] # all factory buildable instances
+    exclude_factory = [ # exclude from default importing method 
+        "Build_RailroadTrack",
+        "Build_RailroadTrackIntegrated_C_Points",
+        "Build_PowerLine_C",
+        "Build_ConveyorBelt",
+        "Build_Pipeline_",
+        "Build_PipelineMK2",
+        "Build_PipeHyper_C",
+        "Build_ConveyorLift",
+        "Build_PipelineFlowIndicator_C"
+    ]   
+    spline_buildables = [
+        "Build_PipelineMK2_",
+        "Build_Pipeline_",
+        "Build_RailroadTrack",
+        "Build_PipeHyper_C",
+    ]
+    
+    save_objects = save.allSaveObjects()
+    
+    for obj in save_objects:
+        if stop_get_requested:
+            break
+        if not obj.isActor():
+            continue    
+    
+        header = obj.Header
+        className =  header.ObjectHeader.ClassName  
+    
+        if className.startswith('/Game/FactoryGame/Buildable/') and '.Build_' in className and className.endswith('_C') or '.BP_ElevatorCabin_C' in className:
+            all_classes.add(className.split('.')[-1])
+            factory_classes.append(obj)
+    
+        if className.startswith('/Game/FactoryGame/Prototype/') and '.Build_' in className and className.endswith('_C'):
+            all_classes.add(className.split('.')[-1])
+            factory_classes.append(obj)
+    
+    
+    for factory in all_classes:
+        if get_heavyweight:
+            if factory in exclude_factory:
+                continue
+        if get_signs:
+            if not "Build_StandaloneWidgetSign_" in factory:
+                continue
+        if get_splines:
+            if not factory in spline_buildables:
+                continue
+            
+        name = map.get(factory)
+        if "Build_PipelinePumpMk2" in factory:
+            name = map.get("Build_PipelinePumpMK2_C")
+        if not name:
+            print("skipping: ",factory)
+            continue
+        mesh = name.get("ObjectName")
+        get_lib_result = get_lib_assets(data_type="Collection",asset_name=mesh,asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend",col_type=True)
+        
+        if get_lib_result:
+            print(get_lib_result)
+        
     
 class ImportSaveButton(bpy.types.Operator):
     bl_idname = "button.import_save"
@@ -2079,6 +2188,8 @@ class ImportSaveButton(bpy.types.Operator):
         get_heavyweight = bpy.context.scene.sf_importer_props.get_heavyweight
         get_signs = bpy.context.scene.sf_importer_props.get_signs
         get_splines = bpy.context.scene.sf_importer_props.get_splines
+        
+        get_models_from_library = bpy.context.scene.sf_importer_props.get_models_from_library
         
         if not is_scanning and not is_get_scanning and not is_asset_building:
         #if not stop_requested:
@@ -2151,10 +2262,22 @@ class ImportSaveButton(bpy.types.Operator):
             #    if get_lib_result:
             #        self.report({'INFO'}, get_lib_result)
                 
-            get_lib_result = get_lib_assets(data_type="NodeTree",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
+            get_lib_result = get_lib_assets(data_type="NodeTree",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend",set_fake=True)
 
             if get_lib_result:
                 self.report({'INFO'}, get_lib_result)
+            
+            if get_models_from_library:
+                #if bpy.data.collections.get(mesh):
+                    
+                get_lib_result = get_lib_assets(data_type="Collection",asset_name="Utility",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
+
+                if get_lib_result:
+                    print(get_lib_result)
+            
+            if get_models_from_library:
+                self.report({'INFO'}, "Getting Models from asset library...")
+                get_total_instances_task(save)
             
             is_scanning = True
             self.report({'INFO'}, "Starting scan...")
@@ -2169,7 +2292,6 @@ class ImportSaveButton(bpy.types.Operator):
             ImportSaveButton.bl_label = "Start Scan"
         
         return {'FINISHED'}
-
 class BuildAssetsButton(bpy.types.Operator):
     bl_idname = "button.build_assets"
     bl_label = "Build Asset Library"
@@ -2280,6 +2402,7 @@ class VIEW3D_PT_SF_Importer_panel(Panel):
         # TODO: button to swap all to proxy mesh
     
         pro_col = layout.column()
+        pro_col.prop(props, "get_models_from_library")
         pro_col.prop(props, "use_proxy")
         pro_col.prop(props, "hide_buildable", text="Hide Buildable")
     

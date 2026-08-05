@@ -29,9 +29,12 @@ assets = [
     #{"Collection": "Assets"},
 ]
 
-def get_lib_assets(data_type:str,asset_name:str = "",asset_lib_name:str = "SF Asset Lib",asset_lib_blend:str = "SF_Asset_Lib.blend") -> str:
+def get_lib_assets(data_type:str,asset_name:str = "",asset_lib_name:str = "SF Asset Lib",asset_lib_blend:str = "SF_Asset_Lib.blend",col_type:bool =False,set_fake:bool = False) -> str:
     library_path = bpy.context.preferences.filepaths.asset_libraries.get(asset_lib_name).path
     as_col = get_or_create_collection("Assets")
+    bles_col = get_or_create_collection("Assets")
+    f_col = get_or_create_collection("Factory","Assets")
+    b_col = get_or_create_collection("Building","Assets")
     
     asset_lib_blend_path = os.path.join(library_path, asset_lib_blend)
     # get collections
@@ -44,19 +47,38 @@ def get_lib_assets(data_type:str,asset_name:str = "",asset_lib_name:str = "SF As
                 print(f"{asset_name} already exists in the current Blender session.")    
             
             inner_path = data_type
+            active_col = bpy.context.view_layer.active_layer_collection.collection
             bpy.ops.wm.append(
                 filepath=os.path.join(asset_lib_blend_path, inner_path, asset_name),
                 directory=os.path.join(asset_lib_blend_path, inner_path),
                 filename=asset_name,
-                clear_asset_data =True
+                clear_asset_data =True,
+                #active_collection = False
             )
             
             if asset_name in bpy.data.collections:
-                as_col.children.link(bpy.data.collections[asset_name])
-                bpy.context.scene.collection.children.unlink(bpy.data.collections[asset_name])
+                if col_type:
+                    f_col.children.link(bpy.data.collections[asset_name])
+                else:
+                    if "Utility" in asset_name:
+                        as_col.children.link(bpy.data.collections[asset_name])
+                    else:
+                        b_col.children.link(bpy.data.collections[asset_name])
+                
+                if bpy.context.scene.collection.children.get(asset_name):
+                    bpy.context.scene.collection.children.unlink(bpy.data.collections[asset_name])
+                else:
+                    active_col.children.unlink(bpy.data.collections[asset_name])
+                    
                 view_layer = bpy.context.view_layer
                 sc_col = view_layer.layer_collection
-                sc_col.children[as_col.name].children[asset_name].exclude = True
+                sc_col.children[as_col.name].exclude = True
+                #if "Utility" in asset_name:
+                #    sc_col.children[as_col.name].children[asset_name].exclude = True
+                #if col_type:
+                #    sc_col.children[as_col.name].children[f_col.name].children[asset_name].exclude = True
+                #else:
+                #    sc_col.children[as_col.name].children[b_col.name].children[asset_name].exclude = True
             else:
                 return f"Collection {asset_name} not found in the library: {asset_lib_blend_path}"
             
@@ -106,7 +128,8 @@ def get_lib_assets(data_type:str,asset_name:str = "",asset_lib_name:str = "SF As
                     filepath=os.path.join(asset_lib_blend_path, inner_path, object_name),
                     directory=os.path.join(asset_lib_blend_path, inner_path),
                     filename=object_name,
-                    clear_asset_data =True
+                    clear_asset_data =True,
+                    set_fake=set_fake
                 )
                 
                 if object_name in bpy.data.collections:
