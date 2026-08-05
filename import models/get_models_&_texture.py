@@ -588,7 +588,7 @@ def main():
                     target_catalogs[name] = uuid
                     
     for col in list(a_coll.children):
-        catalog_id = target_catalogs.get(col.name)
+        catalog_id = target_catalogs.get("Assets-"+col.name)
         for b_col in list(col.children):
             a_coll.asset_clear()
             b_col.asset_mark()

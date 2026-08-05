@@ -651,9 +651,13 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
         OUTPUT_FILE = Path(custom_output_path, "buildable_to_asset.json")
     else:
         OUTPUT_FILE = Path(__file__).parent / "buildable_to_asset.json"
-    
-    build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Buildable")
-    beam_build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Prototype", "Buildable", "Beams")
+        
+    if Path(SF_export_dir,"Exports").exists():
+        build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Buildable")
+        beam_build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Prototype", "Buildable", "Beams")
+    else:
+        build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Buildable")
+        beam_build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Prototype", "Buildable", "Beams")
     
     start_time = time.perf_counter()
     all_data = {}

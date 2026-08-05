@@ -41,6 +41,11 @@ buildable_to_asset_path = ""
 x_corr = -500.0
 y_corr = 2800.0
 distance = 1000.0
+obj_name=""
+prop_parent = None
+build_total = 0
+total_buildings_imported = 0
+build_execution_time = 0.0
 
 # start common types
 Vec3 = tuple[float, float, float]
@@ -222,7 +227,6 @@ class SFImportPreferences(AddonPreferences):
         elif Path(Path(__file__).parent, "buildable_to_asset.json").exists():
             bta_btt_text = "Overwrite buildable_to_asset.json"
         bta_box.operator("sf_importer.generate_buildable_to_asset", text=bta_btt_text)
-        
         
         # path to the Satisfactory asset library folder
         lb_btt_text = "Copy asset library files to asset library path"
@@ -1342,7 +1346,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             progress = (total_imported / total) * 100
     bpy.app.timers.register(update_ui)
 
-def import_task(save: s.SaveGame, color_map: dict):
+def import_save_task(save: s.SaveGame, color_map: dict):
     global progress,total,total_imported,is_scanning,stop_requested,execution_time,per_time
     start_time = datetime.now()
     execution_time = 0.0
@@ -1444,6 +1448,474 @@ def import_task(save: s.SaveGame, color_map: dict):
     end_time = datetime.now()
     execution_time = end_time - start_time   
     per_time = partial_time
+    print(f"SF to Blender time: {execution_time} seconds")
+    bpy.app.timers.register(update_ui)
+
+def import_models_reg(
+        b_type:int,
+        asset: dict,
+        buildable_name:str,
+        file: Path,
+        parent_name:str,
+        parent_attach:str,
+        support_name:str = "",
+        pole_height:float = 0.0):
+    global obj_name
+    
+    if b_type == 0:
+        obj_name = import_model(
+            asset=asset,
+            buildable_name=buildable_name,
+            file=file,
+            parent_name=parent_name,
+            parent_attach=parent_attach,
+            support_name=support_name,
+            pole_height = pole_height
+        )
+    else:
+        obj_name = import_model(
+                asset=asset,
+                buildable_name=buildable_name,
+                file=file,
+                parent_name=parent_name,
+                parent_attach=parent_attach
+            )
+    
+def import_empty_reg(
+        asset: dict,
+        buildable_name:str,
+        empty_name:str = ""):
+    global prop_parent
+    
+    prop_parent = import_empty(
+            asset=asset,
+            buildable_name=buildable_name,
+            empty_name=empty_name
+        )
+
+def get_models(sf_asset_export_path):
+    global buildable_to_asset_path,build_total,total_buildings_imported
+    global is_asset_building,stop_building_requested,obj_name,prop_parent
+    print("---------------------------------------------------------")
+    #sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
+    
+    #mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
+    #build_materials = bpy.context.scene.sf_importer_props.build_materials
+    
+    search_dir = Path(r"FactoryGame\Content\FactoryGame\Buildable")
+    base_file_dir = Path(sf_asset_export_path, search_dir)
+    event_file_dir = Path(sf_asset_export_path, search_dir.parent,"Events")
+    base_tex_dir = base_file_dir
+    if Path(sf_asset_export_path,"Exports").exists():
+        base_tex_dir = Path(sf_asset_export_path,"Exports", search_dir)
+    
+    psk_files = list(base_file_dir.rglob("*.psk"))
+    pskx_files = list(base_file_dir.rglob("*.pskx"))
+    event_psk_files = list(Path(event_file_dir).rglob("*.psk"))
+    event_pskx_files = list(Path(event_file_dir).rglob("*.pskx"))
+    asset_files = psk_files + pskx_files + event_psk_files + event_pskx_files
+    
+    is_pskx = "ALL"
+    
+    
+    #bpy.ops.outliner.orphans_purge(do_recursive=True)
+
+    with open(buildable_to_asset_path, 'r', encoding='utf-8') as f:
+        build_to_asset = json.load(f)
+        
+    build_total = len(build_to_asset)
+    count = 0
+    for build in build_to_asset:
+        if stop_building_requested:
+            break
+        
+        buildable = build_to_asset[build]
+        buildable_name = buildable['ObjectName']
+    
+        asset_list = {}
+        support_name = ""
+        support_mesh = []
+        for component in buildable:
+            if stop_building_requested:
+                break
+            
+            if component == 'ObjectName':# or asset == 'ProductionIndicator':
+                continue
+            asset = buildable.get(component)
+            if not asset:
+                continue
+    
+            print(component)
+            print("===============")
+            if type(asset) == list:
+                for ast in asset:
+                    print("--------------")
+                    asset_name = ast.get('Mesh')
+                    asset_dir = ""
+                    buildable_file = ""
+                    if '/' in asset_name:
+                        asset_dir =Path(asset_name)
+                        asset_name = asset_name.split('/')[-1]
+    
+                    pole_height = ast.get('Height')
+    
+                    if asset_dir:
+                        for asset_file in asset_files:
+                            if os.fspath(asset_dir) in os.fspath(asset_file):
+                                if asset_file.name.startswith(asset_name+'.'):
+                                    buildable_file = asset_file
+                    else:
+                        buildable_file = [asset_file for asset_file in asset_files if asset_file.name.startswith(asset_name+'.')]
+    
+    
+                    if buildable_file:
+                        if type(buildable_file) == list:
+                            file = buildable_file[0]
+                        else:
+                            file = buildable_file # type: Path
+                    else:
+                        print(f"Not Found: {asset_name}")
+                        continue
+    
+                    parent_name = ""
+                    parent_attach = ""
+                    parent_comp_name = ast.get('Parent')
+                    if parent_comp_name:
+                        if asset_list.get(parent_comp_name):
+                            parent_name = asset_list.get(parent_comp_name,"") 
+                        else:
+                            parent_name = buildable[parent_comp_name].get('Mesh',"")
+                        print(f"parent_name: {parent_name}")
+                        parent_attach = ast.get('ParentAttach',"")
+                        print(f"parent_attach: {parent_attach}")
+                    #ob_name = import_model(asset=ast,
+                    #    buildable_name=buildable_name,
+                    #    file=file,
+                    #    parent_name=parent_name,
+                    #    parent_attach=parent_attach,
+                    #    support_name=support_name,
+                    #    pole_height = pole_height
+                    #    )
+                    
+                    obj_name = None
+                    bpy.app.timers.register(functools.partial(
+                        import_models_reg,
+                        b_type = 0,
+                        asset=ast,
+                        buildable_name=buildable_name,
+                        file=file,
+                        parent_name=parent_name,
+                        parent_attach=parent_attach,
+                        support_name=support_name,
+                        pole_height = pole_height
+                        ), first_interval=0)
+                    time.sleep(0.1)
+                    
+                    while not obj_name:
+                        if stop_building_requested:
+                            break
+                        print("waiting for model to finish importing")
+                        time.sleep(0.5)
+                    
+                    asset_list[component] = obj_name
+    
+                    #if not obj_name:
+                    #    asset_list[component] = file.name.split('.')[0]
+                    #else:
+                    #    asset_list[component] = obj_name #file.name.split('.')[0]
+                    #print(asset_list)
+    
+                support_ob_org = bpy.data.objects.get(support_name)    
+                if support_ob_org:
+                    bpy.data.objects.remove(support_ob_org, do_unlink=True)
+            elif "Props" in component:
+                asset_name = asset.get('Mesh')
+                empty_name =component.split('_')[0]
+                prop_components = asset["Props"]
+    
+                #prop_parent = import_empty(asset=asset,
+                #    buildable_name=buildable_name,
+                #    empty_name=empty_name
+                #    )
+                
+                prop_parent = None
+                bpy.app.timers.register(functools.partial(
+                    import_empty_reg,
+                    asset=asset,
+                    buildable_name=buildable_name,
+                    empty_name=empty_name
+                    ), first_interval=0)
+                time.sleep(0.1)
+    
+                for prop in prop_components:
+                    print("--------------")
+                    ast = prop_components[prop]
+                    asset_name = ast.get('Mesh')
+                    asset_dir = ""
+                    buildable_file = ""
+                    if '/' in asset_name:
+                        asset_dir =Path(asset_name)
+                        asset_name = asset_name.split('/')[-1]
+    
+                    if asset_dir:
+                        for asset_file in asset_files:
+    
+                            if os.fspath(asset_dir) in os.fspath(asset_file):
+                                buildable_file = asset_file
+                    else:
+                        buildable_file = [asset_file for asset_file in asset_files if asset_file.name.startswith(asset_name+'.')]
+    
+                    if buildable_file:
+                        if type(buildable_file) == list:
+                            file = buildable_file[0]
+                        else:
+                            file = buildable_file
+                    else:
+                        print(f"Not Found: {asset_name}")
+                        continue
+    
+                    
+                    
+                    while not prop_parent:
+                        if stop_building_requested:
+                            break
+                        print("waiting for model to finish importing")
+                        time.sleep(0.5)
+                    
+                    parent_name = prop_parent.name
+                    
+                    #if not prop_parent:
+                    #    parent_name = empty_name
+                    #else:
+                    #    parent_name = prop_parent.name
+                    parent_attach = ""
+                    parent_comp_name = ast.get('Parent')
+    
+                    #ob_name = import_model(asset=ast,
+                    #    buildable_name=buildable_name,
+                    #    file=file,
+                    #    parent_name=parent_name,
+                    #    parent_attach=parent_attach
+                    #    )
+                    
+                    obj_name = None
+                    bpy.app.timers.register(functools.partial(
+                        import_models_reg,
+                        b_type = 1,
+                        asset=asset,
+                        buildable_name=buildable_name,
+                        file=file,
+                        parent_name=parent_name,
+                        parent_attach=parent_attach
+                        ), first_interval=0)
+                    time.sleep(0.1)
+                    
+                    while not obj_name:
+                        if stop_building_requested:
+                            break
+                        print("waiting for model to finish importing")
+                        time.sleep(0.5)
+                    
+                    asset_list[prop] = obj_name
+    
+                    #if not obj_name:
+                    #    asset_list[prop] = file.name.split('.')[0]
+                    #else:
+                    #    asset_list[prop] = obj_name #file.name.split('.')[0]
+                    #print(asset_list)
+            else:   
+                asset_name = asset.get('Mesh')
+                asset_dir = ""
+                buildable_file = ""
+                if '/' in asset_name:
+                    asset_dir =Path(asset_name)
+    
+                    asset_name = asset_name.split('/')[-1] # type: str
+    
+                if "mSupportMeshInstanceData" in component:
+                    support_name = asset_name
+                print(f"does {build} have mSupportMeshInstanceData: {support_name}")
+    
+                if asset_dir:
+                    for asset_file in asset_files:
+                        if os.fspath(asset_dir) in os.fspath(asset_file):
+                            if asset_file.name.startswith(asset_name+'.'):
+                                buildable_file = asset_file
+                                print(buildable_file)
+    
+                        if asset_dir.name in asset_file.parent.name:
+                            asset_file_l = asset_file.stem.lower()
+                            if asset_file_l == asset_name.lower():
+                                buildable_file = asset_file
+                                print(buildable_file)
+                else:
+                    buildable_file = [asset_file for asset_file in asset_files if asset_file.name.startswith(asset_name+'.')]
+                    print(buildable_file)
+
+                if buildable_file:
+                    #if type(buildable_file) == list:
+                    #    file = buildable_file[0]
+                    #else:
+                    #    file = buildable_file
+                    if type(buildable_file) == list:
+                        if 1 < len(buildable_file):
+                            print(f"Multiple files found: {buildable_file}")
+                            #multiple_files = builable_filea
+                            if "TradingPost" in str(buildable_file[0]):
+                                file = buildable_file[1]
+                            else:   
+                                file = buildable_file[0]
+                        else:
+                            file = buildable_file[0]
+                    else:
+                        file = buildable_file # type: Path
+                else:
+                    print(f"Not Found: {asset_name}")
+                    continue
+
+                parent_name = ""
+                parent_attach = ""
+                parent_comp_name = asset.get('Parent')
+
+                if parent_comp_name:
+                    if asset_list.get(parent_comp_name):
+                        parent_name = asset_list.get(parent_comp_name,"") 
+                    else:
+                        print(asset)
+                        print(buildable.get(parent_comp_name))
+                        #if buildable.get(parent_comp_name):
+                        parent_name = buildable[parent_comp_name].get('Mesh',"")
+                    print(f"parent_name: {parent_name}")
+                    parent_attach = asset.get('ParentAttach',"")
+                    print(f"parent_attach: {parent_attach}")
+
+                obj_name = None
+                bpy.app.timers.register(functools.partial(
+                    import_models_reg,
+                    b_type = 2,
+                    asset=asset,
+                    buildable_name=buildable_name,
+                    file=file,
+                    parent_name=parent_name,
+                    parent_attach=parent_attach
+                    ), first_interval=0)
+                time.sleep(0.1)
+                
+                #ob_name = import_model(asset=asset,
+                #    buildable_name=buildable_name,
+                #    file=file,
+                #    parent_name=parent_name,
+                #    parent_attach=parent_attach
+                #    )
+                
+                while not obj_name:
+                    if stop_building_requested:
+                        break
+                    print("waiting for model to finish importing")
+                    time.sleep(0.5)
+
+                asset_list[component] = obj_name
+                #if not obj_name:
+                #    asset_list[component] = file.name.split('.')[0]
+                #else:
+                #    asset_list[component] = obj_name #file.name.split('.')[0]
+        total_buildings_imported += 1
+                #print(asset_list)
+                
+    #a_coll = get_or_create_collection('Assets')
+    #u_coll = get_or_create_collection('Utility')
+    #if mark_as_asset and not stop_building_requested:
+    #    folder = Path(bpy.data.filepath).parent
+    #    if not Path(folder,"blender_assets.cats.txt").exists():
+    #        print("blender_assets.cats.txt not in perant folder")
+    #    target_catalogs = {
+    #    "Assets-Factory":"",
+    #    "Assets-Building":"",
+    #    "Utility":""
+    #    }
+    #    with (folder / "blender_assets.cats.txt").open() as f:
+    #        for line in f.readlines():
+    #            if line.startswith(("#", "VERSION", "\n")):
+    #                continue
+    #            # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
+    #            name = line.split(":")[2].split("\n")[0]
+    #            for cat in target_catalogs:
+    #                if name == cat:
+    #                    uuid = line.split(":")[0]
+    #                    target_catalogs[name] = uuid
+    #    
+    #        for col in list(a_coll.children):
+    #            catalog_id = target_catalogs.get("Assets-"+col.name)
+    #            for b_col in list(col.children):
+    #                a_coll.asset_clear()
+    #                b_col.asset_mark()
+    #                b_col.asset_generate_preview()
+    #                asset_data = b_col.asset_data
+    #                asset_data.catalog_id = catalog_id
+    #    
+    #        for col in list(u_coll.children):
+    #            catalog_id = target_catalogs.get(u_coll.name)
+    #            col.asset_clear()
+    #            col.asset_mark()
+    #            col.asset_generate_preview()
+    #            asset_data = col.asset_data 
+    #            asset_data.catalog_id = catalog_id
+        
+def import_models_task(a_coll,u_coll):
+    global build_total,total_buildings_imported,is_asset_building,stop_building_requested,build_execution_time
+    start_time = datetime.now()
+    build_execution_time = 0.0
+    final_total = 0
+    build_total = 0
+    total_buildings_imported = 0
+    
+    sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
+    
+    get_models(sf_asset_export_path)
+    
+    mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
+    if mark_as_asset and not stop_building_requested:
+        folder = Path(bpy.data.filepath).parent
+        if Path(folder,"blender_assets.cats.txt").exists():
+            target_catalogs = {
+            "Assets-Factory":"",
+            "Assets-Building":"",
+            "Utility":""
+            }
+            with (folder / "blender_assets.cats.txt").open() as f:
+                for line in f.readlines():
+                    if line.startswith(("#", "VERSION", "\n")):
+                        continue
+                    # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
+                    name = line.split(":")[2].split("\n")[0]
+                    for cat in target_catalogs:
+                        if name == cat:
+                            uuid = line.split(":")[0]
+                            target_catalogs[name] = uuid
+        
+                for col in list(a_coll.children):
+                    catalog_id = target_catalogs.get("Assets-"+col.name)
+                    for b_col in list(col.children):
+                        a_coll.asset_clear()
+                        b_col.asset_mark()
+                        b_col.asset_generate_preview()
+                        asset_data = b_col.asset_data
+                        asset_data.catalog_id = catalog_id
+        
+                for col in list(u_coll.children):
+                    catalog_id = target_catalogs.get(u_coll.name)
+                    col.asset_clear()
+                    col.asset_mark()
+                    col.asset_generate_preview()
+                    asset_data = col.asset_data 
+                    asset_data.catalog_id = catalog_id
+        else:
+            print("blender_assets.cats.txt not in perant folder")
+    
+    is_asset_building = False
+    stop_building_requested = False
+    end_time = datetime.now()
+    execution_time = end_time - start_time
     print(f"SF to Blender time: {execution_time} seconds")
     bpy.app.timers.register(update_ui)
 
@@ -1686,7 +2158,7 @@ class ImportSaveButton(bpy.types.Operator):
             
             is_scanning = True
             self.report({'INFO'}, "Starting scan...")
-            t1_thread = threading.Thread(target=import_task,args=(save,color_map))
+            t1_thread = threading.Thread(target=import_save_task,args=(save,color_map))
             t1_thread.start()
             
             bpy.app.timers.register(update_ui)
@@ -1703,12 +2175,12 @@ class BuildAssetsButton(bpy.types.Operator):
     bl_label = "Build Asset Library"
 
     def execute(self, context):
-        global is_scanning,is_get_scanning,is_asset_building,stop_building_requested
+        global is_scanning,is_get_scanning,is_asset_building,stop_building_requested,buildable_to_asset_path
         
         sf_asset_lib_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_lib_path
         sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
         if not bpy.context.preferences.addons[__package__].preferences.custom_buildable_to_asset_path:
-            buildable_to_asset_path = Path(__file__).parent / "buildable_to_asset.json"
+            buildable_to_asset_path = os.path.join(os.path.dirname(__file__), "buildable_to_asset.json")
         else:
             buildable_to_asset_path = os.path.join(bpy.context.preferences.addons[__package__].preferences.custom_buildable_to_asset_path, "buildable_to_asset.json")
         
@@ -1725,13 +2197,40 @@ class BuildAssetsButton(bpy.types.Operator):
         mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
         build_materials = bpy.context.scene.sf_importer_props.build_materials
         
-        if not is_scanning and not is_get_scanning:
+        if not is_scanning and not is_get_scanning and not is_asset_building:
+            clear_asset_col = True
+            
+            a_coll = get_or_create_collection('Assets')
+            u_coll = get_or_create_collection('Utility')
+            if clear_asset_col:
+                for obj in list(a_coll.objects):
+                    bpy.data.objects.remove(obj, do_unlink=True)
+                for col in list(a_coll.children):
+                    for b_col in list(col.children):
+                        b_col.asset_clear()
+                    bpy.data.collections.remove(col, do_unlink=True)
+            
+                for obj in list(u_coll.objects):
+                    bpy.data.objects.remove(obj, do_unlink=True)
+                for col in list(u_coll.children):
+                    bpy.data.collections.remove(col, do_unlink=True)
+            
+            else:
+                get_asset_collection()
+            
+            bpy.ops.outliner.orphans_purge(do_recursive=True)
+            
             is_asset_building = True
             self.report({'INFO'}, "Starting asset building...")
+            t1_thread = threading.Thread(target=import_models_task,args=(a_coll,u_coll))
+            t1_thread.start()
+            
+            bpy.app.timers.register(update_ui)
+            BuildAssetsButton.bl_label = "Stop Building"
         else:
             self.report({'INFO'}, "Stopping asset building...")
             stop_building_requested = True
-            is_asset_building = False
+            BuildAssetsButton.bl_label = "Start Building"
         
         return {'FINISHED'}
 
@@ -1828,15 +2327,15 @@ class VIEW3D_PT_SF_Asset_Builder_panel(Panel):
     bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
-        global progress,progress_in,per_time, is_scanning,total,total_imported,execution_time, current_buildable,start_process,is_get_scanning
+        global progress,progress_in,per_time, is_scanning,build_total,total_buildings_imported,execution_time, current_buildable,start_process,is_get_scanning
         layout = self.layout
         scene = context.scene
         props = scene.sf_importer_props
         
         # check if currrent blend file is asset library file, if not, show a warning message
-        if not Path(bpy.data.filepath).name == "SF_Asset_Lib.blend":
-            layout.label(text="Current blend file is not SF_Asset_Lib.blend", icon='INFO')
-            layout.label(text="Please open SF_Asset_Lib.blend to continue building asset library", icon='INFO')
+        if not "SF_Asset_Lib.blend" in Path(bpy.data.filepath).name:
+            layout.label(text="Current blend file is not 'SF_Asset_Lib.blend'", icon='INFO')
+            layout.label(text="Open 'SF_Asset_Lib.blend' to continue building asset library", icon='INFO')
 
         build_button = layout.column()
         build_button.scale_y = 1.5
@@ -1847,8 +2346,9 @@ class VIEW3D_PT_SF_Asset_Builder_panel(Panel):
             build_button.active = True
         
         # TODO: show after finishing importing models
-        row = layout.row(align=True)
-        row.label(text=f"Total Assets: total_imported/total")
+        if build_total:
+            row = layout.row(align=True)
+            row.label(text=f"Total Assets: {total_buildings_imported}/{build_total}")
         
         config_box = layout.box()
         config_box.prop(props, "mark_as_asset")
