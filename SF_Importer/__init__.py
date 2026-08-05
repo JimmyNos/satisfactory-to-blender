@@ -173,7 +173,7 @@ class SF_Importer_Properties(PropertyGroup):
     
     get_models_from_library: bpy.props.BoolProperty(
         name="Use Library Models",
-        description="Append models from SF_Asset_Lib file before import save data instead of using models in current blend file. NOTE: The more buildable types in the save, the longer it will take and blender UI will be while it appends. Uses default_mesh if no models in blend file or SF_Asset_Lib.",
+        description="Append models from SF_Asset_Lib file before importing save data instead of using models in current blend file. NOTE: The more buildable types in the save, the longer it will take and blender UI will be while it appends. Uses default_mesh if no models in blend file or SF_Asset_Lib.",
         default=False
     ) # type: ignore
 
