@@ -1885,11 +1885,6 @@ def import_models_task(a_coll,u_coll):
     
     sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
     
-    build_materials = bpy.context.scene.sf_importer_props.build_materials
-    
-    if build_materials:
-        get_par_materials(sf_asset_export_path)
-    
     get_models(sf_asset_export_path)
     
     mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
@@ -2142,15 +2137,40 @@ def get_lib_assets_task(save: s.SaveGame):
     
     for factory in all_classes:
         if get_heavyweight:
+            if not get_signs or not get_splines:
+                if not get_signs and not get_splines:
+                    if "Build_StandaloneWidgetSign_" in factory or factory in spline_buildables:
+                        continue
+                if not get_signs:
+                    if "Build_StandaloneWidgetSign_" in factory:
+                        continue
+                if not get_splines:
+                    if factory in spline_buildables:
+                        continue
             if factory in exclude_factory:
                 continue
         if get_signs:
-            if not "Build_StandaloneWidgetSign_" in factory:
-                continue
+            if not get_heavyweight or not get_splines:
+                if not get_heavyweight and not get_splines:
+                    if not "Build_StandaloneWidgetSign_" in factory:
+                        continue
+                if not get_heavyweight:
+                    if not "Build_StandaloneWidgetSign_" in factory or not factory in spline_buildables:
+                        continue
+                if not get_splines:
+                    if factory in spline_buildables:
+                        continue
         if get_splines:
-            if not factory in spline_buildables:
-                continue
-            
+            if not get_heavyweight or not get_signs:
+                if not get_heavyweight and not get_signs:
+                    if not factory in spline_buildables:
+                        continue
+                if not get_heavyweight:
+                    if not "Build_StandaloneWidgetSign_" in factory or not factory in spline_buildables:
+                        continue
+                if not get_signs:
+                    if "Build_StandaloneWidgetSign_" in factory:
+                        continue
         name = map.get(factory)
         if "Build_PipelinePumpMk2" in factory:
             name = map.get("Build_PipelinePumpMK2_C")
@@ -2349,6 +2369,12 @@ class BuildAssetsButton(bpy.types.Operator):
             bpy.ops.outliner.orphans_purge(do_recursive=True)
             
             is_asset_building = True
+            
+            build_materials = bpy.context.scene.sf_importer_props.build_materials
+            
+            if build_materials:
+                get_par_materials(sf_asset_export_path)
+            
             self.report({'INFO'}, "Starting asset building...")
             t1_thread = threading.Thread(target=import_models_task,args=(a_coll,u_coll))
             t1_thread.start()
@@ -2474,7 +2500,8 @@ class VIEW3D_PT_SF_Asset_Builder_panel(Panel):
         else:
             build_button.active = True
         
-        # TODO: show after finishing importing models
+        # TODO: show time elapsed after finishing importing models
+        
         if build_total:
             row = layout.row(align=True)
             row.label(text=f"Total Assets: {total_buildings_imported}/{build_total}")

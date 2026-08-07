@@ -119,6 +119,7 @@ def get_par_materials(sf_asset_export_path):
         sf_shader_node = nodes.new('ShaderNodeGroup')
         if bpy.data.node_groups.get("SatisfactoryToBlenderShader"):
             sf_shader_node.node_tree = bpy.data.node_groups['SatisfactoryToBlenderShader']
+            sf_shader_node.inputs["No AO?"].default_value = False
         else:
             sf_shader_node.node_tree = bpy.data.node_groups['FallBack']
         sf_shader_node.location.x = 500
@@ -259,8 +260,8 @@ def get_par_materials(sf_asset_export_path):
                             sf_tile = "Relf/MREA"
                         else:
                             sf_tile = "Color/BC/Albedo"
-                            sf_shader_node.inputs[1].default_value = False
-                            sf_shader_node.inputs[5].default_value = False
+                            sf_shader_node.inputs["No AO?"].default_value = False
+                            sf_shader_node.inputs["No Paint Finish?"].default_value = False
                             txd_Shader_links.new(txd_shader_node.outputs["AO"], txd_Shader_in.inputs["AO"])
                             links.new(txd_Shader_node.outputs["AO"], sf_shader_node.inputs["AO/IDMask"])
                         txd_Shader_links.new(txd_shader_node.outputs["Result"], txd_Shader_in.inputs[sf_tile])
@@ -299,8 +300,8 @@ def get_par_materials(sf_asset_export_path):
                         uv_fact_node.location.y = 200
                         uv_fact_node.attribute_name = "UVMapFact"
                     
-                    sf_shader_node.inputs[1].default_value = False
-                    sf_shader_node.inputs[5].default_value = False
+                    sf_shader_node.inputs["No AO?"].default_value = False
+                    sf_shader_node.inputs["No Paint Finish?"].default_value = False
                     
                     sf_shader_node.location.x = 200
                     sf_shader_node.location.y = 300
@@ -363,13 +364,16 @@ def get_par_materials(sf_asset_export_path):
                             b_texture.location.y = 100
                             b_texture.location.x = -400
                     if "Decal_Normal" in mat:
+                        sf_shader_node.inputs["No AO?"].default_value = False
                         if "_Mask" in img.name:
                             links.new(b_texture.outputs["Color"], mix_shader_node.inputs["Factor"])
                     
                     if "Decal_Color" in mat or "DecalColor_Masked" in mat:
                         if "ColorAtlas_Alb" in img.name:
+                            sf_shader_node.inputs["No AO?"].default_value = False
+                            sf_shader_node.inputs["Alpha?"].default_value = True
                             sf_shader_node.inputs["No Paint Finish?"].default_value = True
-                            links.new(b_texture.outputs["Alpha"], sf_shader_node.inputs["Alpha"])
+                            links.new(b_texture.outputs["Alpha"], sf_shader_node.inputs["Albedo Alpha"])
                     
                     sf_tile = ""
                     if "_N" in tex:

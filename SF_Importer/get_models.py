@@ -91,15 +91,19 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_Blender",
         "MI_TradingPostStage5",
         "MI_Packager",
-        "MI_Pump_01",
         "MI_Truckstation",
+        "MI_VTX_ANIM_WaterPump_01"
     ]
     
     force_get_texture = [
         "Light_Vertical_Blinking_Mask"
     ]
     
-    mirrored_tex = [
+    extra_uv = [
+        "EXTRAUV0"
+    ]
+    
+    mirrored_tex = [ # TODO change to textures
         "SM_BigDoor_01",
         "MI_Foundation_FicsitSet_",
         "MI_SteelWall_",
@@ -107,18 +111,48 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_WallSetConcrete_"
     ]
     
+    no_gb_mat = [
+        "MI_BlueprintDesigner_Foundations_01",
+        "MI_BlueprintDesigner_Computer_01",
+        "MI_MamMycelia",
+        "MI_Book_02D",
+        "MI_MamNutrients"
+    ]
+    
+    mra_mat = [
+        "MI_CPWall",
+        "MI_FactoryBaked_Workshop_01"
+    ]
+    
     emision_type_mats = [
         "MI_PriorityLightsLift_01"
     ]
     
     force_replace_mat = {
-        "MI_SK_Constructor":"MI_VAT_Constructorr"
+        "MI_SK_Constructor":"MI_VAT_Constructorr",
+        "MI_Tack_01_NoDeform":"MI_Tack_01"
     }
+    
+    search_mat = [
+        {"PipelineMK2":
+            "MI_PipeMK2"
+        },
+    ]
+    
+    out_parent_exc = [
+        
+    ]
                 
     find_path = Path(parent_path,"Material")
     mat_path = None
     new_parent_path = parent_path
     check_parent_path = False
+    fact_mat = bpy.data.materials.get("MI_Factory_01")
+    is_force = any(obj_material == force for force in force_use_factory_01)
+    
+    if is_force:# or "_Inst" in obj_material:
+        ob.material_slots[index].material = fact_mat
+        return None
     for i in range(3):
         if not check_parent_path:
             check_parent_path = True
@@ -141,6 +175,16 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             print("folder not in dir")
             new_parent_path = new_parent_path.parent
             find_path = Path(new_parent_path,"Material")
+            
+    for sm in search_mat:
+        for dm in sm:
+            dm_mat = sm.get(dm,"")
+            if dm_mat in obj_material:
+                search_file = list(Path(sf_asset_export_path).rglob(f"{obj_material}.json"))
+                if search_file:
+                    mat_path = search_file[0]
+                    break
+            
     if not mat_path:
         search_file = list(Path(sf_asset_export_path,"Exports").rglob(f"{obj_material}.json"))
         if search_file:
@@ -165,7 +209,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         if f_mat == obj_material:
             obj_material = force_replace_mat[f_mat]
     
-    if "Glass" in obj_material:
+    if "Glass" in obj_material or "MI_HadronEffect_01" in obj_material:
         glass_mat = bpy.data.materials.get("Glass_mat")
         ob.material_slots[index].material = glass_mat
         return None
@@ -173,12 +217,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     if textures:
         for tex in textures:
             if "TX2D_" in tex:
-                fact_mat = bpy.data.materials.get("MI_Factory_01")
                 ob.material_slots[index].material = fact_mat
                 return None
-    if any(force == obj_material for force in force_use_factory_01):# or "_Inst" in obj_material:
-        fact_mat = bpy.data.materials.get("MI_Factory_01")
-        ob.material_slots[index].material = fact_mat
     
     if textures:
         print("getting mat tex")
@@ -193,7 +233,10 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             sf_shader_node.node_tree = bpy.data.node_groups['FallBack']
         sf_shader_node.location.x = 200
         links.new(sf_shader_node.outputs["Shader"], output_node.inputs["Surface"])
-        
+        if any(mat == obj_material for mat in no_gb_mat):
+            sf_shader_node.inputs["AO no GB packed?"].default_value = True
+        if any(mat == obj_material for mat in mra_mat):
+            sf_shader_node.inputs["MRA?"].default_value = True
         pos = 0
         tex_set = set([textures[tex] for tex in textures])
         #print(tex_set)
@@ -249,35 +292,43 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                 print(b_texture.image.name)
                 b_texture.hide = True
                 for mt in mirrored_tex:
-                    if mt in tex_file.name:
-                        b_texture.image.extension = 'MIRROR'
+                    if mt in obj_material:#tex_file.name:
+                        if "TX_Stencils" not in tex_file.name:
+                            b_texture.extension = 'MIRROR'
                 for t in rn_type_tex:
                     if t in tex_file.name:
                     #if '_N' in tex_file.name or 'Refl' in tex_file.name:
                         b_texture.image.colorspace_settings.name = 'Linear Rec.709'
                 
                 
-                sf_tile = ""
+                tx_type = ""
+                tx_type_a = ""
                 if "_N" in tex_file.name:
-                    sf_tile = "Normal/Nor/N"
+                    tx_type = "Normal/Nor/N"
                 
                 if "_AO" in tex_file.name:
-                    sf_tile = "AO/IDMask"
-                    
+                    tx_type = "AO/IDMask"
+                    sf_shader_node.inputs["No AO?"].default_value = False
                 for rt in rough_type_tex:
                     if rt in tex_file.name:
-                        sf_tile = "Relf/MREA"
-                    if "MREA" in tex_file.name:
-                        sf_shader_node.inputs[6].default_value = True
+                        tx_type = "Relf/MREA"
+                        tx_type_a = tx_type+" Alpha"
+                        b_texture.image.alpha_mode = 'CHANNEL_PACKED'
+                    if "_MREA" in tex_file.name:
+                        sf_shader_node.inputs["Relf or MREA?"].default_value = True
                 for bc in color_type_tex:
                     if bc in tex_file.name:
-                        sf_tile = "Color/BC/Albedo"
+                        tx_type = "Color/BC/Albedo"
+                        tx_type_a = "Albedo Alpha"
+                        b_texture.image.alpha_mode = 'CHANNEL_PACKED'
                 
-                if not sf_tile:
+                if not tx_type:
                     continue
                 print(b_texture.outputs["Color"])
-                print(sf_shader_node.inputs[sf_tile])
-                links.new(b_texture.outputs["Color"], sf_shader_node.inputs[sf_tile])
+                print(sf_shader_node.inputs[tx_type])
+                links.new(b_texture.outputs["Color"], sf_shader_node.inputs[tx_type])
+                if tx_type_a:
+                    links.new(b_texture.outputs["Alpha"], sf_shader_node.inputs[tx_type_a])
             except Exception as e:
                 print("Error loading texture: ",e)
                 return None         
