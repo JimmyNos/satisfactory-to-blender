@@ -1,4 +1,5 @@
 import math
+from re import search
 import time
 
 import bpy
@@ -6,6 +7,17 @@ from pathlib import Path
 import json
 import os
 from mathutils import Quaternion, Matrix, Vector
+
+def set_geonode_input(modifier: bpy.types.Modifier, label: str, value):
+    for item in modifier.node_group.interface.items_tree:
+        if getattr(item, "in_out", None) == "INPUT" and item.name == label:
+            if bpy.app.version < (5, 2, 0):
+                modifier[item.identifier] = value
+            else:
+                input_prop = getattr(modifier.properties.inputs, item.identifier)
+                input_prop.value = value
+            return
+    raise KeyError(f"Input '{label}' not found")
 
 def get_or_create_collection(name,parent_name = "") -> bpy.types.Collection:
     col = bpy.data.collections.get(name)
@@ -24,6 +36,251 @@ def get_asset_collection() -> bpy.types.Collection:
 
 def get_essential_collection() -> bpy.types.Collection:
     return get_or_create_collection('essentials')
+
+def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_path):
+    print("---------")
+    print("Getting Matetrals")
+    parent_path = file.parent
+    print(parent_path)
+    
+    rn_type_tex = [
+        "_N",
+        "_Nor",
+        "_MREO",
+        "_Rough",
+        "_Relf",
+        "_Refl",
+        "_REFL",
+        "_RELF"
+    ]
+    
+    rough_type_tex = [
+        "_MREO",
+        "_Rough",
+        "_Refl",
+        "_Relf",
+        "_REFL",
+        "_RELF"
+    ]
+    
+    color_type_tex = [
+        "_BC",
+        "_BaseColor",
+        "_Alb"
+    ]
+    
+    ao_type_tex = [
+        "_AO",
+        #"",
+    ]
+    
+    screen_type_mat = [
+        "Display",
+        "Monitor"
+    ]
+    
+    force_use_factory_01 = [
+        "MI_Elevator",
+        "MI_Factory_Base_01",
+        "SpaceElevator_Inst",
+        "MI_PowerStorage_Inst",
+        "MI_ResourceSink_01",
+        "Walkways_Inst",
+        "MI_InPuts",
+        "MI_Fracker_01",
+        "MI_Blender",
+        "MI_TradingPostStage5",
+        "MI_Packager",
+        "MI_Pump_01",
+        "MI_Truckstation",
+    ]
+    
+    force_get_texture = [
+        "Light_Vertical_Blinking_Mask"
+    ]
+    
+    mirrored_tex = [
+        "SM_BigDoor_01",
+        "MI_Foundation_FicsitSet_",
+        "MI_SteelWall_",
+        "MI_Door_01",
+        "MI_WallSetConcrete_"
+    ]
+    
+    emision_type_mats = [
+        "MI_PriorityLightsLift_01"
+    ]
+    
+    force_replace_mat = {
+        "MI_SK_Constructor":"MI_VAT_Constructorr"
+    }
+                
+    find_path = Path(parent_path,"Material")
+    mat_path = None
+    new_parent_path = parent_path
+    check_parent_path = False
+    for i in range(3):
+        if not check_parent_path:
+            check_parent_path = True
+            if parent_path.parent.name.endswith(".json"):
+                parent_path = parent_path.parent
+                if parent_path.exists():
+                    print("material folder found")
+                    mat_path = parent_path
+                    break
+            if Path(parent_path,f"{obj_material}.json").exists():
+                print("material folder found")
+                mat_path = parent_path
+                break
+        print(f"Mat: {find_path}============")
+        if find_path.is_dir():
+            print("The folder exists in dir.")
+            mat_path = find_path
+            break
+        else:
+            print("folder not in dir")
+            new_parent_path = new_parent_path.parent
+            find_path = Path(new_parent_path,"Material")
+    if not mat_path:
+        search_file = list(Path(sf_asset_export_path,"Exports").rglob(f"{obj_material}.json"))
+        if search_file:
+            mat_path = search_file[0]
+        else:
+            print("No Material file found.")
+            return None
+    try:
+        mat_file = Path(mat_path,f"{obj_material}.json")
+        print(mat_file)
+        with open(mat_file, 'r', encoding='utf-8') as f:
+            m_data = json.load(f)
+            #print(m_data)
+    except Exception as e:
+        print("Error opening material file: ",e)
+        return None
+    b_material = bpy.data.materials[obj_material]    
+    b_material.node_tree.nodes.clear()
+    textures = m_data.get('Textures')
+    
+    for f_mat in force_replace_mat:
+        if f_mat == obj_material:
+            obj_material = force_replace_mat[f_mat]
+    
+    if "Glass" in obj_material:
+        glass_mat = bpy.data.materials.get("Glass_mat")
+        ob.material_slots[index].material = glass_mat
+        return None
+    
+    if textures:
+        for tex in textures:
+            if "TX2D_" in tex:
+                fact_mat = bpy.data.materials.get("MI_Factory_01")
+                ob.material_slots[index].material = fact_mat
+                return None
+    if any(force == obj_material for force in force_use_factory_01):# or "_Inst" in obj_material:
+        fact_mat = bpy.data.materials.get("MI_Factory_01")
+        ob.material_slots[index].material = fact_mat
+    
+    if textures:
+        print("getting mat tex")
+        nodes = b_material.node_tree.nodes
+        links = b_material.node_tree.links
+        output_node = nodes.new('ShaderNodeOutputMaterial')
+        output_node.location.x = 400
+        sf_shader_node = nodes.new('ShaderNodeGroup')
+        if bpy.data.node_groups.get("SatisfactoryToBlenderShader"):
+            sf_shader_node.node_tree = bpy.data.node_groups['SatisfactoryToBlenderShader']
+        else:
+            sf_shader_node.node_tree = bpy.data.node_groups['FallBack']
+        sf_shader_node.location.x = 200
+        links.new(sf_shader_node.outputs["Shader"], output_node.inputs["Surface"])
+        
+        pos = 0
+        tex_set = set([textures[tex] for tex in textures])
+        #print(tex_set)
+        
+        for tex in tex_set:
+            print(tex)
+            tex_dir = tex.replace("/Game", "Content").split('.')[0] + ".png"
+            tex_file = Path(sf_asset_export_path,"FactoryGame",tex_dir)    
+            print(tex_file)
+            model_parent_path = mat_path.parent
+            in_parent = os.fspath(tex_file).startswith(str(os.fspath(mat_path.parent)))
+            print(os.fspath(tex_file).startswith(str(os.fspath(mat_path.parent))))   
+            print(in_parent)
+            print("---")
+                
+            print(tex_file.name.startswith("TX_"))
+            print(tex_file.name.startswith("T_"))
+            print(tex_file.name)
+            if not tex_file.exists():
+                print(f"Error: texture does not exist: {tex_file}")
+                continue
+            if not tex_file.name.startswith("TX_") and not tex_file.name.startswith("T_") and not any(screen in tex_file.name for screen in screen_type_mat):
+                print(f"Skipping None 'TX_' and 'T_' textures: {tex_file}")
+                continue
+            
+            if not in_parent:
+                print(f"Skipping textures not in parent dir: {tex_file}")
+                continue
+            
+            print("========================>")
+            print(f"Getting {tex_file.name} texture")
+            print("========================")
+            try:
+                b_texture = b_material.node_tree.nodes.new('ShaderNodeTexImage')
+                x = -200
+                y = 0-(pos*50)
+                print(y)
+                pos += 1
+                b_texture.location = Vector((x,y))
+                #b_texture.image = bpy.data.images.load(os.fspath(tex_file))
+                print(os.fspath(tex_file))
+                #print(bpy.data.images)
+                img_list = [img.name for img in bpy.data.images]
+                #print(img_list)
+                print(tex_file)
+                img = bpy.data.images.get(tex_file.name)
+                if img:
+                    print("img in bl")
+                    b_texture.image = img
+                else:
+                    print("img not in bl")
+                    b_texture.image = bpy.data.images.load(os.fspath(tex_file))
+                print(b_texture.image.name)
+                b_texture.hide = True
+                for mt in mirrored_tex:
+                    if mt in tex_file.name:
+                        b_texture.image.extension = 'MIRROR'
+                for t in rn_type_tex:
+                    if t in tex_file.name:
+                    #if '_N' in tex_file.name or 'Refl' in tex_file.name:
+                        b_texture.image.colorspace_settings.name = 'Linear Rec.709'
+                
+                
+                sf_tile = ""
+                if "_N" in tex_file.name:
+                    sf_tile = "Normal/Nor/N"
+                
+                if "_AO" in tex_file.name:
+                    sf_tile = "AO/IDMask"
+                    
+                for rt in rough_type_tex:
+                    if rt in tex_file.name:
+                        sf_tile = "Relf/MREA"
+                    if "MREA" in tex_file.name:
+                        sf_shader_node.inputs[6].default_value = True
+                for bc in color_type_tex:
+                    if bc in tex_file.name:
+                        sf_tile = "Color/BC/Albedo"
+                
+                if not sf_tile:
+                    continue
+                print(b_texture.outputs["Color"])
+                print(sf_shader_node.inputs[sf_tile])
+                links.new(b_texture.outputs["Color"], sf_shader_node.inputs[sf_tile])
+            except Exception as e:
+                print("Error loading texture: ",e)
+                return None         
 
 def read_transform(transform: dict,attach_bone_pos,ob_parent):
     #print(transform)
@@ -267,6 +524,19 @@ def import_model(
     if "TradingPost" not in buildable_name:
         if ob_sk_mesh != None and col not in ob_sk_mesh.users_collection and is_SK_Tradingpost == False:
             col.objects.link(ob_sk_mesh)
+    
+    sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
+    build_materials = bpy.context.scene.sf_importer_props.build_materials
+    if build_materials:
+        obj_materials = [slot.material.name for slot in ob.material_slots if slot.material]
+        print(f"Materials on {ob.name}: {obj_materials}")
+        if "Decal_Normal" in obj_materials:
+            node_group = bpy.data.node_groups["Decal_Normal_Copy_Color"]
+            mod = ob.modifiers.new(name="GeometryNodes", type="NODES")
+            mod.node_group = node_group
+            #set_geonode_input(mod, "Material", "Decal_Normal")
+        for i,mat in enumerate(obj_materials):
+            mat_results = get_materials(ob,mat,file,i,sf_asset_export_path)
     
     mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
     if mark_as_asset:

@@ -17,6 +17,7 @@ from .get_models import *
 from .import_save_data import *
 from .populate_buildable_to_asset import populate_buildable_to_asset
 from .get_lib_assets import get_lib_assets
+from .get_par_materials import get_par_materials
 
 # Global variables to save progress
 total_entries = 0
@@ -1884,6 +1885,11 @@ def import_models_task(a_coll,u_coll):
     
     sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
     
+    build_materials = bpy.context.scene.sf_importer_props.build_materials
+    
+    if build_materials:
+        get_par_materials(sf_asset_export_path)
+    
     get_models(sf_asset_export_path)
     
     mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
@@ -2062,7 +2068,7 @@ class GetTotIntButton(bpy.types.Operator):
         
         return {'FINISHED'}
 
-def get_total_instances_task(save: s.SaveGame):
+def get_lib_assets_task(save: s.SaveGame):
     global buildable_to_asset_path
     with open(buildable_to_asset_path, 'r', encoding='utf-8') as f:
         map = json.load(f)
@@ -2277,7 +2283,7 @@ class ImportSaveButton(bpy.types.Operator):
             
             if get_models_from_library:
                 self.report({'INFO'}, "Getting Models from asset library...")
-                get_total_instances_task(save)
+                get_lib_assets_task(save)
             
             is_scanning = True
             self.report({'INFO'}, "Starting scan...")
