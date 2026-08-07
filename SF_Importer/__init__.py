@@ -1506,8 +1506,13 @@ def import_empty_reg(
             buildable_name=buildable_name,
             empty_name=empty_name
         )
+    
+def hide_current_col(buildable_name:str):
+    current_col = bpy.data.collections.get(buildable_name)
+    if current_col:
+        current_col.hide_viewport = True
 
-def get_models(sf_asset_export_path):
+def get_buildable_models(sf_asset_export_path):
     global buildable_to_asset_path,build_total,total_buildings_imported
     global is_asset_building,stop_building_requested,obj_name,prop_parent
     print("---------------------------------------------------------")
@@ -1834,7 +1839,15 @@ def get_models(sf_asset_export_path):
                 #else:
                 #    asset_list[component] = obj_name #file.name.split('.')[0]
         total_buildings_imported += 1
-                #print(asset_list)
+        bpy.app.timers.register(functools.partial(
+            hide_current_col,
+            buildable_name=buildable_name
+            ), first_interval=0)
+        time.sleep(0.1)
+        #current_col = bpy.data.collections.get(buildable_name)
+        #if current_col:
+        #    current_col.hide_viewport = True
+        #print(asset_list)
                 
     #a_coll = get_or_create_collection('Assets')
     #u_coll = get_or_create_collection('Utility')
@@ -1874,7 +1887,7 @@ def get_models(sf_asset_export_path):
     #            col.asset_generate_preview()
     #            asset_data = col.asset_data 
     #            asset_data.catalog_id = catalog_id
-        
+
 def import_models_task(a_coll,u_coll):
     global build_total,total_buildings_imported,is_asset_building,stop_building_requested,build_execution_time
     start_time = datetime.now()
@@ -1885,7 +1898,7 @@ def import_models_task(a_coll,u_coll):
     
     sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
     
-    get_models(sf_asset_export_path)
+    get_buildable_models(sf_asset_export_path)
     
     mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
     if mark_as_asset and not stop_building_requested:
@@ -1910,17 +1923,23 @@ def import_models_task(a_coll,u_coll):
                 for col in list(a_coll.children):
                     catalog_id = target_catalogs.get("Assets-"+col.name)
                     for b_col in list(col.children):
+                        col.hide_viewport = False
                         a_coll.asset_clear()
                         b_col.asset_mark()
                         b_col.asset_generate_preview()
+                        col.hide_viewport = True
                         asset_data = b_col.asset_data
                         asset_data.catalog_id = catalog_id
         
                 for col in list(u_coll.children):
+                    if "Conveyor" in col.name:
+                        col.hide_viewport = True
                     catalog_id = target_catalogs.get(u_coll.name)
+                    col.hide_viewport = False
                     col.asset_clear()
                     col.asset_mark()
                     col.asset_generate_preview()
+                    col.hide_viewport = True
                     asset_data = col.asset_data 
                     asset_data.catalog_id = catalog_id
         else:
@@ -1929,7 +1948,7 @@ def import_models_task(a_coll,u_coll):
     is_asset_building = False
     stop_building_requested = False
     end_time = datetime.now()
-    execution_time = end_time - start_time
+    build_execution_time = end_time - start_time
     print(f"SF to Blender time: {execution_time} seconds")
     bpy.app.timers.register(update_ui)
 
@@ -2389,7 +2408,7 @@ class BuildAssetsButton(bpy.types.Operator):
         return {'FINISHED'}
 
 class VIEW3D_PT_SF_Importer_panel(Panel):
-    bl_idname = "SF_IMPORTER"
+    bl_idname = "SF_PT_IMPORTER"
     bl_label = "Import SF Save"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -2474,7 +2493,7 @@ class VIEW3D_PT_SF_Importer_panel(Panel):
                     save_box.label(text=per)
         
 class VIEW3D_PT_SF_Asset_Builder_panel(Panel):
-    bl_idname = "SF_ASSET_BUILDER"
+    bl_idname = "SF_PT_ASSET_BUILDER"
     bl_label = "Build SF Asset Library"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -2482,7 +2501,7 @@ class VIEW3D_PT_SF_Asset_Builder_panel(Panel):
     bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
-        global progress,progress_in,per_time, is_scanning,build_total,total_buildings_imported,execution_time, current_buildable,start_process,is_get_scanning
+        global progress,progress_in,per_time, is_scanning,build_total,total_buildings_imported,build_execution_time, current_buildable,start_process,is_get_scanning
         layout = self.layout
         scene = context.scene
         props = scene.sf_importer_props
@@ -2505,6 +2524,9 @@ class VIEW3D_PT_SF_Asset_Builder_panel(Panel):
         if build_total:
             row = layout.row(align=True)
             row.label(text=f"Total Assets: {total_buildings_imported}/{build_total}")
+        if build_execution_time:
+            row = layout.row(align=True)
+            row.label(text=f"Execution Time: {str(build_execution_time)[:-4]}")
         
         config_box = layout.box()
         config_box.prop(props, "mark_as_asset")

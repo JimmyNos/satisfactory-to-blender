@@ -42,6 +42,15 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     print("Getting Matetrals")
     parent_path = file.parent
     print(parent_path)
+    PRO_MATERIALS = [
+        "MI_Factory_01", # base name
+        "Decal_Color",
+        "Decal_Normal",
+        "DecalColor_Masked",
+        #"Glass_Inst", # glass mat name
+    ]
+    if any(pro in obj_material for pro in PRO_MATERIALS):
+        return None
     
     rn_type_tex = [
         "_N",
@@ -121,7 +130,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     
     mra_mat = [
         "MI_CPWall",
-        "MI_FactoryBaked_Workshop_01"
+        "MI_FactoryBaked_Workshop_01",
+        "MI_Foundation_LOD0"
     ]
     
     emision_type_mats = [
@@ -153,6 +163,16 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     if is_force:# or "_Inst" in obj_material:
         ob.material_slots[index].material = fact_mat
         return None
+    
+    for f_mat in force_replace_mat:
+        if f_mat == obj_material:
+            obj_material = force_replace_mat[f_mat]
+            
+    if "Glass" in obj_material or "MI_HadronEffect_01" in obj_material:
+        glass_mat = bpy.data.materials.get("Glass_mat")
+        ob.material_slots[index].material = glass_mat
+        return None
+    
     for i in range(3):
         if not check_parent_path:
             check_parent_path = True
@@ -177,6 +197,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             find_path = Path(new_parent_path,"Material")
             
     for sm in search_mat:
+        continue
         for dm in sm:
             dm_mat = sm.get(dm,"")
             if dm_mat in obj_material:
@@ -193,7 +214,10 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             print("No Material file found.")
             return None
     try:
-        mat_file = Path(mat_path,f"{obj_material}.json")
+        if mat_path.name.endswith(".json"):
+            mat_file = mat_path
+        else:
+            mat_file = Path(mat_path,f"{obj_material}.json")
         print(mat_file)
         with open(mat_file, 'r', encoding='utf-8') as f:
             m_data = json.load(f)
@@ -201,18 +225,11 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     except Exception as e:
         print("Error opening material file: ",e)
         return None
+    if type(m_data) == list:
+        return None
     b_material = bpy.data.materials[obj_material]    
     b_material.node_tree.nodes.clear()
     textures = m_data.get('Textures')
-    
-    for f_mat in force_replace_mat:
-        if f_mat == obj_material:
-            obj_material = force_replace_mat[f_mat]
-    
-    if "Glass" in obj_material or "MI_HadronEffect_01" in obj_material:
-        glass_mat = bpy.data.materials.get("Glass_mat")
-        ob.material_slots[index].material = glass_mat
-        return None
     
     if textures:
         for tex in textures:
@@ -500,12 +517,14 @@ def import_model(
     sc_col = bpy.context.scene.collection
     as_col = get_asset_collection()
     get_or_create_collection("Utility")
-    get_or_create_collection("ConveyorLifts","Utility")
+    conveyor_lifts_col = get_or_create_collection("ConveyorLifts","Utility")
     get_or_create_collection("Factory","Assets")
     get_or_create_collection("Building","Assets")
     lift_parts_col = get_or_create_collection("LiftParts","ConveyorLifts")
     lifts_col = get_or_create_collection("Lifts","ConveyorLifts")
     conveyor_belts_col = get_or_create_collection("ConveyorBelts","Utility")
+    conveyor_belts_col.hide_viewport = True
+    conveyor_lifts_col.hide_viewport = True
     
     if ob_sk_mesh != None and ob.type == 'ARMATURE':
         ob.data.display_type = 'STICK'
@@ -588,10 +607,12 @@ def import_model(
             #set_geonode_input(mod, "Material", "Decal_Normal")
         for i,mat in enumerate(obj_materials):
             mat_results = get_materials(ob,mat,file,i,sf_asset_export_path)
+            if mat_results == None:
+                print("material logic ran")
     
-    mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
-    if mark_as_asset:
-        col.asset_mark()
+    #mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
+    #if mark_as_asset:
+    #    col.asset_mark()
     return ob.name
         
 def import_empty(

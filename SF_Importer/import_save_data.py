@@ -685,9 +685,6 @@ def import_spline_buildables(name: str,
         
     if hide_buildable:
         obj.hide_viewport = True
-    
-    if hide_buildable:
-        obj.hide_viewport = True
     #progress_in = 100
     print(f"Imported {name} from save file")
 
