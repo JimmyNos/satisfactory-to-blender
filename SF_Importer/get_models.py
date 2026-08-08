@@ -101,7 +101,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_TradingPostStage5",
         "MI_Packager",
         "MI_Truckstation",
-        "MI_VTX_ANIM_WaterPump_01"
+        "MI_VTX_ANIM_WaterPump_01",
+        "MI_VA_CoalGenerator_01"
     ]
     
     force_get_texture = [
@@ -117,7 +118,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_Foundation_FicsitSet_",
         "MI_SteelWall_",
         "MI_Door_01",
-        "MI_WallSetConcrete_"
+        "MI_WallSetConcrete_",
+        "MI_Foundation_Concrete"
     ]
     
     no_gb_mat = [
@@ -140,7 +142,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     
     force_replace_mat = {
         "MI_SK_Constructor":"MI_VAT_Constructorr",
-        "MI_Tack_01_NoDeform":"MI_Tack_01"
+        "MI_Tack_01_NoDeform":"MI_Tack_01",
+        "MI_HyperTubeStart_01":"MM_ShutterGate_Inst"
     }
     
     search_mat = [
@@ -167,6 +170,10 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     for f_mat in force_replace_mat:
         if f_mat == obj_material:
             obj_material = force_replace_mat[f_mat]
+            replace_mat = bpy.data.materials.get(obj_material)
+            if not replace_mat:
+                replace_mat = bpy.data.materials.new(obj_material)
+            ob.material_slots[index].material = replace_mat
             
     if "Glass" in obj_material or "MI_HadronEffect_01" in obj_material:
         glass_mat = bpy.data.materials.get("Glass_mat")
@@ -187,6 +194,9 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                 mat_path = parent_path
                 break
         print(f"Mat: {find_path}============")
+        if Path(find_path.parent,f"{obj_material}.json").exists():
+            mat_path = find_path.parent
+            break
         if find_path.is_dir():
             print("The folder exists in dir.")
             mat_path = find_path
@@ -260,11 +270,17 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         
         for tex in tex_set:
             print(tex)
+            if "MI_WallSetConcrete_8x1" in obj_material:
+                if "TX_WallSetConcrete_8x1_AOMasks" in tex:
+                    continue
             tex_dir = tex.replace("/Game", "Content").split('.')[0] + ".png"
             tex_file = Path(sf_asset_export_path,"FactoryGame",tex_dir)    
             print(tex_file)
             model_parent_path = mat_path.parent
             in_parent = os.fspath(tex_file).startswith(str(os.fspath(mat_path.parent)))
+                    
+            #if mat_path.parent.name == "Factory" or mat_path.parent.name == "Building":
+            #    in_parent = False
             print(os.fspath(tex_file).startswith(str(os.fspath(mat_path.parent))))   
             print(in_parent)
             print("---")
@@ -513,7 +529,6 @@ def import_model(
         support_ob_dp.location = support_ob_dp.location
         print(f"support name:{support_ob_dp.name}⚠️")
         
-
     sc_col = bpy.context.scene.collection
     as_col = get_asset_collection()
     get_or_create_collection("Utility")
@@ -598,17 +613,21 @@ def import_model(
     sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
     build_materials = bpy.context.scene.sf_importer_props.build_materials
     if build_materials:
-        obj_materials = [slot.material.name for slot in ob.material_slots if slot.material]
-        print(f"Materials on {ob.name}: {obj_materials}")
+        ob_pros = ob
+        if ob_sk_mesh:
+            ob_pros = ob_sk_mesh
+        obj_materials = [slot.material.name for slot in ob_pros.material_slots if slot.material]
+        print(f"Materials on {ob_pros.name}: {obj_materials}")
+            
         if "Decal_Normal" in obj_materials:
             node_group = bpy.data.node_groups["Decal_Normal_Copy_Color"]
-            mod = ob.modifiers.new(name="GeometryNodes", type="NODES")
+            mod = ob_pros.modifiers.new(name="GeometryNodes", type="NODES")
             mod.node_group = node_group
             #set_geonode_input(mod, "Material", "Decal_Normal")
         for i,mat in enumerate(obj_materials):
-            mat_results = get_materials(ob,mat,file,i,sf_asset_export_path)
+            mat_results = get_materials(ob_pros,mat,file,i,sf_asset_export_path)
             if mat_results == None:
-                print("material logic ran")
+                print(f"got {mat} material for {ob_pros}")
     
     #mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
     #if mark_as_asset:

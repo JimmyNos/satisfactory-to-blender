@@ -132,7 +132,7 @@ def get_par_materials(sf_asset_export_path):
         if "Decal_Normal" in mat:
             transparent_node = nodes.new('ShaderNodeBsdfTransparent')
             transparent_node.location.x = 200
-            transparent_node.location.y = -50
+            transparent_node.location.y = -200
                     
             mix_shader_node = nodes.new('ShaderNodeMixShader')
             mix_shader_node.location.x = 400

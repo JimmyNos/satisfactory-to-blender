@@ -19,7 +19,8 @@ EXCLUDE_LIST = [
     "BUILD_SingleDoor_Base_01",
     "Build_RailroadTrackIntegrated",
     "Concave",
-    "Build_VehiclePathNode"
+    "Build_VehiclePathNode",
+    "_NoIndicator"
     #"Integrate",
     #"Build_TradingPost",
     #"Build_Blueprint",
