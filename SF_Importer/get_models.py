@@ -46,7 +46,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_Factory_01", # base name
         "Decal_Color",
         "Decal_Normal",
-        "DecalColor_Masked",
+        "DecalColor_Masked"
         #"Glass_Inst", # glass mat name
     ]
     if any(pro in obj_material for pro in PRO_MATERIALS):
@@ -157,6 +157,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     ]
                 
     find_path = Path(parent_path,"Material")
+    find_path_s = Path(parent_path,"Materials")
+    find_path_pl = Path(find_path,"Placeholder") # TODO hub materials
     mat_path = None
     new_parent_path = parent_path
     check_parent_path = False
@@ -180,6 +182,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         ob.material_slots[index].material = glass_mat
         return None
     
+    is_hub = False
     for i in range(3):
         if not check_parent_path:
             check_parent_path = True
@@ -194,17 +197,26 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                 mat_path = parent_path
                 break
         print(f"Mat: {find_path}============")
-        if Path(find_path.parent,f"{obj_material}.json").exists():
-            mat_path = find_path.parent
+        print(f"Mat: {find_path_s}============")
+        if Path(find_path.parent,f"{obj_material}.json").exists() or Path(find_path_s.parent,f"{obj_material}.json").exists():
+            mat_path = find_path.parent if Path(find_path.parent,f"{obj_material}.json").exists() else find_path_s.parent
             break
-        if find_path.is_dir():
+        if find_path.is_dir() or find_path_s.is_dir() or find_path_pl.is_dir():
             print("The folder exists in dir.")
-            mat_path = find_path
+            if find_path_pl.is_dir(): 
+                mat_path = find_path_pl
+                is_hub = True
+            elif find_path_s.is_dir():
+                mat_path = find_path_s
+            else:
+                mat_path = find_path 
             break
         else:
             print("folder not in dir")
             new_parent_path = new_parent_path.parent
             find_path = Path(new_parent_path,"Material")
+            find_path_s = Path(new_parent_path,"Materials")
+            find_path_pl = Path(find_path,"Placeholder")
             
     for sm in search_mat:
         continue
@@ -278,7 +290,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             print(tex_file)
             model_parent_path = mat_path.parent
             in_parent = os.fspath(tex_file).startswith(str(os.fspath(mat_path.parent)))
-                    
+            if is_hub:
+                in_parent = os.fspath(tex_file).startswith(str(os.fspath(mat_path.parent.parent)))
             #if mat_path.parent.name == "Factory" or mat_path.parent.name == "Building":
             #    in_parent = False
             print(os.fspath(tex_file).startswith(str(os.fspath(mat_path.parent))))   
@@ -333,6 +346,12 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                     #if '_N' in tex_file.name or 'Refl' in tex_file.name:
                         b_texture.image.colorspace_settings.name = 'Linear Rec.709'
                 
+                if "HubDecal_Masked" in b_material.name:
+                    sf_shader_node.inputs["No AO?"].default_value = False
+                    sf_shader_node.inputs["Alpha?"].default_value = True
+                    sf_shader_node.inputs["No Paint Finish?"].default_value = True
+                    if "TX_HubDecal_BC" in img.name:
+                        links.new(b_texture.outputs["Alpha"], sf_shader_node.inputs["Albedo Alpha"])
                 
                 tx_type = ""
                 tx_type_a = ""
