@@ -4,6 +4,7 @@ from bpy.props import StringProperty, IntProperty, BoolProperty # type: ignore
 
 import threading
 import time
+import functools
 from datetime import datetime
 import json
 from mathutils import Quaternion, Matrix, Vector
@@ -44,6 +45,7 @@ y_corr = 2800.0
 distance = 1000.0
 obj_name=""
 prop_parent = None
+prop_parent_name = ""
 build_total = 0
 total_buildings_imported = 0
 build_execution_time = 0.0
@@ -1500,22 +1502,35 @@ def import_empty_reg(
         asset: dict,
         buildable_name:str,
         empty_name:str = ""):
-    global prop_parent
+    global prop_parent_name
     
     prop_parent = import_empty(
             asset=asset,
             buildable_name=buildable_name,
             empty_name=empty_name
         )
+    prop_parent_name = prop_parent.name if prop_parent else ""
     
 def hide_current_col(buildable_name:str):
     current_col = bpy.data.collections.get(buildable_name)
     if current_col:
         current_col.hide_viewport = True
 
+def schedule_remove_object(object_name: str):
+    if not object_name:
+        return None
+
+    def remove():
+        ob = bpy.data.objects.get(object_name)
+        if ob:
+            bpy.data.objects.remove(ob, do_unlink=True)
+        return None
+
+    bpy.app.timers.register(remove, first_interval=0)
+
 def get_buildable_models(sf_asset_export_path):
     global buildable_to_asset_path,build_total,total_buildings_imported
-    global is_asset_building,stop_building_requested,obj_name,prop_parent
+    global is_asset_building,stop_building_requested,obj_name,prop_parent_name
     print("---------------------------------------------------------")
     #sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
     
@@ -1631,7 +1646,7 @@ def get_buildable_models(sf_asset_export_path):
                         ), first_interval=0)
                     time.sleep(0.1)
                     
-                    while not obj_name:
+                    while obj_name is None:
                         if stop_building_requested:
                             break
                         print("waiting for model to finish importing")
@@ -1645,9 +1660,8 @@ def get_buildable_models(sf_asset_export_path):
                     #    asset_list[component] = obj_name #file.name.split('.')[0]
                     #print(asset_list)
     
-                support_ob_org = bpy.data.objects.get(support_name)    
-                if support_ob_org:
-                    bpy.data.objects.remove(support_ob_org, do_unlink=True)
+                if support_name:
+                    schedule_remove_object(support_name)
             elif "Props" in component:
                 asset_name = asset.get('Mesh')
                 empty_name =component.split('_')[0]
@@ -1658,7 +1672,7 @@ def get_buildable_models(sf_asset_export_path):
                 #    empty_name=empty_name
                 #    )
                 
-                prop_parent = None
+                prop_parent_name = None
                 bpy.app.timers.register(functools.partial(
                     import_empty_reg,
                     asset=asset,
@@ -1696,13 +1710,13 @@ def get_buildable_models(sf_asset_export_path):
     
                     
                     
-                    while not prop_parent:
+                    while not prop_parent_name:
                         if stop_building_requested:
                             break
                         print("waiting for model to finish importing")
                         time.sleep(0.5)
-                    
-                    parent_name = prop_parent.name
+    
+                    parent_name = prop_parent_name
                     
                     #if not prop_parent:
                     #    parent_name = empty_name
@@ -1937,7 +1951,7 @@ def run_mark_asset(a_coll,u_coll):
         print("blender_assets.cats.txt not in perant folder")
     marking_asset = False
     
-def import_models_task(a_coll,u_coll):
+def import_models_task(a_coll,u_coll,sf_asset_export_path,mark_as_asset):
     global build_total,total_buildings_imported,is_asset_building,stop_building_requested,build_execution_time
     start_time = datetime.now()
     build_execution_time = 0.0
@@ -1945,11 +1959,8 @@ def import_models_task(a_coll,u_coll):
     build_total = 0
     total_buildings_imported = 0
     
-    sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
-    
     get_buildable_models(sf_asset_export_path)
     
-    mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
     if mark_as_asset and not stop_building_requested:
         bpy.app.timers.register(functools.partial(
             run_mark_asset,
@@ -2452,7 +2463,11 @@ class BuildAssetsButton(bpy.types.Operator):
                 get_par_materials(sf_asset_export_path)
             
             self.report({'INFO'}, "Starting asset building...")
-            t1_thread = threading.Thread(target=import_models_task,args=(a_coll,u_coll))
+            mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
+            t1_thread = threading.Thread(
+                target=import_models_task,
+                args=(a_coll, u_coll, sf_asset_export_path, mark_as_asset)
+            )
             t1_thread.start()
             
             bpy.app.timers.register(update_ui)

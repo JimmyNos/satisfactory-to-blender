@@ -51,6 +51,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "Decal_Normal",
         "DecalColor_Masked"
         #"Glass_Inst", # glass mat name
+        #"Lights_Inst", # Lights mat name
     ]
     if any(pro in obj_material for pro in PRO_MATERIALS):
         return None
@@ -559,7 +560,14 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                     textures.append(
                         {"AOMasks":ref_tex["ObjectPath"][6:].split('.')[0]}
                     )
-    b_material = bpy.data.materials[obj_material]    
+    b_material = bpy.data.materials.get(obj_material)
+    if not b_material:
+        print(f"Material not found: {obj_material}")
+        return None
+    if not b_material.use_nodes:
+        b_material.use_nodes = True
+    if not b_material.node_tree:
+        b_material.use_nodes = True
     b_material.node_tree.nodes.clear()
     
     # Start Textures logic
