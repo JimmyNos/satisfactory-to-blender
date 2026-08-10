@@ -23,7 +23,10 @@ EXCLUDE_LIST = [
     "Build_VehiclePathNode",
     "_NoIndicator",
     "Tris_Glass",
-    "_Proxy",
+    "d_Proxy",
+    "t_Proxy",
+    "r_Proxy",
+    "k_Proxy",
     "BP_VehicleTarget",
     "BP_Wheeled",
     "RearWheel",
@@ -56,7 +59,10 @@ EXCLUDE_MESH_LIST = [
     "FactoryLeg",
     "Plane",
     "SM_TradingPostMeshBF_01",
-    "SM_Hub_Stg_01"
+    "SM_Hub_Stg_01",
+    "SM_Locomotive_LOD4",
+    "SM_LightShaft_Street_01",
+    "SM_Freight_Wagon_LOD4"
 ]
 
 MESH_TYPES = [
@@ -76,7 +82,8 @@ MESH_TYPES = [
     "mHeightSegment4m",
     "mCapMesh",
     "mLadderSegmentMesh",
-    "mButtonMesh"
+    "mButtonMesh",
+    "mContainerMeshLiquid"
 ]
 
 MESH_NODE_TYPES = [
@@ -96,7 +103,8 @@ MESH_NODE_TYPES = [
     "Build_Ladder_C",
     "Build_TradingPost_C",
     "BP_ElevatorCabin_C",
-    "Xmass"
+    "Xmass",
+    "BP_FreightWagon_C"
 ]
 
 CONVEYOR_LIFT_MESHES = [
@@ -699,6 +707,7 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
     build_files = build_files + list(beam_build_dir.rglob("build_*.json"))
     build_files = build_files + list(events_build_dir.rglob("build_*.json"))
     build_files = build_files + list(vehicle_build_dir.rglob("BP_*.json"))
+    build_files = build_files + list(build_dir.rglob("BP_DroneTransport.json"))
     #build_files(list(build_dir.rglob("BP_ProductionIndicatorInstanced.json"))[0])
     print(f"Found {len(build_files)} build files")
     count = 0

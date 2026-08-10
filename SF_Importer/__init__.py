@@ -1736,7 +1736,7 @@ def get_buildable_models(sf_asset_export_path):
                     bpy.app.timers.register(functools.partial(
                         import_models_reg,
                         b_type = 1,
-                        asset=asset,
+                        asset=ast,
                         buildable_name=buildable_name,
                         file=file,
                         parent_name=parent_name,

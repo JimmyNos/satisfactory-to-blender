@@ -1,4 +1,5 @@
 import math
+from pickle import TRUE
 from re import search
 import time
 
@@ -64,8 +65,10 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "Relf",
         "Refl",
         "REFL",
-        "RELF"
+        "RELF",
+        "ORMA"
     ]
+    
     nor_type_tex = [
         "_N",
         "Nor",
@@ -77,7 +80,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "Refl",
         "Relf",
         "REFL",
-        "RELF"
+        "RELF",
+        "ORMA"
     ]
     
     color_type_tex = [
@@ -145,6 +149,14 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_AsphaltRamp",
         "MI_Ramp_PolishedConcrete",
         "MI_Foundation_PolishedConcrete"
+    ]
+    
+    uses_alpha = [
+        "HubDecal_Masked",
+        "HubFicsmasDecal_Masked",
+        "Placeholder_Garland",
+        "MMU_LightLine",
+        "MI_FicsmasTree_Branches_01"
     ]
     
     con_mat_remap = {
@@ -235,13 +247,16 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     ]
     
     force_replace_mat = {
-        "MI_SK_Constructor":"MI_VAT_Constructorr",
+        #"MI_SK_Constructor":"MI_VAT_Constructorr",
         "MI_Tack_01_NoDeform":"MI_Tack_01",
         "MM_ShutterGate_Inst":"MI_HyperTubeStart_01",
+        "HubDecal_Opaque":"HubDecal_Masked"
     }
     
     search_mat = {"PipelineMK2":
-        "MI_PipeMK2"
+        "MI_PipeMK2",
+        "Pipeline":
+        "MI_Pipe"
         }
     
     light_type_mat = [
@@ -259,19 +274,33 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     is_force = any(obj_material == force for force in force_use_factory_01)
     
     if is_force:# or "_Inst" in obj_material:
-        ob.material_slots[index].material = fact_mat
-        return None
+        if "SM_Blender_01" != ob.name:
+            ob.material_slots[index].material = fact_mat
+            return None
     
     for f_mat in force_replace_mat:
-        if f_mat == col.name:
+        if f_mat == obj_material:
             obj_material = force_replace_mat[f_mat]
             replace_mat = bpy.data.materials.get(obj_material)
             if not replace_mat:
                 replace_mat = bpy.data.materials.new(obj_material)
             ob.material_slots[index].material = replace_mat
     
+    #opa_name = ""
+    #if "HubDecal_Opaque" in obj_material:
+    #    opa_name = obj_material
+    #    no_opa_name = "HubDecal_Masked"
+    #    replace_mat = bpy.data.materials.get(no_opa_name)
+    #    if not replace_mat:
+    #        replace_mat = bpy.data.materials.new(no_opa_name)
+    #    ob.material_slots[index].material = replace_mat
+    #    
+    #    material_dup = ob.material_slots[index].material.copy()
+    #    ob.material_slots[index].material = material_dup
+    #    ob.material_slots[index].material.name = obj_material
+    
     for s_mat in search_mat:
-        if s_mat == obj_material:
+        if s_mat == col.name:
             new_mat = search_mat[s_mat]
             ob.data = ob.data.copy()
             material_dup = ob.material_slots[index].material.copy()
@@ -573,7 +602,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                 r = light_color_data["R"]
                 g = light_color_data["G"]
                 b = light_color_data["B"]
-                sf_shader_node.inputs["Emission colour?"].default_value = False
+                sf_shader_node.inputs["Emission colour?"].default_value = True
                 sf_shader_node.inputs["Emission Colour"].default_value = (r, g, b, 1)
         
         pos = 0
@@ -640,13 +669,16 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                     if t in tex_type or t in tex_file.name:
                     #if '_N' in tex_file.name or 'Refl' in tex_file.name:
                         b_texture.image.colorspace_settings.name = 'Linear Rec.709'
-                
-                if "HubDecal_Masked" in b_material.name:
-                    sf_shader_node.inputs["No AO?"].default_value = False
-                    sf_shader_node.inputs["Alpha?"].default_value = True
-                    sf_shader_node.inputs["No Paint Finish?"].default_value = True
-                    if "TX_HubDecal_BC" in img.name:
-                        links.new(b_texture.outputs["Alpha"], sf_shader_node.inputs["Albedo Alpha"])
+                if "_ORMA" in tex_file.name:
+                    sf_shader_node.inputs["ORMA?"].default_value = True
+                for ua in uses_alpha:
+                    if ua in b_material.name:
+                        sf_shader_node.inputs["No AO?"].default_value = False
+                        sf_shader_node.inputs["Alpha?"].default_value = True
+                        sf_shader_node.inputs["No Paint Finish?"].default_value = True
+                        if "TX_HubDecal_BC" in img.name:
+                            links.new(b_texture.outputs["Alpha"], sf_shader_node.inputs["Albedo Alpha"])
+                        
                 
                 tx_type = ""
                 tx_type_a = ""
@@ -795,7 +827,8 @@ def import_model(
         ob = bpy.data.objects.get(file_name)
         
         if "SM_Blender_01" in ob.name:
-            ob.name = "SM_Blender_factory"
+            if not "Props" in str(file):
+                ob.name = "SM_Blender_factory"
             
             
         if ob.type == "ARMATURE":
@@ -819,8 +852,10 @@ def import_model(
             attach_bone_pos_tail = ob_parent.matrix_world @ attach_bone.tail_local
             attach_bone_pos = attach_bone_pos_head-attach_bone_pos_tail
             #print(f"attach_bone_pos: {attach_bone_pos}")
-            
+    
     pos, rot, scale = read_transform(asset,attach_bone_pos,ob_parent)
+    print(pos)
+    print(asset)
     if parent_attach:
         ob.parent = ob_parent
         ob.parent_type = 'BONE'
