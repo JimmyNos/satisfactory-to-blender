@@ -244,6 +244,10 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_PipeMK2"
         }
     
+    light_type_mat = [
+        "MI_PriorityLights"
+    ]
+    
     find_path = Path(parent_path,"Material")
     find_path_s = Path(parent_path,"Materials")
     find_path_pl = Path(find_path,"Placeholder") # TODO hub materials
@@ -525,23 +529,24 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     if not b_material.node_tree:
         b_material.use_nodes = True
     b_material.node_tree.nodes.clear()
-    if "Light" in obj_material:
-        light_shader_node = nodes.new('ShaderNodeGroup')
-        if bpy.data.node_groups.get("Light_shader"):
-            light_shader_node.node_tree = bpy.data.node_groups['Light_shader']
-        else:
-            light_shader_node.node_tree = bpy.data.node_groups['FallBack']
-        light_shader_node.location.x = 200
-        links.new(light_shader_node.outputs["Shader"], output_node.inputs["Surface"])
-        return None
+    nodes = b_material.node_tree.nodes
+    links = b_material.node_tree.links
+    output_node = nodes.new('ShaderNodeOutputMaterial')
+    output_node.location.x = 400
+    for l_mat in light_type_mat:
+        if l_mat in obj_material:
+            light_shader_node = nodes.new('ShaderNodeGroup')
+            if bpy.data.node_groups.get("Light_shader"):
+                light_shader_node.node_tree = bpy.data.node_groups['Light_shader']
+            else:
+                light_shader_node.node_tree = bpy.data.node_groups['FallBack']
+            light_shader_node.location.x = 200
+            links.new(light_shader_node.outputs["Shader"], output_node.inputs["Surface"])
+            return None
     
     # Start Textures logic
     if textures:
         print("getting mat tex")
-        nodes = b_material.node_tree.nodes
-        links = b_material.node_tree.links
-        output_node = nodes.new('ShaderNodeOutputMaterial')
-        output_node.location.x = 400
         sf_shader_node = nodes.new('ShaderNodeGroup')
         if bpy.data.node_groups.get("SatisfactoryToBlenderShader"):
             sf_shader_node.node_tree = bpy.data.node_groups['SatisfactoryToBlenderShader']
