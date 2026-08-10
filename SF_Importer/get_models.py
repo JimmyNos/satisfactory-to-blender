@@ -37,11 +37,14 @@ def get_asset_collection() -> bpy.types.Collection:
 def get_essential_collection() -> bpy.types.Collection:
     return get_or_create_collection('essentials')
 
-def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_path):
-    print("---------")
+def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_path:str,col):
+    print("=================================>")
     print("Getting Matetrals")
+    print("=================================<")
     parent_path = file.parent
     print(parent_path)
+    exports_parent_path = str(parent_path).replace(sf_asset_export_path,sf_asset_export_path+"Exports")
+    
     PRO_MATERIALS = [
         "MI_Factory_01", # base name
         "Decal_Color",
@@ -54,28 +57,32 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     
     rn_type_tex = [
         "_N",
-        "_Nor",
-        "_MREO",
-        "_Rough",
-        "_Relf",
-        "_Refl",
-        "_REFL",
-        "_RELF"
+        "Nor",
+        "MREO",
+        "Rough",
+        "Relf",
+        "Refl",
+        "REFL",
+        "RELF"
+    ]
+    nor_type_tex = [
+        "_N",
+        "Nor",
     ]
     
     rough_type_tex = [
-        "_MREO",
-        "_Rough",
-        "_Refl",
-        "_Relf",
-        "_REFL",
-        "_RELF"
+        "MREO",
+        "Rough",
+        "Refl",
+        "Relf",
+        "REFL",
+        "RELF"
     ]
     
     color_type_tex = [
-        "_BC",
-        "_BaseColor",
-        "_Alb"
+        "BC",
+        "BaseColor",
+        "Alb"
     ]
     
     ao_type_tex = [
@@ -90,6 +97,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     
     force_use_factory_01 = [
         "MI_Elevator",
+        "MI_GeneratorNuclear",
         "MI_Factory_Base_01",
         "SpaceElevator_Inst",
         "MI_PowerStorage_Inst",
@@ -119,8 +127,86 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_SteelWall_",
         "MI_Door_01",
         "MI_WallSetConcrete_",
-        "MI_Foundation_Concrete"
+        "MI_Foundation_Concrete",
+        "MI_Ramp_Concrete",
+        "MI_GripMetal_Ramp",
+        "MI_GripMetal_RampCorner",
+        "MI_GripMetal_Foundation",
+        "MMU_BigDoorAnimation",
+        "MI_AsphaltFoundation",
+        "MI_AsphaltRamp",
+        "MI_Ramp_PolishedConcrete",
+        "MI_Foundation_PolishedConcrete"
     ]
+    
+    con_mat_remap = {
+        "Concrete":[
+            "MI_Foundation_Concrete",
+            "MI_Ramp_Concrete",
+            ],
+        "Asphalt":[
+            "MI_AsphaltFoundation",
+            "MI_AsphaltRamp",
+            ],
+        "Polished":[
+            "MI_Foundation_PolishedConcrete",
+            "MI_Ramp_PolishedConcrete",
+            ],
+        #"Ficsit":[
+        #    "MI_Foundation_FicsitSet_01",
+        #    "MI_Foundation_FicsitSet_Ramp_01",
+        #    "MI_Foundation_FicsitSet_CornerRamp_01",
+        #    ],
+        #"Grip":[
+        #    "MI_GripMetal_Foundation",
+        #    "MI_GripMetal_Ramp",
+        #    "MI_GripMetal_RampCorner",
+        #    ],
+        #"Metal":[
+        #    "MI_GripMetal_Foundation",
+        #    "MI_GripMetal_Ramp",
+        #    "MI_GripMetal_RampCorner",
+        #    ]
+        
+        
+        #"MI_Foundation_Concrete":{
+        #    "Asphalt":"MI_AsphaltFoundation",
+        #    "Polished":"MI_Foundation_PolishedConcrete"
+        #},
+        #"MI_Ramp_Concrete":{
+        #    "Asphalt":"MI_AsphaltRamp",
+        #    "Polished":"MI_Ramp_PolishedConcrete"
+        #},
+        #"MI_Foundation_FicsitSet_01":{
+        #    "Grip":"MI_GripMetal_Foundation",
+        #    "Metal":"MI_GripMetal_Foundation",
+        #},
+        #"MI_Foundation_FicsitSet_CornerRamp_01":{
+        #    "Grip":"MI_GripMetal_RampCorner",
+        #    "Metal":"MI_GripMetal_RampCorner",
+        #},
+        #"MI_Foundation_FicsitSet_Ramp_01":{
+        #    "Grip":"MI_GripMetal_Ramp",
+        #    "Metal":"MI_GripMetal_Ramp",
+        #}
+    }
+    fic_mat_remap = {
+        "Ficsit":[
+            "MI_Foundation_FicsitSet_01",
+            "MI_Foundation_FicsitSet_Ramp_01",
+            "MI_Foundation_FicsitSet_CornerRamp_01",
+            ],
+        "Grip":[
+            "MI_GripMetal_Foundation",
+            "MI_GripMetal_Ramp",
+            "MI_GripMetal_RampCorner",
+            ],
+        "Metal":[
+            "MI_GripMetal_Foundation",
+            "MI_GripMetal_Ramp",
+            "MI_GripMetal_RampCorner",
+            ]
+    }
     
     no_gb_mat = [
         "MI_BlueprintDesigner_Foundations_01",
@@ -143,23 +229,18 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     force_replace_mat = {
         "MI_SK_Constructor":"MI_VAT_Constructorr",
         "MI_Tack_01_NoDeform":"MI_Tack_01",
-        "MI_HyperTubeStart_01":"MM_ShutterGate_Inst"
+        "MM_ShutterGate_Inst":"MI_HyperTubeStart_01",
     }
     
-    search_mat = [
-        {"PipelineMK2":
-            "MI_PipeMK2"
-        },
-    ]
+    search_mat = {"PipelineMK2":
+        "MI_PipeMK2"
+        }
     
-    out_parent_exc = [
-        
-    ]
-                
     find_path = Path(parent_path,"Material")
     find_path_s = Path(parent_path,"Materials")
     find_path_pl = Path(find_path,"Placeholder") # TODO hub materials
     mat_path = None
+    mat_exports_path = None
     new_parent_path = parent_path
     check_parent_path = False
     fact_mat = bpy.data.materials.get("MI_Factory_01")
@@ -176,6 +257,158 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             if not replace_mat:
                 replace_mat = bpy.data.materials.new(obj_material)
             ob.material_slots[index].material = replace_mat
+    
+    for s_mat in search_mat:
+        if s_mat == obj_material:
+            obj_material = search_mat[s_mat]
+            replace_mat = bpy.data.materials.get(obj_material)
+            if not replace_mat:
+                replace_mat = bpy.data.materials.new(obj_material)
+            ob.material_slots[index].material = replace_mat
+    
+    
+    remapped_mat = False
+    #for mat_re in con_mat_remap:
+    #    if mat_re in col.name and not "Polished" in col.name:
+    #        if "Ramp" in col.name and not "DCorner" in col.name and not "DownCorner" in col.name:
+    #            obj_material_dup = con_mat_remap[mat_re][1]
+    #        else:
+    #            obj_material_dup = con_mat_remap[mat_re][0]
+    #        ob.data = ob.data.copy()
+    #        material_dup = ob.material_slots[index].material.copy()
+    #        ob.material_slots[index].material = material_dup
+    #        replace_mat = bpy.data.materials.get(obj_material_dup)
+    #        if not replace_mat:
+    #            replace_mat = bpy.data.materials.new(obj_material_dup)
+    #        ob.material_slots[index].material = replace_mat
+    #        obj_material = obj_material_dup
+    #        break
+    #    elif "Polished" in col.name:
+    #        if "Ramp" in col.name and not "DCorner" in col.name and not "DownCorner" in col.name:
+    #            obj_material_dup = con_mat_remap[mat_re][1]
+    #        else:
+    #            obj_material_dup = con_mat_remap[mat_re][0]
+    #        ob.data = ob.data.copy()
+    #        material_dup = ob.material_slots[index].material.copy()
+    #        ob.material_slots[index].material = material_dup
+    #        replace_mat = bpy.data.materials.get(obj_material_dup)
+    #        if not replace_mat:
+    #            replace_mat = bpy.data.materials.new(obj_material_dup)
+    #        ob.material_slots[index].material = replace_mat
+    #        obj_material = obj_material_dup
+    #        break
+    
+    foundation_path = "Foundation" in list(parent_path.parts)
+    if "Concrete" in col.name and foundation_path:# and not "Wall" in col.name and not "Piller" in col.name and not "Barrier" in col.name:
+        mat_re = con_mat_remap["Concrete"]
+        if "Ramp" in col.name and not "DCorner" in col.name and not "DownCorner" in col.name:
+            obj_material_dup = mat_re[1]
+        else:
+            obj_material_dup = mat_re[0]
+        ob.data = ob.data.copy()
+        material_dup = ob.material_slots[index].material.copy()
+        ob.material_slots[index].material = material_dup
+        replace_mat = bpy.data.materials.get(obj_material_dup)
+        if not replace_mat:
+            replace_mat = bpy.data.materials.new(obj_material_dup)
+        ob.material_slots[index].material = replace_mat
+        obj_material = obj_material_dup
+    if "Asphalt" in col.name:
+        mat_re = con_mat_remap["Asphalt"]
+        if "Ramp" in col.name and not "DCorner" in col.name and not "DownCorner" in col.name:
+            obj_material_dup = mat_re[1]
+        else:
+            obj_material_dup = mat_re[0]
+        ob.data = ob.data.copy()
+        material_dup = ob.material_slots[index].material.copy()
+        ob.material_slots[index].material = material_dup
+        replace_mat = bpy.data.materials.get(obj_material_dup)
+        if not replace_mat:
+            replace_mat = bpy.data.materials.new(obj_material_dup)
+        ob.material_slots[index].material = replace_mat
+        obj_material = obj_material_dup
+    if "Polished" in col.name:
+        mat_re = con_mat_remap["Polished"]
+        if "Ramp" in col.name and not "DCorner" in col.name and not "DownCorner" in col.name:
+            obj_material_dup = mat_re[1]
+        else:
+            obj_material_dup = mat_re[0]
+        ob.data = ob.data.copy()
+        material_dup = ob.material_slots[index].material.copy()
+        ob.material_slots[index].material = material_dup
+        replace_mat = bpy.data.materials.get(obj_material_dup)
+        if not replace_mat:
+            replace_mat = bpy.data.materials.new(obj_material_dup)
+        ob.material_slots[index].material = replace_mat
+        obj_material = obj_material_dup
+    
+    if "Ficsit" in col.name:
+        mat_re = fic_mat_remap["Ficsit"]
+        if "Ramp" in col.name or "Stair" in col.name:
+            obj_material_dup = mat_re[1]
+        else:
+            obj_material_dup = mat_re[0]
+        
+        ob.data = ob.data.copy()
+        material_dup = ob.material_slots[index].material.copy()
+        ob.material_slots[index].material = material_dup
+        replace_mat = bpy.data.materials.get(obj_material_dup)
+        if not replace_mat:
+            replace_mat = bpy.data.materials.new(obj_material_dup)
+        ob.material_slots[index].material = replace_mat
+        obj_material = obj_material_dup
+    
+    if "Grip" in col.name or "Metal" in col.name and foundation_path:# and not "Wall" in col.name and not "Piller" in col.name and not "Barrier" in col.name:
+        mat_re = fic_mat_remap["Grip"]
+        if "Corner" in col.name and "Ramp" in col.name and not "DC" in col.name and not "DownCorner" in col.name:
+            obj_material_dup = mat_re[2]
+        elif "Ramp" in col.name and not "DC" in col.name and not "DownCorner" in col.name:# or "Stair" in col.name:
+            obj_material_dup = mat_re[1]
+        else:
+            obj_material_dup = mat_re[0]
+    
+        ob.data = ob.data.copy()
+        material_dup = ob.material_slots[index].material.copy()
+        ob.material_slots[index].material = material_dup
+        replace_mat = bpy.data.materials.get(obj_material_dup)
+        if not replace_mat:
+            replace_mat = bpy.data.materials.new(obj_material_dup)
+        ob.material_slots[index].material = replace_mat
+        obj_material = obj_material_dup
+        
+    #for mat_re in fic_mat_remap:
+    #    if mat_re in col.name:
+    #        if "Ficsit" in 
+    #        if "Corner" in col.name and not "Ramp" in col.name:
+    #            obj_material_dup = fic_mat_remap[mat_re][0]
+    #        elif "Ramp" in col.name or "Stair" in col.name:
+    #            obj_material_dup = fic_mat_remap[mat_re][1]
+    #        else:
+    #            obj_material_dup = fic_mat_remap[mat_re][0]
+    #        ob.data = ob.data.copy()
+    #        material_dup = ob.material_slots[index].material.copy()
+    #        ob.material_slots[index].material = material_dup
+    #        replace_mat = bpy.data.materials.get(obj_material_dup)
+    #        if not replace_mat:
+    #            replace_mat = bpy.data.materials.new(obj_material_dup)
+    #        ob.material_slots[index].material = replace_mat
+    #        obj_material = obj_material_dup
+    #        break
+        
+            #for mat in mat_remap[mat_re]:
+            #    if remapped_mat:
+            #        break
+            #    print(mat)
+            #    print(col.name)
+            #    print(mat in col.name)
+            #    if mat in col.name:
+            #        replace_mat = bpy.data.materials.get(obj_material_dup)
+            #        if not replace_mat:
+            #            replace_mat = bpy.data.materials.new(obj_material_dup)
+            #        remapped_mat = True
+            #        #break
+            #    else:
+            #        ob.material_slots[index].material = bpy.data.materials.get(mat_re)
             
     if "Glass" in obj_material or "MI_HadronEffect_01" in obj_material:
         glass_mat = bpy.data.materials.get("Glass_mat")
@@ -183,82 +416,153 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         return None
     
     is_hub = False
-    for i in range(3):
-        if not check_parent_path:
-            check_parent_path = True
-            if parent_path.parent.name.endswith(".json"):
-                parent_path = parent_path.parent
-                if parent_path.exists():
-                    print("material folder found")
-                    mat_path = parent_path
-                    break
-            if Path(parent_path,f"{obj_material}.json").exists():
-                print("material folder found")
-                mat_path = parent_path
-                break
-        print(f"Mat: {find_path}============")
-        print(f"Mat: {find_path_s}============")
-        if Path(find_path.parent,f"{obj_material}.json").exists() or Path(find_path_s.parent,f"{obj_material}.json").exists():
-            mat_path = find_path.parent if Path(find_path.parent,f"{obj_material}.json").exists() else find_path_s.parent
-            break
-        if find_path.is_dir() or find_path_s.is_dir() or find_path_pl.is_dir():
-            print("The folder exists in dir.")
-            if find_path_pl.is_dir(): 
-                mat_path = find_path_pl
-                is_hub = True
-            elif find_path_s.is_dir():
-                mat_path = find_path_s
-            else:
-                mat_path = find_path 
-            break
-        else:
-            print("folder not in dir")
-            new_parent_path = new_parent_path.parent
-            find_path = Path(new_parent_path,"Material")
-            find_path_s = Path(new_parent_path,"Materials")
-            find_path_pl = Path(find_path,"Placeholder")
-            
-    for sm in search_mat:
-        continue
-        for dm in sm:
-            dm_mat = sm.get(dm,"")
-            if dm_mat in obj_material:
-                search_file = list(Path(sf_asset_export_path).rglob(f"{obj_material}.json"))
-                if search_file:
-                    mat_path = search_file[0]
-                    break
-            
-    if not mat_path:
-        search_file = list(Path(sf_asset_export_path,"Exports").rglob(f"{obj_material}.json"))
-        if search_file:
-            mat_path = search_file[0]
-        else:
-            print("No Material file found.")
-            return None
+    search_file = list(Path(sf_asset_export_path,"Exports").rglob(f"{obj_material}.json"))
+    if search_file:
+        mat_path = search_file[0]
+        mat_file = search_file[0]
+    
+    # search Exports path if not found in mesh path 
+    if not mat_path: # TODO
+        return None
+    
+    # Get Material file
     try:
-        if mat_path.name.endswith(".json"):
-            mat_file = mat_path
-        else:
-            mat_file = Path(mat_path,f"{obj_material}.json")
+        mat_file = mat_path
+        #if mat_path.name.endswith(".json"):
+        #    mat_file = mat_path
+        #else:
+        #    mat_file = Path(mat_path,f"{obj_material}.json")
         print(mat_file)
         with open(mat_file, 'r', encoding='utf-8') as f:
             m_data = json.load(f)
-            #print(m_data)
+            
     except Exception as e:
-        print("Error opening material file: ",e)
+        print("⚠️Error opening material file: ",e)
         return None
-    if type(m_data) == list:
-        return None
+
+    
+    #if textures:
+    #    for tex in textures:
+    #        if "TX2D_" in tex:
+    #            ob.material_slots[index].material = fact_mat
+    #            return None
+    
+    textures = [] # type: list[dict[str,str]] 
+    switch_parameters = [] # type: list[dict[str,str]] 
+    vec_parameters = [] # type: list[dict[str,str]] 
+    for item in m_data:
+        is_tpv = False
+        if item.get("Properties"):
+            props = item.get("Properties")
+            if props.get("Parent"):
+                # default to Factory_01 material if TX2D_ textures found
+                if "MI_Factory_Base" in props["Parent"]["ObjectName"]: 
+                    ob.material_slots[index].material = fact_mat
+                    return None
+            
+            if props.get("TextureParameterValues"):
+                is_tpv = True
+                for tex in props["TextureParameterValues"]:
+                    textures.append(
+                        {tex["ParameterInfo"]["Name"]:tex["ParameterValue"]["ObjectPath"][6:].split('.')[0]}
+                    )
+                if props.get("TextureStreamingData"):
+                    for tsd in props["TextureStreamingData"]:
+                        if "_N" in tsd["TextureName"]:
+                            normal_name = tsd["TextureName"]
+                            has_normal = False
+                            alb_tex = ""
+                            for t in textures:
+                                for k in t:
+                                    if k.startswith('N'):
+                                        has_normal = True
+                                    if k.startswith('A'):
+                                        alb_tex = t[k]
+                            if not has_normal:    
+                                alb_parts = alb_tex.split('/')
+                                alb_parts[-1] = normal_name
+                                mat_tex = '/'.join(alb_parts)
+                                textures.append(
+                                    {"Normal":mat_tex}
+                                )
+            
+            if props.get("TextureStreamingData") and not props.get("TextureParameterValues"):
+                for tsd in props["TextureStreamingData"]:
+                    for t in rough_type_tex:
+                        if t in tsd["TextureName"]:
+                            tex_name = tsd["TextureName"]
+                            search_tex_path = mat_path.parent.parent
+                            search_tex = list(search_tex_path.rglob(f"{tex_name}.png"))
+                            if search_tex:
+                                mat_tex = str(search_tex[0]).replace("\\Exports\\","\\")
+                                textures.append(
+                                    {"Normal":mat_tex.split('.')[0]}
+                                )
+                    if "_AO" in tsd["TextureName"]:
+                        tex_name = tsd["TextureName"]
+                        search_tex_path = mat_path.parent.parent
+                        search_tex = list(search_tex_path.rglob(f"{tex_name}.png"))
+                        if search_tex:
+                            mat_tex = str(search_tex[0]).replace("\\Exports\\","\\")
+                            textures.append(
+                                {"AOMasks":mat_tex.split('.')[0]}
+                            )
+                    for t in color_type_tex:
+                        if t in tsd["TextureName"]:
+                            tex_name = tsd["TextureName"]
+                            search_tex_path = mat_path.parent.parent
+                            search_tex = list(search_tex_path.rglob(f"{tex_name}.png"))
+                            if search_tex:
+                                mat_tex = str(search_tex[0]).replace("\\Exports\\","\\")
+                                textures.append(
+                                    {"Albedo":mat_tex.split('.')[0]}
+                                )
+                    for t in rough_type_tex:
+                        if t in tsd["TextureName"]:
+                            tex_name = tsd["TextureName"]
+                            search_tex_path = mat_path.parent.parent
+                            search_tex = list(search_tex_path.rglob(f"{tex_name}.png"))
+                            if search_tex:
+                                mat_tex = str(search_tex[0]).replace("\\Exports\\","\\")
+                                textures.append(
+                                    {"ReflectionMap":mat_tex.split('.')[0]}
+                                )
+            
+            if props.get("StaticParametersRuntime"):
+                for ssp in props["StaticParametersRuntime"]["StaticSwitchParameters"]:
+                    switch_parameters.append(
+                        {ssp["ParameterInfo"]["Name"]:ssp["Value"]}
+                    )
+            if props.get("VectorParameterValues"):
+                for vpv in props["VectorParameterValues"]:
+                    vec_parameters.append(
+                        {vpv["ParameterInfo"]["Name"]:vpv["ParameterValue"]}
+                    )
+        
+        if item.get("ReferencedTextures") and not is_tpv:
+            for ref_tex in item["ReferencedTextures"]:
+                for t in color_type_tex:
+                    if t in ref_tex.get("ObjectName"):
+                        textures.append(
+                            {"Albedo":ref_tex["ObjectPath"][6:].split('.')[0]}
+                        )
+                for t in rough_type_tex:
+                    if t in ref_tex.get("ObjectName"):
+                        textures.append(
+                            {"ReflectionMap":ref_tex["ObjectPath"][6:].split('.')[0]}
+                        )
+                if "_N" in ref_tex.get("ObjectName"):
+                    textures.append(
+                        {"Normal":ref_tex["ObjectPath"][6:].split('.')[0]}
+                    )
+                if "_AO" in ref_tex.get("ObjectName"):
+                    textures.append(
+                        {"AOMasks":ref_tex["ObjectPath"][6:].split('.')[0]}
+                    )
     b_material = bpy.data.materials[obj_material]    
     b_material.node_tree.nodes.clear()
-    textures = m_data.get('Textures')
     
-    if textures:
-        for tex in textures:
-            if "TX2D_" in tex:
-                ob.material_slots[index].material = fact_mat
-                return None
-    
+    # Start Textures logic
     if textures:
         print("getting mat tex")
         nodes = b_material.node_tree.nodes
@@ -274,28 +578,38 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         links.new(sf_shader_node.outputs["Shader"], output_node.inputs["Surface"])
         if any(mat == obj_material for mat in no_gb_mat):
             sf_shader_node.inputs["AO no GB packed?"].default_value = True
-        if any(mat == obj_material for mat in mra_mat):
-            sf_shader_node.inputs["MRA?"].default_value = True
+        #if any(mat == obj_material for mat in mra_mat):
+        #    sf_shader_node.inputs["MRA?"].default_value = True
+        has_cbp = False # CanBePainted
+        #for sp in switch_parameters:
+        #    if not sp.get("CanBePainted"):
+        #        has_cbp = True
+        for mra in mra_mat:
+            if mra in obj_material:
+                has_cbp = True
+        sf_shader_node.inputs["MRA?"].default_value = has_cbp
+        
         pos = 0
-        tex_set = set([textures[tex] for tex in textures])
+        #tex_set = set([textures[tex] for tex in textures])
         #print(tex_set)
         
-        for tex in tex_set:
-            print(tex)
+        for tex in textures:
+            print(tex) 
+            tex_type = ""
+            tex_path = ""
+            for tt,tp in tex.items(): #should only have one item {texture type: texture path}
+                tex_type = tt # type: str
+                tex_path = tp # type: str
+                
             if "MI_WallSetConcrete_8x1" in obj_material:
-                if "TX_WallSetConcrete_8x1_AOMasks" in tex:
+                if "TX_WallSetConcrete_8x1_AOMasks" in tex_path:
                     continue
-            tex_dir = tex.replace("/Game", "Content").split('.')[0] + ".png"
-            tex_file = Path(sf_asset_export_path,"FactoryGame",tex_dir)    
+            
+            exports_path = Path(sf_asset_export_path,"FactoryGame","Content")
+            print(exports_path)
+            tex_file = Path(exports_path,f"{tex_path}.png")    
             print(tex_file)
             model_parent_path = mat_path.parent
-            in_parent = os.fspath(tex_file).startswith(str(os.fspath(mat_path.parent)))
-            if is_hub:
-                in_parent = os.fspath(tex_file).startswith(str(os.fspath(mat_path.parent.parent)))
-            #if mat_path.parent.name == "Factory" or mat_path.parent.name == "Building":
-            #    in_parent = False
-            print(os.fspath(tex_file).startswith(str(os.fspath(mat_path.parent))))   
-            print(in_parent)
             print("---")
                 
             print(tex_file.name.startswith("TX_"))
@@ -304,16 +618,12 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             if not tex_file.exists():
                 print(f"Error: texture does not exist: {tex_file}")
                 continue
-            if not tex_file.name.startswith("TX_") and not tex_file.name.startswith("T_") and not any(screen in tex_file.name for screen in screen_type_mat):
-                print(f"Skipping None 'TX_' and 'T_' textures: {tex_file}")
-                continue
+            #if not tex_file.name.startswith("TX_") and not tex_file.name.startswith("T_") and not any(screen in tex_file.name for screen in screen_type_mat):
+            #    print(f"Skipping None 'TX_' and 'T_' textures: {tex_file}")
+            #    continue
             
-            if not in_parent:
-                print(f"Skipping textures not in parent dir: {tex_file}")
-                continue
-            
-            print("========================>")
-            print(f"Getting {tex_file.name} texture")
+            print("========================")
+            print(f"Getting {tex_file} texture")
             print("========================")
             try:
                 b_texture = b_material.node_tree.nodes.new('ShaderNodeTexImage')
@@ -323,11 +633,9 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                 pos += 1
                 b_texture.location = Vector((x,y))
                 #b_texture.image = bpy.data.images.load(os.fspath(tex_file))
-                print(os.fspath(tex_file))
                 #print(bpy.data.images)
-                img_list = [img.name for img in bpy.data.images]
+                #img_list = [img.name for img in bpy.data.images]
                 #print(img_list)
-                print(tex_file)
                 img = bpy.data.images.get(tex_file.name)
                 if img:
                     print("img in bl")
@@ -342,7 +650,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                         if "TX_Stencils" not in tex_file.name:
                             b_texture.extension = 'MIRROR'
                 for t in rn_type_tex:
-                    if t in tex_file.name:
+                    if t in tex_type or t in tex_file.name:
                     #if '_N' in tex_file.name or 'Refl' in tex_file.name:
                         b_texture.image.colorspace_settings.name = 'Linear Rec.709'
                 
@@ -355,21 +663,21 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                 
                 tx_type = ""
                 tx_type_a = ""
-                if "_N" in tex_file.name:
-                    tx_type = "Normal/Nor/N"
                 
-                if "_AO" in tex_file.name:
+                if "_N" in tex_file.name or "N" in tex_type:
+                    tx_type = "Normal/Nor/N"
+                if "_AO" in tex_file.name or "AO" in tex_type:
                     tx_type = "AO/IDMask"
                     sf_shader_node.inputs["No AO?"].default_value = False
                 for rt in rough_type_tex:
-                    if rt in tex_file.name:
+                    if rt in tex_file.name or rt in tex_type:
                         tx_type = "Relf/MREA"
                         tx_type_a = tx_type+" Alpha"
                         b_texture.image.alpha_mode = 'CHANNEL_PACKED'
                     if "_MREA" in tex_file.name:
                         sf_shader_node.inputs["Relf or MREA?"].default_value = True
                 for bc in color_type_tex:
-                    if bc in tex_file.name:
+                    if bc in tex_file.name or bc in tex_type:
                         tx_type = "Color/BC/Albedo"
                         tx_type_a = "Albedo Alpha"
                         b_texture.image.alpha_mode = 'CHANNEL_PACKED'
@@ -479,6 +787,8 @@ def import_model(
             ob_sk_mesh.parent = ob
         else:
             obj_duplicate = ob.copy()
+            #obj_data_duplicate = ob.data.copy()
+            #obj_duplicate.data = obj_data_duplicate
             ob = obj_duplicate 
         
     else:
@@ -633,8 +943,10 @@ def import_model(
     build_materials = bpy.context.scene.sf_importer_props.build_materials
     if build_materials:
         ob_pros = ob
+        col_pros = col
         if ob_sk_mesh:
             ob_pros = ob_sk_mesh
+            
         obj_materials = [slot.material.name for slot in ob_pros.material_slots if slot.material]
         print(f"Materials on {ob_pros.name}: {obj_materials}")
             
@@ -644,9 +956,10 @@ def import_model(
             mod.node_group = node_group
             #set_geonode_input(mod, "Material", "Decal_Normal")
         for i,mat in enumerate(obj_materials):
-            mat_results = get_materials(ob_pros,mat,file,i,sf_asset_export_path)
+            mat_results = get_materials(ob_pros,mat,file,i,sf_asset_export_path,col_pros)
             if mat_results == None:
                 print(f"got {mat} material for {ob_pros}")
+            #time.sleep(0.2)
     
     #mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
     #if mark_as_asset:

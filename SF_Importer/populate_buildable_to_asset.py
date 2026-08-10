@@ -20,11 +20,11 @@ EXCLUDE_LIST = [
     "Build_RailroadTrackIntegrated",
     "Concave",
     "Build_VehiclePathNode",
-    "_NoIndicator"
+    #"_NoIndicator"
     #"Integrate",
     #"Build_TradingPost",
     #"Build_Blueprint",
-    #"Build_Pipeline_NoIndicator",
+    "Build_Pipeline_NoIndicator",
     #"Build_BlueprintDesigner",
 ]
 

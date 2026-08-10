@@ -47,6 +47,7 @@ prop_parent = None
 build_total = 0
 total_buildings_imported = 0
 build_execution_time = 0.0
+marking_asset = False
 
 # start common types
 Vec3 = tuple[float, float, float]
@@ -1888,6 +1889,54 @@ def get_buildable_models(sf_asset_export_path):
     #            asset_data = col.asset_data 
     #            asset_data.catalog_id = catalog_id
 
+def run_mark_asset(a_coll,u_coll):
+    global marking_asset
+    marking_asset = True
+    
+    folder = Path(bpy.data.filepath).parent
+    if Path(folder,"blender_assets.cats.txt").exists():
+        target_catalogs = {
+        "Assets-Factory":"",
+        "Assets-Building":"",
+        "Utility":""
+        }
+        with (folder / "blender_assets.cats.txt").open() as f:
+            for line in f.readlines():
+                if line.startswith(("#", "VERSION", "\n")):
+                    continue
+                # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
+                name = line.split(":")[2].split("\n")[0]
+                for cat in target_catalogs:
+                    if name == cat:
+                        uuid = line.split(":")[0]
+                        target_catalogs[name] = uuid
+                        
+            for col in list(a_coll.children):
+                catalog_id = target_catalogs.get("Assets-"+col.name)
+                for b_col in list(col.children):
+                    col.hide_viewport = False
+                    a_coll.asset_clear()
+                    b_col.asset_mark()
+                    b_col.asset_generate_preview()
+                    col.hide_viewport = True
+                    asset_data = b_col.asset_data
+                    asset_data.catalog_id = catalog_id
+                    
+            for col in list(u_coll.children):
+                if "Conveyor" in col.name:
+                    col.hide_viewport = True
+                catalog_id = target_catalogs.get(u_coll.name)
+                col.hide_viewport = False
+                col.asset_clear()
+                col.asset_mark()
+                col.asset_generate_preview()
+                col.hide_viewport = True
+                asset_data = col.asset_data 
+                asset_data.catalog_id = catalog_id
+    else:
+        print("blender_assets.cats.txt not in perant folder")
+    marking_asset = False
+    
 def import_models_task(a_coll,u_coll):
     global build_total,total_buildings_imported,is_asset_building,stop_building_requested,build_execution_time
     start_time = datetime.now()
@@ -1902,48 +1951,57 @@ def import_models_task(a_coll,u_coll):
     
     mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
     if mark_as_asset and not stop_building_requested:
-        folder = Path(bpy.data.filepath).parent
-        if Path(folder,"blender_assets.cats.txt").exists():
-            target_catalogs = {
-            "Assets-Factory":"",
-            "Assets-Building":"",
-            "Utility":""
-            }
-            with (folder / "blender_assets.cats.txt").open() as f:
-                for line in f.readlines():
-                    if line.startswith(("#", "VERSION", "\n")):
-                        continue
-                    # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
-                    name = line.split(":")[2].split("\n")[0]
-                    for cat in target_catalogs:
-                        if name == cat:
-                            uuid = line.split(":")[0]
-                            target_catalogs[name] = uuid
-        
-                for col in list(a_coll.children):
-                    catalog_id = target_catalogs.get("Assets-"+col.name)
-                    for b_col in list(col.children):
-                        col.hide_viewport = False
-                        a_coll.asset_clear()
-                        b_col.asset_mark()
-                        b_col.asset_generate_preview()
-                        col.hide_viewport = True
-                        asset_data = b_col.asset_data
-                        asset_data.catalog_id = catalog_id
-        
-                for col in list(u_coll.children):
-                    if "Conveyor" in col.name:
-                        col.hide_viewport = True
-                    catalog_id = target_catalogs.get(u_coll.name)
-                    col.hide_viewport = False
-                    col.asset_clear()
-                    col.asset_mark()
-                    col.asset_generate_preview()
-                    col.hide_viewport = True
-                    asset_data = col.asset_data 
-                    asset_data.catalog_id = catalog_id
-        else:
-            print("blender_assets.cats.txt not in perant folder")
+        bpy.app.timers.register(functools.partial(
+            run_mark_asset,
+            a_coll=a_coll,
+            u_coll=u_coll
+            ), first_interval=0)
+        time.sleep(0.1)
+    
+    #mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
+    #if mark_as_asset and not stop_building_requested:
+    #    folder = Path(bpy.data.filepath).parent
+    #    if Path(folder,"blender_assets.cats.txt").exists():
+    #        target_catalogs = {
+    #        "Assets-Factory":"",
+    #        "Assets-Building":"",
+    #        "Utility":""
+    #        }
+    #        with (folder / "blender_assets.cats.txt").open() as f:
+    #            for line in f.readlines():
+    #                if line.startswith(("#", "VERSION", "\n")):
+    #                    continue
+    #                # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
+    #                name = line.split(":")[2].split("\n")[0]
+    #                for cat in target_catalogs:
+    #                    if name == cat:
+    #                        uuid = line.split(":")[0]
+    #                        target_catalogs[name] = uuid
+    #    
+    #            for col in list(a_coll.children):
+    #                catalog_id = target_catalogs.get("Assets-"+col.name)
+    #                for b_col in list(col.children):
+    #                    col.hide_viewport = False
+    #                    a_coll.asset_clear()
+    #                    b_col.asset_mark()
+    #                    b_col.asset_generate_preview()
+    #                    col.hide_viewport = True
+    #                    asset_data = b_col.asset_data
+    #                    asset_data.catalog_id = catalog_id
+    #    
+    #            for col in list(u_coll.children):
+    #                if "Conveyor" in col.name:
+    #                    col.hide_viewport = True
+    #                catalog_id = target_catalogs.get(u_coll.name)
+    #                col.hide_viewport = False
+    #                col.asset_clear()
+    #                col.asset_mark()
+    #                col.asset_generate_preview()
+    #                col.hide_viewport = True
+    #                asset_data = col.asset_data 
+    #                asset_data.catalog_id = catalog_id
+    #    else:
+    #        print("blender_assets.cats.txt not in perant folder")
     
     is_asset_building = False
     stop_building_requested = False
@@ -2202,7 +2260,6 @@ def get_lib_assets_task(save: s.SaveGame):
         if get_lib_result:
             print(get_lib_result)
         
-    
 class ImportSaveButton(bpy.types.Operator):
     bl_idname = "button.import_save"
     bl_label = "Start Save Import"
@@ -2501,7 +2558,8 @@ class VIEW3D_PT_SF_Asset_Builder_panel(Panel):
     bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
-        global progress,progress_in,per_time, is_scanning,build_total,total_buildings_imported,build_execution_time, current_buildable,start_process,is_get_scanning
+        global progress,progress_in,per_time, is_scanning,build_total,total_buildings_imported,build_execution_time
+        global current_buildable,start_process,is_get_scanning,marking_asset
         layout = self.layout
         scene = context.scene
         props = scene.sf_importer_props
@@ -2527,6 +2585,10 @@ class VIEW3D_PT_SF_Asset_Builder_panel(Panel):
         if build_execution_time:
             row = layout.row(align=True)
             row.label(text=f"Execution Time: {str(build_execution_time)[:-4]}")
+        
+        if marking_asset:
+            row = layout.row(align=True)
+            row.label(text="Marking Assets...")
         
         config_box = layout.box()
         config_box.prop(props, "mark_as_asset")
