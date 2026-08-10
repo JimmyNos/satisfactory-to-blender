@@ -1076,7 +1076,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             type_mk_belt = []
             
             total_cons = len(actor.mChainSplineSegments)
-            current_buildable = f"{className.split('.')[-1]}: {total_cons} segments" 
+            current_buildable = f"Conveyor chain: {total_cons} segments" 
             count_p = 0
             for i, seg in enumerate(reversed(actor.mChainSplineSegments)):
                 if stop_requested:

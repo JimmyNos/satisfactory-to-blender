@@ -250,7 +250,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         #"MI_SK_Constructor":"MI_VAT_Constructorr",
         "MI_Tack_01_NoDeform":"MI_Tack_01",
         "MM_ShutterGate_Inst":"MI_HyperTubeStart_01",
-        "HubDecal_Opaque":"HubDecal_Masked"
+        "HubDecal_Opaque":"HubDecal_Masked",
+        "MI_Pipe_Static":"MI_Pipe"
     }
     
     search_mat = {"PipelineMK2":
@@ -466,7 +467,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                                     {"Normal":mat_tex}
                                 )
             
-            if props.get("TextureStreamingData") and not props.get("TextureParameterValues"):
+            if props.get("TextureStreamingData") and len(textures) <= 1:# not props.get("TextureParameterValues"):
                 for tsd in props["TextureStreamingData"]:
                     for t in nor_type_tex:
                         if t in tsd["TextureName"]:
