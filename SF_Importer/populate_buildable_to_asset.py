@@ -19,12 +19,22 @@ EXCLUDE_LIST = [
     "BUILD_SingleDoor_Base_01",
     "Build_RailroadTrackIntegrated",
     "Concave",
+    "_Curved",
     "Build_VehiclePathNode",
-    #"_NoIndicator"
+    "_NoIndicator",
+    "Tris_Glass",
+    "_Proxy",
+    "BP_VehicleTarget",
+    "BP_Wheeled",
+    "RearWheel",
+    "FrontWheel",
+    "Cinematic",
+    "BP_Wheel_",
+    "SoundComponent",
+    "PassengerSeat"
     #"Integrate",
     #"Build_TradingPost",
     #"Build_Blueprint",
-    "Build_Pipeline_NoIndicator",
     #"Build_BlueprintDesigner",
 ]
 
@@ -85,7 +95,8 @@ MESH_NODE_TYPES = [
     "Build_RailroadTrack",
     "Build_Ladder_C",
     "Build_TradingPost_C",
-    "BP_ElevatorCabin_C"
+    "BP_ElevatorCabin_C",
+    "Xmass"
 ]
 
 CONVEYOR_LIFT_MESHES = [
@@ -657,15 +668,21 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
     if Path(SF_export_dir,"Exports").exists():
         build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Buildable")
         beam_build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Prototype", "Buildable", "Beams")
+        events_build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Events")
+        vehicle_build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Buildable","Vehicle")
     else:
         build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Buildable")
         beam_build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Prototype", "Buildable", "Beams")
+        events_build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Events")
+        vehicle_build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Buildable","Vehicle")
     
     start_time = time.perf_counter()
     all_data = {}
     PI_build = "BP_ProductionIndicatorInstanced"
     build_dir = Path(build_files_dir)
     beam_build_dir = Path(beam_build_files_dir)
+    events_build_dir = Path(events_build_files_dir)
+    vehicle_build_dir = Path(vehicle_build_files_dir)
     
     if not build_dir.exists():# or not build_beam_dir.exists():
         print(f"Error: Directory does not exist: {build_dir}")# or {build_beam_dir}")
@@ -680,6 +697,8 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
             integrated_builds.extend(build_dir.rglob(f"build_*{i}*.json"))
     build_files = integrated_builds + list(build_dir.rglob("build_*.json"))
     build_files = build_files + list(beam_build_dir.rglob("build_*.json"))
+    build_files = build_files + list(events_build_dir.rglob("build_*.json"))
+    build_files = build_files + list(vehicle_build_dir.rglob("BP_*.json"))
     #build_files(list(build_dir.rglob("BP_ProductionIndicatorInstanced.json"))[0])
     print(f"Found {len(build_files)} build files")
     count = 0
@@ -704,12 +723,12 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
             if data:
                 count+=1
                 
-                if data.get("Build_Pipeline_C"):
-                    data["Build_Pipeline_NoIndicator"] = data.get("Build_Pipeline_C")
-                    count+=1
-                elif data.get("Build_PipelineMK2_C"):
-                    data["Build_PipelineMK2_NoIndicator"] = data.get("Build_PipelineMK2_C")
-                    count+=1
+                #if data.get("Build_Pipeline_C"):
+                #    data["Build_Pipeline_NoIndicator"] = data.get("Build_Pipeline_C")
+                #    count+=1
+                #elif data.get("Build_PipelineMK2_C"):
+                #    data["Build_PipelineMK2_NoIndicator"] = data.get("Build_PipelineMK2_C")
+                #    count+=1
                 if data.get("Build_PowerTowerPlatform_C"):
                     if all_data.get("Build_PowerTower_C"):
                         Build_PowerTower_C = all_data["Build_PowerTower_C"]
@@ -736,8 +755,6 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
     
     #print(f"Found {len(build_files)} build files")
     #print(f"processed {count} buildables")
-    #print(f"excluded {ex_count,ex_list} build files")
-    #print(f"failed {len(failed_list)} build files")
     
     # Write to output file
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
@@ -747,6 +764,8 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
     #    json.dump(failed_list, f, indent=2)
     
     print(f"\nPopulated {len(all_data)} entries in {OUTPUT_FILE}")
+    print(f"excluded {ex_count,ex_list} build files")
+    print(f"failed {len(failed_list)} build files")
     end_time = time.perf_counter()
     execution_time = end_time - start_time
     print(f"Importing models time: {execution_time:.6f} seconds")

@@ -50,8 +50,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "Decal_Color",
         "Decal_Normal",
         "DecalColor_Masked"
-        #"Glass_Inst", # glass mat name
-        #"Lights_Inst", # Lights mat name
+        #"Glass_Mat", # glass mat name
+        #"Lights_Mat", # Lights mat name
     ]
     if any(pro in obj_material for pro in PRO_MATERIALS):
         return None
@@ -83,7 +83,14 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     color_type_tex = [
         "BC",
         "BaseColor",
-        "Alb"
+        "Alb",
+        "Pattern_02"
+    ]
+    
+    extra_type_tex = [
+        "Pattern_02",
+        "POS",
+        "QUAT"
     ]
     
     ao_type_tex = [
@@ -252,7 +259,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         return None
     
     for f_mat in force_replace_mat:
-        if f_mat == obj_material:
+        if f_mat == col.name:
             obj_material = force_replace_mat[f_mat]
             replace_mat = bpy.data.materials.get(obj_material)
             if not replace_mat:
@@ -261,43 +268,15 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     
     for s_mat in search_mat:
         if s_mat == obj_material:
-            obj_material = search_mat[s_mat]
-            replace_mat = bpy.data.materials.get(obj_material)
+            new_mat = search_mat[s_mat]
+            ob.data = ob.data.copy()
+            material_dup = ob.material_slots[index].material.copy()
+            ob.material_slots[index].material = material_dup
+            replace_mat = bpy.data.materials.get(new_mat)
             if not replace_mat:
-                replace_mat = bpy.data.materials.new(obj_material)
+                replace_mat = bpy.data.materials.new(new_mat)
             ob.material_slots[index].material = replace_mat
-    
-    
-    remapped_mat = False
-    #for mat_re in con_mat_remap:
-    #    if mat_re in col.name and not "Polished" in col.name:
-    #        if "Ramp" in col.name and not "DCorner" in col.name and not "DownCorner" in col.name:
-    #            obj_material_dup = con_mat_remap[mat_re][1]
-    #        else:
-    #            obj_material_dup = con_mat_remap[mat_re][0]
-    #        ob.data = ob.data.copy()
-    #        material_dup = ob.material_slots[index].material.copy()
-    #        ob.material_slots[index].material = material_dup
-    #        replace_mat = bpy.data.materials.get(obj_material_dup)
-    #        if not replace_mat:
-    #            replace_mat = bpy.data.materials.new(obj_material_dup)
-    #        ob.material_slots[index].material = replace_mat
-    #        obj_material = obj_material_dup
-    #        break
-    #    elif "Polished" in col.name:
-    #        if "Ramp" in col.name and not "DCorner" in col.name and not "DownCorner" in col.name:
-    #            obj_material_dup = con_mat_remap[mat_re][1]
-    #        else:
-    #            obj_material_dup = con_mat_remap[mat_re][0]
-    #        ob.data = ob.data.copy()
-    #        material_dup = ob.material_slots[index].material.copy()
-    #        ob.material_slots[index].material = material_dup
-    #        replace_mat = bpy.data.materials.get(obj_material_dup)
-    #        if not replace_mat:
-    #            replace_mat = bpy.data.materials.new(obj_material_dup)
-    #        ob.material_slots[index].material = replace_mat
-    #        obj_material = obj_material_dup
-    #        break
+            obj_material = new_mat
     
     foundation_path = "Foundation" in list(parent_path.parts)
     if "Concrete" in col.name and foundation_path:# and not "Wall" in col.name and not "Piller" in col.name and not "Barrier" in col.name:
@@ -376,45 +355,12 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             replace_mat = bpy.data.materials.new(obj_material_dup)
         ob.material_slots[index].material = replace_mat
         obj_material = obj_material_dup
-        
-    #for mat_re in fic_mat_remap:
-    #    if mat_re in col.name:
-    #        if "Ficsit" in 
-    #        if "Corner" in col.name and not "Ramp" in col.name:
-    #            obj_material_dup = fic_mat_remap[mat_re][0]
-    #        elif "Ramp" in col.name or "Stair" in col.name:
-    #            obj_material_dup = fic_mat_remap[mat_re][1]
-    #        else:
-    #            obj_material_dup = fic_mat_remap[mat_re][0]
-    #        ob.data = ob.data.copy()
-    #        material_dup = ob.material_slots[index].material.copy()
-    #        ob.material_slots[index].material = material_dup
-    #        replace_mat = bpy.data.materials.get(obj_material_dup)
-    #        if not replace_mat:
-    #            replace_mat = bpy.data.materials.new(obj_material_dup)
-    #        ob.material_slots[index].material = replace_mat
-    #        obj_material = obj_material_dup
-    #        break
-        
-            #for mat in mat_remap[mat_re]:
-            #    if remapped_mat:
-            #        break
-            #    print(mat)
-            #    print(col.name)
-            #    print(mat in col.name)
-            #    if mat in col.name:
-            #        replace_mat = bpy.data.materials.get(obj_material_dup)
-            #        if not replace_mat:
-            #            replace_mat = bpy.data.materials.new(obj_material_dup)
-            #        remapped_mat = True
-            #        #break
-            #    else:
-            #        ob.material_slots[index].material = bpy.data.materials.get(mat_re)
             
-    if "Glass" in obj_material or "MI_HadronEffect_01" in obj_material:
+    if "Glass" in obj_material or "MI_HadronEffect_01" in obj_material or "MM_Window_CC" in obj_material:
         glass_mat = bpy.data.materials.get("Glass_mat")
         ob.material_slots[index].material = glass_mat
         return None
+
     
     is_hub = False
     search_file = list(Path(sf_asset_export_path,"Exports").rglob(f"{obj_material}.json"))
@@ -450,7 +396,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     
     textures = [] # type: list[dict[str,str]] 
     switch_parameters = [] # type: list[dict[str,str]] 
-    vec_parameters = [] # type: list[dict[str,str]] 
+    vec_parameters = [] # type: list[dict[str,dict]] 
     for item in m_data:
         is_tpv = False
         if item.get("Properties"):
@@ -489,7 +435,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             
             if props.get("TextureStreamingData") and not props.get("TextureParameterValues"):
                 for tsd in props["TextureStreamingData"]:
-                    for t in rough_type_tex:
+                    for t in nor_type_tex:
                         if t in tsd["TextureName"]:
                             tex_name = tsd["TextureName"]
                             search_tex_path = mat_path.parent.parent
@@ -527,6 +473,16 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                                 mat_tex = str(search_tex[0]).replace("\\Exports\\","\\")
                                 textures.append(
                                     {"ReflectionMap":mat_tex.split('.')[0]}
+                                )
+                    for t in extra_type_tex:
+                        if t in tsd["TextureName"]:
+                            tex_name = tsd["TextureName"]
+                            search_tex_path = mat_path.parent.parent
+                            search_tex = list(search_tex_path.rglob(f"{tex_name}.png"))
+                            if search_tex:
+                                mat_tex = str(search_tex[0]).replace("\\Exports\\","\\")
+                                textures.append(
+                                    {"Extra":mat_tex.split('.')[0]}
                                 )
             
             if props.get("StaticParametersRuntime"):
@@ -569,6 +525,15 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     if not b_material.node_tree:
         b_material.use_nodes = True
     b_material.node_tree.nodes.clear()
+    if "Light" in obj_material:
+        light_shader_node = nodes.new('ShaderNodeGroup')
+        if bpy.data.node_groups.get("Light_shader"):
+            light_shader_node.node_tree = bpy.data.node_groups['Light_shader']
+        else:
+            light_shader_node.node_tree = bpy.data.node_groups['FallBack']
+        light_shader_node.location.x = 200
+        links.new(light_shader_node.outputs["Shader"], output_node.inputs["Surface"])
+        return None
     
     # Start Textures logic
     if textures:
@@ -596,6 +561,15 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             if mra in obj_material:
                 has_cbp = True
         sf_shader_node.inputs["MRA?"].default_value = has_cbp
+        
+        for par in vec_parameters:
+            light_color_data = par.get("Emissive Color")
+            if light_color_data:
+                r = light_color_data["R"]
+                g = light_color_data["G"]
+                b = light_color_data["B"]
+                sf_shader_node.inputs["Emission colour?"].default_value = False
+                sf_shader_node.inputs["Emission Colour"].default_value = (r, g, b, 1)
         
         pos = 0
         #tex_set = set([textures[tex] for tex in textures])
