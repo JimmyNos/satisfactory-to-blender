@@ -351,7 +351,7 @@ def append_assets(cls: str,map_file,is_light:bool = False):
             if is_light:
                 get_lib_result = get_lib_assets(data_type="Collection",asset_name=mesh,asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
             else:
-                get_lib_result = get_lib_assets(data_type="Collection",asset_name=mesh,asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
+                get_lib_result = get_lib_assets(data_type="Collection",asset_name=mesh,asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend",col_type=True)
                 
             if get_lib_result:
                 print(get_lib_result)
@@ -1123,11 +1123,15 @@ def import_splines_task(save: s.SaveGame, color_map: dict,get_models_from_librar
                 total_spline_buildables += 1
     total = total_spline_buildables + tot_chains
     total_types = 0
+    total_types_imported = 0
     if tot_chains > 0:
-        total_types += 1
+        total_types = 1
     total_types += total_spline_buildables
-    
-    # conveyor belt chains       
+    total_percent = 100 / total_types
+    print("    total_percent: ",total_percent)
+    spline_set = set()
+    # conveyor belt chains   
+    has_con = False   
     for obj in save.mPersistentAndRuntimeData.SaveObjects:
         if stop_requested:
             progress = 0.0
@@ -1142,6 +1146,8 @@ def import_splines_task(save: s.SaveGame, color_map: dict,get_models_from_librar
         
         
         if className.startswith( '/Script/FactoryGame.FGConveyorChainActor'):
+            has_con = True
+            spline_set.add("c_chain")
             conv = lambda v: Vector((v.X/100, -v.Y/100, v.Z/100))
             
             #collect the splines in reverse order
@@ -1306,10 +1312,15 @@ def import_splines_task(save: s.SaveGame, color_map: dict,get_models_from_librar
             progress_in = 100.0
             time.sleep(0.1)
             total_imported += 1#count
-            progress = (total_imported / total) * 100
+            progress = (total_imported / total) * total_percent
+    
+    #total_types_imported = len(spline_set)
             
     count = 0
+    
     for factory in all_classes:
+        total_types_imported = len(spline_set)
+        print(total_types_imported)
         if stop_requested:
             progress = 0.0
             break
@@ -1329,6 +1340,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict,get_models_from_librar
         total_instances = len(instances[0])
         
         if factory.startswith('Build_PowerLine_'):
+            spline_set.add(factory)
             transform = instances[0]
             actors = instances[1]
             
@@ -1382,10 +1394,11 @@ def import_splines_task(save: s.SaveGame, color_map: dict,get_models_from_librar
                 time.sleep(0.1)
             count += 1
             total_imported += 1#count
-            progress = (total_imported / total) * 100
+            progress = (total_percent * total_types_imported)+(total_imported / total) * total_percent
                 #import_powerlines(factory, instances)
                     
         if any(building in factory for building in spline_buildables):
+            spline_set.add(factory)
             transform = instances[0]
             actors = instances[1]
             current_buildable = f"{factory}: {total_instances} splines" 
@@ -1464,7 +1477,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict,get_models_from_librar
                         flow_indicator,
                         buildable_to_asset_path
                         ), first_interval=0)
-                progress_in = 100.0
+                #progress_in = 100.0
                 time.sleep(0.1)
                 
                 count_p += 1
@@ -1472,7 +1485,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict,get_models_from_librar
                 
             count += 1
             total_imported += 1#count
-            progress = (total_imported / total) * 100
+            progress = (total_percent * total_types_imported)+(total_imported / total) * total_percent
     bpy.app.timers.register(update_ui)
 
 def import_save_task(save: s.SaveGame, color_map: dict,get_models_from_library):
