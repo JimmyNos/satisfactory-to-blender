@@ -2199,8 +2199,8 @@ def get_lib_assets_task(save: s.SaveGame):
     spline_buildables = [
         "Build_PipelineMK2_",
         "Build_Pipeline_",
+        "Build_PipeHyper_",
         "Build_RailroadTrack",
-        "Build_PipeHyper_C",
     ]
     
     save_objects = save.allSaveObjects()
@@ -2222,44 +2222,28 @@ def get_lib_assets_task(save: s.SaveGame):
             all_classes.add(className.split('.')[-1])
             factory_classes.append(obj)
     
-    
     for factory in all_classes:
+        if factory in exclude_factory:
+            continue
+        get_heavy = False
+        is_spline = any(spline in factory for spline in spline_buildables)
         if get_heavyweight:
-            if not get_signs or not get_splines:
-                if not get_signs and not get_splines:
-                    if "Build_StandaloneWidgetSign_" in factory or factory in spline_buildables:
-                        continue
-                if not get_signs:
-                    if "Build_StandaloneWidgetSign_" in factory:
-                        continue
-                if not get_splines:
-                    if factory in spline_buildables:
-                        continue
-            if factory in exclude_factory:
-                continue
+            if "Build_StandaloneWidgetSign_" not in factory or not is_spline:
+                get_heavy = True
+                
         if get_signs:
-            if not get_heavyweight or not get_splines:
-                if not get_heavyweight and not get_splines:
-                    if not "Build_StandaloneWidgetSign_" in factory:
-                        continue
-                if not get_heavyweight:
-                    if not "Build_StandaloneWidgetSign_" in factory or not factory in spline_buildables:
-                        continue
-                if not get_splines:
-                    if factory in spline_buildables:
-                        continue
+            if "Build_StandaloneWidgetSign_" in factory:
+                get_heavy = True
+                
         if get_splines:
-            if not get_heavyweight or not get_signs:
-                if not get_heavyweight and not get_signs:
-                    if not factory in spline_buildables:
-                        continue
-                if not get_heavyweight:
-                    if not "Build_StandaloneWidgetSign_" in factory or not factory in spline_buildables:
-                        continue
-                if not get_signs:
-                    if "Build_StandaloneWidgetSign_" in factory:
-                        continue
+            if is_spline:
+                get_heavy = True
+        
+        if not get_heavy:
+            continue
+            
         name = map.get(factory)
+        print(f"Getting {factory} mapping")
         if "Build_PipelinePumpMk2" in factory:
             name = map.get("Build_PipelinePumpMK2_C")
         if not name:
