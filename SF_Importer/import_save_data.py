@@ -249,28 +249,18 @@ def buildable_class_to_object(cls: str,buildable_to_asset_path: str,is_factory:b
     json_file_path = buildable_to_asset_path
     print(json_file_path)
     with open(json_file_path, 'r', encoding='utf-8') as f:
-        map = json.load(f)
+        map_file = json.load(f)
 
-    name = map.get(cls)
-    
-    get_models_from_library = False #bpy.context.scene.sf_importer_props.get_models_from_library
+    name = map_file.get(cls)
     
     if "Build_PipelinePumpMk2" in cls:
-        name = map.get("Build_PipelinePumpMK2_C")
+        name = map_file.get("Build_PipelinePumpMK2_C")
     if name is None:
         print(f"Missing object mapping: {cls}")
         return None
     
     mesh = name.get("ObjectName")
     
-    if get_models_from_library:
-        #if bpy.data.collections.get(mesh):
-            
-        get_lib_result = get_lib_assets(data_type="Collection",asset_name=mesh,asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend",col_type=is_factory)
-
-        if get_lib_result:
-            print(get_lib_result)
-            
 
     print(f"found object mapping: {cls}")
     print(f"object mapping name: {mesh}")

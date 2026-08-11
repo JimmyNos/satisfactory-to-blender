@@ -29,12 +29,25 @@ assets = [
     #{"Collection": "Assets"},
 ]
 
-def get_lib_assets(data_type:str,asset_name:str = "",asset_lib_name:str = "SF Asset Lib",asset_lib_blend:str = "SF_Asset_Lib.blend",col_type:bool =False,set_fake:bool = False) -> str:
+def get_lib_assets(
+    data_type:str,
+    asset_name:str = "",
+    asset_lib_name:str = "SF Asset Lib",
+    asset_lib_blend:str = "SF_Asset_Lib.blend",
+    col_type:bool =False,
+    set_fake:bool = False,
+    col_color:str = "") -> str:
     library_path = bpy.context.preferences.filepaths.asset_libraries.get(asset_lib_name).path
+    asset_color = "COLOR_01"
+    util_color = "COLOR_02"
+    sub_color = "COLOR_03"
     as_col = get_or_create_collection("Assets")
+    as_col.color_tag = asset_color
     bles_col = get_or_create_collection("Assets")
     f_col = get_or_create_collection("Factory","Assets")
+    f_col.color_tag = util_color
     b_col = get_or_create_collection("Building","Assets")
+    b_col.color_tag = util_color
     
     asset_lib_blend_path = os.path.join(library_path, asset_lib_blend)
     # get collections
@@ -59,11 +72,18 @@ def get_lib_assets(data_type:str,asset_name:str = "",asset_lib_name:str = "SF As
             if asset_name in bpy.data.collections:
                 if col_type:
                     f_col.children.link(bpy.data.collections[asset_name])
+                    bpy.data.collections[asset_name].color_tag = sub_color
+                    for ccol in bpy.data.collections[asset_name].children_recursive:
+                        ccol.color_tag = sub_color
                 else:
                     if "Utility" in asset_name:
                         as_col.children.link(bpy.data.collections[asset_name])
+                        bpy.data.collections[asset_name].color_tag = util_color
+                        for ccol in bpy.data.collections[asset_name].children_recursive:
+                            ccol.color_tag = sub_color
                     else:
                         b_col.children.link(bpy.data.collections[asset_name])
+                        bpy.data.collections[asset_name].color_tag = sub_color
                 
                 if bpy.context.scene.collection.children.get(asset_name):
                     bpy.context.scene.collection.children.unlink(bpy.data.collections[asset_name])

@@ -50,6 +50,8 @@ build_total = 0
 total_buildings_imported = 0
 build_execution_time = 0.0
 marking_asset = False
+is_appended = 0
+mapped_build = set()
 
 # start common types
 Vec3 = tuple[float, float, float]
@@ -320,8 +322,46 @@ class CopyBlendToAssetLib(Operator):
         self.report({'INFO'}, f"Asset library files copied to: {lib_path}")
         return {'FINISHED'}
 
-def import_lightweights_task(save: s.SaveGame, color_map: dict):
-    global progress,progress_in, is_scanning, stop_requested,run_once,total,total_imported,total_instances,current_buildable,buildable_to_asset_path
+def append_assets(cls: str,map_file,is_light:bool = False):
+    global is_appended,mapped_build
+    
+    name = map_file.get(cls)
+    mesh = None
+    if "Build_PipelinePumpMk2" in cls:
+        name = map_file.get("Build_PipelinePumpMK2_C")
+    
+    if "Build_PipelineMK2_NoIndicator" in cls:
+        name = map_file.get("Build_PipelineMK2_C")
+    if "Build_Pipeline_NoIndicator" in cls:
+        name = map_file.get("Build_Pipeline_C")
+    if not name:
+        print("skipping: ",cls)
+        is_appended = 3
+    else:
+        mesh = name.get("ObjectName")
+        
+    if mesh:
+        if mesh in mapped_build:
+            print(f"{mesh} already appended by {cls}")
+            is_appended = 4
+        else:
+                
+            
+            print(f"Appending {cls} models",mesh)
+            if is_light:
+                get_lib_result = get_lib_assets(data_type="Collection",asset_name=mesh,asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
+            else:
+                get_lib_result = get_lib_assets(data_type="Collection",asset_name=mesh,asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
+                
+            if get_lib_result:
+                print(get_lib_result)
+                is_appended = 1
+        
+            mapped_build.add(mesh)
+
+def import_lightweights_task(save: s.SaveGame, color_map: dict,get_models_from_library,map_file):
+    global progress,progress_in, is_scanning, stop_requested,run_once,is_appended
+    global total,total_imported,total_instances,current_buildable,buildable_to_asset_path
     progress = 0.0
     progress_in = 0.0
     cls = save.allSaveObjects()
@@ -387,7 +427,25 @@ def import_lightweights_task(save: s.SaveGame, color_map: dict):
                     "type":["INT","value"]
             })
         
-        progress_in = 50.0
+        if get_models_from_library:
+            progress_in = 50.0
+            is_appended = 0
+            bpy.app.timers.register(functools.partial(
+                append_assets, 
+                name,
+                map_file,
+                True
+                ), first_interval=0)
+            time.sleep(0.1)
+        
+            while is_appended == 0:
+                if stop_requested:
+                    break
+                print("waiting for model to finish appending..")
+                time.sleep(0.2)
+        else:
+            progress_in = 50.0
+        
         bpy.app.timers.register(functools.partial(
             create_buildable_object, 
             name,
@@ -421,8 +479,9 @@ def import_lightweights_task(save: s.SaveGame, color_map: dict):
     #stop_requested = False
     bpy.app.timers.register(update_ui)
 
-def import_heavyweights_task(save: s.SaveGame, color_map: dict):
-    global progress, is_scanning, stop_requested,run_once,total,total_imported,current_buildable,total_instances,current_buildable,progress_in,buildable_to_asset_path
+def import_heavyweights_task(save: s.SaveGame, color_map: dict,get_models_from_library,map_file):
+    global progress, is_scanning, stop_requested,run_once,total,total_imported,current_buildable,is_appended
+    global total_instances,current_buildable,progress_in,buildable_to_asset_path
     save_objects = save.allSaveObjects()
     progress = 0.0
     progress_in = 0.0
@@ -669,6 +728,22 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict):
             if colors:
                 primary_colors, secondary_colors, paint_type = zip(*colors)
             
+
+            if get_models_from_library:
+                is_appended = 0
+                bpy.app.timers.register(functools.partial(
+                    append_assets, 
+                    factory,
+                    map_file
+                    ), first_interval=0)
+                time.sleep(0.1)
+
+                while is_appended == 0:
+                    if stop_requested:
+                        break
+                    print("waiting for model to finish appending..")
+                    time.sleep(0.2)
+            
             progress_in = 99
             bpy.app.timers.register(functools.partial(
                 create_buildable_object, 
@@ -696,8 +771,9 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict):
     #stop_requested = False
     bpy.app.timers.register(update_ui)
 
-def import_signs_task(save: s.SaveGame, color_map: dict):
-    global progress, is_scanning, stop_requested,run_once,total,total_imported,current_buildable,total_instances,current_buildable,progress_in,buildable_to_asset_path
+def import_signs_task(save: s.SaveGame,get_models_from_library,map_file):
+    global progress, is_scanning, stop_requested,run_once,total,total_imported,is_appended
+    global current_buildable,total_instances,current_buildable,progress_in,buildable_to_asset_path
     save_objects = save.allSaveObjects()
     progress = 0.0
     progress_in = 0.0
@@ -900,6 +976,21 @@ def import_signs_task(save: s.SaveGame, color_map: dict):
             "type":["FLOAT","value"]
             })
         
+        if get_models_from_library:
+            is_appended = 0
+            bpy.app.timers.register(functools.partial(
+                append_assets, 
+                factory,
+                map_file
+                ), first_interval=0)
+            time.sleep(0.1)
+        
+            while is_appended == 0:
+                if stop_requested:
+                    break
+                print("waiting for model to finish appending..")
+                time.sleep(0.2)
+                
         progress_in = 99
         bpy.app.timers.register(functools.partial(
             create_buildable_object, 
@@ -917,8 +1008,9 @@ def import_signs_task(save: s.SaveGame, color_map: dict):
         
     bpy.app.timers.register(update_ui)
 
-def import_splines_task(save: s.SaveGame, color_map: dict):
-    global progress, is_scanning, stop_requested,run_once,total,total_imported,progress_in,total_instances,current_buildable,buildable_to_asset_path
+def import_splines_task(save: s.SaveGame, color_map: dict,get_models_from_library,map_file):
+    global progress, is_scanning, stop_requested,run_once,total,total_imported,is_appended
+    global progress_in,total_instances,current_buildable,buildable_to_asset_path
     save_objects = save.allSaveObjects()
     progress = 0.0
     progress_in = 0.0
@@ -957,50 +1049,50 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             factory_classes.append(obj) # buildables
         
         if className.startswith('/Game/FactoryGame/Buildable/Factory/Conveyor') and "Mk" in className:
-           conveyor_dict[classRef] = None
-           top_rotations = {}
-           passthroughs = []
-           rotations = {
-               'W':header.Transform.Rotation.W,
-               'X':header.Transform.Rotation.X,
-               'Y':header.Transform.Rotation.Y,
-               'Z':header.Transform.Rotation.Z
-           }
-           
-           colors = []
-           for prop in actor.Properties:
-               prop_name = prop.Name.Name
-               prop_data = None
-               if 'mSnappedPassthroughs' in prop_name:
-                   prop_data = prop.Value
-                   for i in prop_data.Values:
-                       if i.PathName:
-                           passthroughs.append(1)
-                       else:
-                           passthroughs.append(0)
-               if 'mTopTransform' in prop_name:
-                   for i in prop.Value.Data:
-                       if "Rotation" == i.Name.Name:
-                           prop_data = i.Value
-                   if prop_data:
-                       top_rotations = {
-                           'W':prop_data.Data.W,
-                           'X':prop_data.Data.X,
-                           'Y':prop_data.Data.Y,
-                           'Z':prop_data.Data.Z,
-                       }
-           colors = [
-               read_colors(prop.Value.Data[0].Value.PathName,color_map) 
-               for prop in actor.Properties
-               if 'mCustomizationData' in prop.Name.Name
-               ]
-           
-           conveyor_dict[classRef] = {
-               "Rotations":rotations,
-               "Colors":colors,
-               "TopRotation":top_rotations,
-               "Passthroughs":passthroughs
-           }
+            conveyor_dict[classRef] = None
+            top_rotations = {}
+            passthroughs = []
+            rotations = {
+                'W':header.Transform.Rotation.W,
+                'X':header.Transform.Rotation.X,
+                'Y':header.Transform.Rotation.Y,
+                'Z':header.Transform.Rotation.Z
+            }
+            
+            colors = []
+            for prop in actor.Properties:
+                prop_name = prop.Name.Name
+                prop_data = None
+                if 'mSnappedPassthroughs' in prop_name:
+                    prop_data = prop.Value
+                    for i in prop_data.Values:
+                        if i.PathName:
+                            passthroughs.append(1)
+                        else:
+                            passthroughs.append(0)
+                if 'mTopTransform' in prop_name:
+                    for i in prop.Value.Data:
+                        if "Rotation" == i.Name.Name:
+                            prop_data = i.Value
+                    if prop_data:
+                        top_rotations = {
+                            'W':prop_data.Data.W,
+                            'X':prop_data.Data.X,
+                            'Y':prop_data.Data.Y,
+                            'Z':prop_data.Data.Z,
+                        }
+            colors = [
+                read_colors(prop.Value.Data[0].Value.PathName,color_map) 
+                for prop in actor.Properties
+                if 'mCustomizationData' in prop.Name.Name
+                ]
+            
+            conveyor_dict[classRef] = {
+                "Rotations":rotations,
+                "Colors":colors,
+                "TopRotation":top_rotations,
+                "Passthroughs":passthroughs
+            }
 
     tot_chains = 0
     for obj in save.mPersistentAndRuntimeData.SaveObjects:
@@ -1030,6 +1122,10 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             if any(building in factory for building in spline_buildables) or factory.startswith('Build_PowerLine_'):
                 total_spline_buildables += 1
     total = total_spline_buildables + tot_chains
+    total_types = 0
+    if tot_chains > 0:
+        total_types += 1
+    total_types += total_spline_buildables
     
     # conveyor belt chains       
     for obj in save.mPersistentAndRuntimeData.SaveObjects:
@@ -1170,7 +1266,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
                     passthrough.append(0)
                     type_mk_belt.append(int(is_belt))
                     type_mk_belt.append(int(conveyor_mk))
-                         
+                        
                 chain_count += 1
                 
                 if chain_points and is_belt:
@@ -1295,6 +1391,22 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             current_buildable = f"{factory}: {total_instances} splines" 
             progress_in = 0.0
             count_p = 0
+            
+            if get_models_from_library:
+                is_appended = 0
+                bpy.app.timers.register(functools.partial(
+                    append_assets, 
+                    factory,
+                    map_file
+                    ), first_interval=0)
+                time.sleep(0.1)
+            
+                while is_appended == 0:
+                    if stop_requested:
+                        break
+                    print("waiting for model to finish appending..")
+                    time.sleep(0.2)
+            
             for i,actor in enumerate(actors): # per spline/instance
                 if stop_requested:
                     progress = 0.0
@@ -1339,8 +1451,8 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
                                     conv(point)
                                 )
                             spline_points.append(tuple(points))
+
                 
-                    
                 bpy.app.timers.register(
                     functools.partial(
                         import_spline_buildables,
@@ -1363,7 +1475,7 @@ def import_splines_task(save: s.SaveGame, color_map: dict):
             progress = (total_imported / total) * 100
     bpy.app.timers.register(update_ui)
 
-def import_save_task(save: s.SaveGame, color_map: dict):
+def import_save_task(save: s.SaveGame, color_map: dict,get_models_from_library):
     global progress,total,total_imported,is_scanning,stop_requested,execution_time,per_time
     start_time = datetime.now()
     execution_time = 0.0
@@ -1384,8 +1496,11 @@ def import_save_task(save: s.SaveGame, color_map: dict):
     get_signs = bpy.context.scene.sf_importer_props.get_signs
     get_splines = bpy.context.scene.sf_importer_props.get_splines
     
+    with open(buildable_to_asset_path, 'r', encoding='utf-8') as f:
+        map_file = json.load(f)
+    
     if get_lightweight:
-        import_lightweights_task(save, color_map)
+        import_lightweights_task(save, color_map,get_models_from_library,map_file)
         final_total = total
         current_imported = total_imported
         #progress = 0.0
@@ -1394,7 +1509,7 @@ def import_save_task(save: s.SaveGame, color_map: dict):
         light_end_time = datetime.now() - start_time
         partial_time[0] = f"Lightweight {str(light_end_time)[:-4]}"
     if get_heavyweight:
-        import_heavyweights_task(save, color_map)
+        import_heavyweights_task(save, color_map,get_models_from_library,map_file)
         if final_total == 0:
             final_total = total
         else:
@@ -1410,7 +1525,7 @@ def import_save_task(save: s.SaveGame, color_map: dict):
             partial_time[1] = f"Heavyweight {str(heavy_end_time)[:-4]}"
     
     if get_signs:
-        import_signs_task(save, color_map)
+        import_signs_task(save,get_models_from_library,map_file)
         if final_total == 0:
             final_total = total
         else:
@@ -1430,7 +1545,7 @@ def import_save_task(save: s.SaveGame, color_map: dict):
             partial_time[2] = f"Signs {str(sign_end_time)[:-4]}"
             
     if get_splines:    
-        import_splines_task(save, color_map)
+        import_splines_task(save, color_map,get_models_from_library,map_file)
         if final_total == 0:
             final_total = total
         else:
@@ -2260,7 +2375,11 @@ class ImportSaveButton(bpy.types.Operator):
     bl_label = "Start Save Import"
 
     def execute(self, context):
-        global is_scanning,is_get_scanning,is_asset_building, stop_requested,execution_time,start_process,buildable_to_asset_path
+        global is_scanning,is_get_scanning,is_asset_building, stop_requested,is_appended,mapped_build
+        global execution_time,start_process,buildable_to_asset_path
+        
+        is_appended = 0
+        mapped_build = set()
         
         sf_asset_lib_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_lib_path
         sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
@@ -2372,13 +2491,13 @@ class ImportSaveButton(bpy.types.Operator):
                 if get_lib_result:
                     print(get_lib_result)
             
-            if get_models_from_library:
-                self.report({'INFO'}, "Getting Models from asset library...")
-                get_lib_assets_task(save)
+            #if get_models_from_library:
+            #    self.report({'INFO'}, "Getting Models from asset library...")
+            #    get_lib_assets_task(save)
             
             is_scanning = True
             self.report({'INFO'}, "Starting scan...")
-            t1_thread = threading.Thread(target=import_save_task,args=(save,color_map))
+            t1_thread = threading.Thread(target=import_save_task,args=(save,color_map,get_models_from_library))
             t1_thread.start()
             
             bpy.app.timers.register(update_ui)
