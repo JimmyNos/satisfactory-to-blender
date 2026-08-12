@@ -596,6 +596,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             if mra in obj_material:
                 has_cbp = True
         sf_shader_node.inputs["MRA?"].default_value = has_cbp
+        sf_shader_node.inputs["No Paint Finish?"].default_value = has_cbp
         
         for par in vec_parameters:
             light_color_data = par.get("Emissive Color")
