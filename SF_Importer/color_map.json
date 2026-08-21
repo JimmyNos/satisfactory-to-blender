@@ -1,422 +1,422 @@
 {
-    "SwatchDesc_Slot0_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+  "SwatchDesc_Slot0_C": {
+    "PrimaryColor": {
+      "R": 0.9529410004615784,
+      "G": 0.30300673842430115,
+      "B": 0.06666701287031174,
+      "A": 1.0
     },
-    "SwatchDesc_Slot1_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.11372500658035278,
+      "G": 0.1335943341255188,
+      "B": 0.2627449929714203,
+      "A": 1.0
     },
-    "SwatchDesc_Slot2_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": "PaintFinishDesc_Shiny_C"
+  },
+  "SwatchDesc_Slot1_C": {
+    "PrimaryColor": {
+      "R": 0.0,
+      "G": 0.1416909545660019,
+      "B": 0.3864299952983856,
+      "A": 1.0
     },
-    "SwatchDesc_Slot3_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.9046609997749329,
+      "G": 0.46032848954200745,
+      "B": 0.01599596068263054,
+      "A": 1.0
     },
-    "SwatchDesc_Slot4_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": "PaintFinishDesc_Matte_C"
+  },
+  "SwatchDesc_Slot2_C": {
+    "PrimaryColor": {
+      "R": 0.015995999798178673,
+      "G": 0.01680699922144413,
+      "B": 0.01850000023841858,
+      "A": 1.0
     },
-    "SwatchDesc_Slot5_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.4969330132007599,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0
     },
-    "SwatchDesc_Slot6_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot3_C": {
+    "PrimaryColor": {
+      "R": 0.3094690144062042,
+      "G": 0.30498701333999634,
+      "B": 0.2917709946632385,
+      "A": 1.0
     },
-    "SwatchDesc_Slot7_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.09084200114011765,
+      "G": 0.10702300071716309,
+      "B": 0.07035999745130539,
+      "A": 1.0
     },
-    "SwatchDesc_Slot8_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot4_C": {
+    "PrimaryColor": {
+      "R": 0.0262410007417202,
+      "G": 0.4507859945297241,
+      "B": 0.6038280129432678,
+      "A": 1.0
     },
-    "SwatchDesc_Slot9_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.5906190276145935,
+      "G": 0.040915001183748245,
+      "B": 0.6795430183410645,
+      "A": 1.0
     },
-    "SwatchDesc_Slot10_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot5_C": {
+    "PrimaryColor": {
+      "R": 0.07421399652957916,
+      "G": 0.08649999648332596,
+      "B": 0.03310500085353851,
+      "A": 1.0
     },
-    "SwatchDesc_Slot11_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.1412629932165146,
+      "G": 0.12213899940252304,
+      "B": 0.11443500220775604,
+      "A": 1.0
     },
-    "SwatchDesc_Slot12_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot6_C": {
+    "PrimaryColor": {
+      "R": 0.9646869897842407,
+      "G": 0.9215819835662842,
+      "B": 0.7681509852409363,
+      "A": 1.0
     },
-    "SwatchDesc_Slot13_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.9559739828109741,
+      "G": 0.30054399371147156,
+      "B": 0.06662599742412567,
+      "A": 1.0
     },
-    "SwatchDesc_Slot14_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot7_C": {
+    "PrimaryColor": {
+      "R": 0.23455099761486053,
+      "G": 0.13286800682544708,
+      "B": 0.4564110040664673,
+      "A": 1.0
     },
-    "SwatchDesc_Slot15_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.13563300669193268,
+      "G": 0.38132598996162415,
+      "B": 0.07421399652957916,
+      "A": 1.0
     },
-    "SwatchDesc_Slot16_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot8_C": {
+    "PrimaryColor": {
+      "R": 0.9473069906234741,
+      "G": 0.7379109859466553,
+      "B": 0.0,
+      "A": 1.0
     },
-    "SwatchDesc_Slot17_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.03310500085353851,
+      "G": 0.40724000334739685,
+      "B": 0.3324519991874695,
+      "A": 1.0
     },
-    "SwatchDesc_Concrete_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot9_C": {
+    "PrimaryColor": {
+      "R": 0.18782100081443787,
+      "G": 0.006994999945163727,
+      "B": 0.006994999945163727,
+      "A": 1.0
     },
-    "PaintFinishDesc_CarbonSteel_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.9046609997749329,
+      "G": 0.4564110040664673,
+      "B": 0.015995999798178673,
+      "A": 1.0
     },
-    "PaintFinishDesc_Caterium_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot10_C": {
+    "PrimaryColor": {
+      "R": 1.0,
+      "G": 0.46207699179649353,
+      "B": 0.6866850256919861,
+      "A": 1.0
     },
-    "PaintFinishDesc_Chrome_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.9215819835662842,
+      "G": 0.04373500123620033,
+      "B": 0.37123799324035645,
+      "A": 1.0
     },
-    "PaintFinishDesc_Copper_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot11_C": {
+    "PrimaryColor": {
+      "R": 0.8069519996643066,
+      "G": 0.4396570026874542,
+      "B": 0.05126899853348732,
+      "A": 1.0
     },
-    "PaintFinishDesc_Unpainted_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.057805001735687256,
+      "G": 0.09758699685335159,
+      "B": 0.10224200040102005,
+      "A": 1.0
     },
-    "SwatchDesc_Slot18_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot12_C": {
+    "PrimaryColor": {
+      "R": 0.7304610013961792,
+      "G": 0.4341540038585663,
+      "B": 0.16826899349689484,
+      "A": 1.0
     },
-    "SwatchDesc_Slot19_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "SecondaryColor": {
+      "R": 0.2195259928703308,
+      "G": 0.11443500220775604,
+      "B": 0.04518600180745125,
+      "A": 1.0
     },
-    "SwatchDesc_Slot20_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot13_C": {
+    "PrimaryColor": {
+      "R": 0.1980690062046051,
+      "G": 0.07035999745130539,
+      "B": 0.015208999626338482,
+      "A": 1.0
     },
-    "SwatchDesc_ProjectAssembly_C": {
-        "PrimaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "SecondaryColor": {
-            "R": 0,
-            "G": 0,
-            "B": 0,
-            "A": 0
-        },
-        "PaintFinish": ""
-    }
+    "SecondaryColor": {
+      "R": 0.5647119879722595,
+      "G": 0.2663559913635254,
+      "B": 0.05448000133037567,
+      "A": 1.0
+    },
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot14_C": {
+    "PrimaryColor": {
+      "R": 0.7379099726676941,
+      "G": 1.0,
+      "B": 0.2158609926700592,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.36625298857688904,
+      "G": 0.13013599812984467,
+      "B": 0.0466650016605854,
+      "A": 1.0
+    },
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot15_C": {
+    "PrimaryColor": {
+      "R": 0.11443500220775604,
+      "G": 0.13286800682544708,
+      "B": 0.26225098967552185,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.9559730291366577,
+      "G": 0.30054399371147156,
+      "B": 0.06662599742412567,
+      "A": 1.0
+    },
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot16_C": {
+    "PrimaryColor": {
+      "R": 0.10980399698019028,
+      "G": 0.10980399698019028,
+      "B": 0.10980399698019028,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.9529410004615784,
+      "G": 0.3019610047340393,
+      "B": 0.06666699796915054,
+      "A": 1.0
+    },
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot17_C": {
+    "PrimaryColor": {
+      "R": 0.9529410004615784,
+      "G": 0.3019610047340393,
+      "B": 0.06666699796915054,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.11372499912977219,
+      "G": 0.1333329975605011,
+      "B": 0.2627449929714203,
+      "A": 1.0
+    },
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Concrete_C": {
+    "PrimaryColor": {
+      "R": 1.0,
+      "G": 1.0,
+      "B": 1.0,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.9529410004615784,
+      "G": 0.3019610047340393,
+      "B": 0.06666699796915054,
+      "A": 1.0
+    },
+    "PaintFinish": ""
+  },
+  "PaintFinishDesc_CarbonSteel_C": {
+    "PrimaryColor": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0
+    },
+    "PaintFinish": "PaintFinishDesc_CarbonSteel_C"
+  },
+  "PaintFinishDesc_Caterium_C": {
+    "PrimaryColor": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0
+    },
+    "PaintFinish": "PaintFinishDesc_Caterium_C"
+  },
+  "PaintFinishDesc_Chrome_C": {
+    "PrimaryColor": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0
+    },
+    "PaintFinish": "PaintFinishDesc_Chrome_C"
+  },
+  "PaintFinishDesc_Copper_C": {
+    "PrimaryColor": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0
+    },
+    "PaintFinish": "PaintFinishDesc_Copper_C"
+  },
+  "PaintFinishDesc_Unpainted_C": {
+    "PrimaryColor": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0
+    },
+    "PaintFinish": "PaintFinishDesc_Unpainted_C"
+  },
+  "SwatchDesc_Slot18_C": {
+    "PrimaryColor": {
+      "R": 0.3515329957008362,
+      "G": 0.06124600023031235,
+      "B": 0.023152999579906464,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.665386974811554,
+      "G": 0.42326799035072327,
+      "B": 0.11443500220775604,
+      "A": 1.0
+    },
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot19_C": {
+    "PrimaryColor": {
+      "R": 0.13013599812984467,
+      "G": 0.2307399958372116,
+      "B": 0.3864299952983856,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.2917709946632385,
+      "G": 0.5088809728622437,
+      "B": 0.42326799035072327,
+      "A": 1.0
+    },
+    "PaintFinish": ""
+  },
+  "SwatchDesc_Slot20_C": {
+    "PrimaryColor": {
+      "R": 0.03189599886536598,
+      "G": 0.44520100951194763,
+      "B": 0.5149180293083191,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.9559739828109741,
+      "G": 0.9386860132217407,
+      "B": 0.887923002243042,
+      "A": 1.0
+    },
+    "PaintFinish": ""
+  },
+  "SwatchDesc_ProjectAssembly_C": {
+    "PrimaryColor": {
+      "R": 0.9529410004615784,
+      "G": 0.30300673842430115,
+      "B": 0.06666701287031174,
+      "A": 1.0
+    },
+    "SecondaryColor": {
+      "R": 0.11372500658035278,
+      "G": 0.1335943341255188,
+      "B": 0.2627449929714203,
+      "A": 1.0
+    },
+    "PaintFinish": "PaintFinishDesc_Matte_C"
+  }
 }

@@ -1,4 +1,4 @@
-import bpy # type: ignore
+import bpy 
 from bpy.types import Operator, AddonPreferences,PropertyGroup,Panel # type: ignore
 from bpy.props import StringProperty, IntProperty, BoolProperty # type: ignore
 
@@ -322,7 +322,8 @@ class CopyBlendToAssetLib(Operator):
         self.report({'INFO'}, f"Asset library files copied to: {lib_path}")
         return {'FINISHED'}
 
-def append_assets(cls: str,map_file,is_light:bool = False):
+
+def append_assets(cls: str,map_file,is_light:bool = False,is_sign:bool = False):
     global is_appended,mapped_build
     
     name = map_file.get(cls)
@@ -345,7 +346,6 @@ def append_assets(cls: str,map_file,is_light:bool = False):
             print(f"{mesh} already appended by {cls}")
             is_appended = 4
         else:
-                
             
             print(f"Appending {cls} models",mesh)
             if is_light:
@@ -413,17 +413,41 @@ def import_lightweights_task(save: s.SaveGame, color_map: dict,get_models_from_l
         colors = [read_colors(i,color_map) for i in instances]
         primary_colors, secondary_colors, paint_type = zip(*colors)   
     
+        lengths = [read_prop(i,"BeamLength") for i in instances]
         if 'Build_Beam_Painted_C' in name or 'Build_Beam_C' == name:
-            lengths = [read_length(i) for i in instances]
+            lengths = [read_prop(i,"BeamLength") for i in instances]
             lengths = [l / 4.0 for l in lengths]
-        else:
-            lengths = [read_length(i) for i in instances]
             
         prop_attr = []
         if "Build_Beam_Shelf_" in name:
             beam_type = [1] * len(instances)
             prop_attr.append({
                 "beam_type" : beam_type,
+                    "type":["INT","value"]
+            })
+        stencil_dir = Path(__file__).parent / "stencil_map.json"
+        with open(stencil_dir, 'r', encoding='utf-8') as f:
+            stencil_map = json.load(f)
+        pattern_rot = [int(read_prop(i,"PatternRotation")) for i in instances]
+        pattern_desc = []
+        for i in instances:
+            prop_result = read_prop(i,"PatternDesc")
+            if type(prop_result) == str:
+                stencil_id = stencil_map.get(prop_result.split('.')[-1],20)
+                if stencil_id:
+                    pattern_desc.append(stencil_id)
+            else:
+                pattern_desc.append(24)
+        
+        if pattern_desc:
+            prop_attr.append({
+                "pattern_desc" : pattern_desc,
+                    "type":["INT","value"]
+            })
+        
+        if pattern_rot:
+            prop_attr.append({
+                "pattern_rot" : pattern_rot,
                     "type":["INT","value"]
             })
         
@@ -600,18 +624,18 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict,get_models_from_l
             prop_attr = []
             height_attr = []
             passthorugh_thickness_attr = []
-            pole_scale_attr = []
+            pole_scale_attr = [[0.0,0.0]] * total_instances
             attr_dict = {}
             needs_attr = []
             attr_used = set()
             pole_scale_used = False
-            passthrough_type = []
+            passthrough_type = [0] * total_instances
             progress_in = 0.0
             
             current_buildable = f"{factory}: {total_instances} instances" 
                             
             for i in float_attributes:
-                attr_dict.update({i:[]})
+                attr_dict.update({i:[None] * total_instances})
             
             skip = False
             for exc in exclude_factory:
@@ -624,7 +648,8 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict,get_models_from_l
             print(factory,f" has {len(instances[1])} instances")
             count_p = 0
             total_instances = len(instances[0])
-            for actor in instances[1]:
+            found_prop = False
+            for idx,actor in enumerate(instances[1]):
                 if stop_requested:
                     progress = 0.0
                     break
@@ -632,9 +657,9 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict,get_models_from_l
                 pole_scale_check = False
                 attr_check = {}
                 if "Build_FoundationPassthrough_Hypertube_C" in factory:
-                    passthrough_type.append(1)
+                    passthrough_type[idx] = 1
                 else:
-                    passthrough_type.append(0)
+                    passthrough_type[idx] = 0
                 
                 for prop in actor.Properties:
                     prop_name = prop.Name.Name
@@ -643,39 +668,49 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict,get_models_from_l
                     for i in float_attributes:
                         if i == prop_name:
                             attr_value = float(prop.Value)
-                            
-                    if attr_value:
-                        if not attr_dict.get(prop_name):
-                            attr_dict.update({prop_name:[]})
-                        attr_dict[prop_name].append(attr_value)
-                        attr_check[prop_name] = 1
-                        needs_attr.append(factory)
+                    
+                    if attr_value != None:
+                        attr_dict[prop_name][idx] = attr_value
                         attr_used.add(prop_name)  
-                    else:
-                        if not attr_dict.get(prop_name):
-                            attr_dict.update({prop_name:[]})
-                        attr_dict[prop_name].append(0) 
+                        if not found_prop:
+                            found_prop = True
+                            
+                    #if attr_value:
+                    #    if not attr_dict.get(prop_name):
+                    #        attr_dict.update({prop_name:[]})
+                    #    attr_dict[prop_name].append(attr_value)
+                    #    attr_check[prop_name] = 1
+                    #    needs_attr.append(factory)
+                    #    attr_used.add(prop_name)  
+                    #else:
+                    #    if not attr_dict.get(prop_name):
+                    #        attr_dict.update({prop_name:[]})
+                    #    attr_dict[prop_name].append(0) 
                         
-                    if 'mSnappedBuildingThickness' in prop_name:
-                        passthorugh_thickness_attr.append(prop.Value)
                     if 'mPoleScale' in prop_name:
-                        pole_scale_attr.extend([
+                        pole_scale_attr[idx] = [
                             prop.Value.Data.X,
                             prop.Value.Data.Y
-                        ])
+                        ]
                         pole_scale_used = True
-                        pole_scale_check = True
+                        #pole_scale_check = True
                         
-                if not pole_scale_check:
-                    pole_scale_attr.extend([0.0,0.0])
+                #if not pole_scale_check:
+                #    pole_scale_attr.extend([0.0,0.0])
                 
                 for i in attr_dict:
-                    check = attr_check.get(i,2)
-                    if check != 1:
+                    if attr_dict[i][idx] == None:
+                        attr_dict[i][idx] = 0.0
                         if "mFixtureAngle" in i:
-                            attr_dict[i].append(45.0)
-                        else:
-                            attr_dict[i].append(0.0)
+                            attr_dict[i][idx] = 24.0
+                
+                #for i in attr_dict:
+                #    check = attr_check.get(i,2)
+                #    if check != 1:
+                #        if "mFixtureAngle" in i:
+                #            attr_dict[i].append(45.0)
+                #        else:
+                #            attr_dict[i].append(0.0)
                         
                 verts, rotations, scales = map(
                     list, zip(*(read_transform(i) for i in instances[0]))
@@ -685,16 +720,13 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict,get_models_from_l
             
             for att_u in attr_used:
                 if len(attr_dict[att_u]) > total_instances:
-                    attr_dict[att_u] = attr_dict[att_u][:total_instances]
+                    print("⚠️higher than total",len(attr_dict[att_u]),total_instances)
+                    #attr_dict[att_u] = attr_dict[att_u][:total_instances]
                 elif len(attr_dict[att_u]) < total_instances:
-                    diff = total_instances - len(attr_dict[att_u])
-                    attr_dict[att_u].extend(attr_dict[att_u][:1]*diff)
-                #if "mFixtureAngle" in att_u:
-                #    f_angle = attr_dict[att_u]
-                #    if len(f_angle) > total_instances:
-                #        diff = len(f_angle) - total_instances
-                #        for i in range(diff):
-                #            attr_dict[att_u] = attr_dict[att_u][:total_instances]#.pop(len(f_angle) - 1) TODO: need a better way
+                    print("⚠️lower than total",len(attr_dict[att_u]),total_instances)
+                    #diff = total_instances - len(attr_dict[att_u])
+                    #attr_dict[att_u].extend(attr_dict[att_u][:1]*diff)
+                
                 prop_attr.append({
                         att_u : attr_dict[att_u],
                         "type":["FLOAT","value"]
@@ -702,7 +734,7 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict,get_models_from_l
                 
             if pole_scale_used:
                 prop_attr.append({
-                        "pole_scale" : pole_scale_attr,
+                        "pole_scale" : [v for vec in pole_scale_attr for v in vec],
                         "type":["FLOAT2","vector"]
                     })
             
@@ -798,6 +830,11 @@ def import_signs_task(save: s.SaveGame,get_models_from_library,map_file):
         "Build_PipeHyperSupport_C"
     ]
     
+    sign_layouts = {}
+    sign_layout_path = Path(__file__).parent / "sign_layouts.json"
+    with open(    sign_layout_path, 'r', encoding='utf-8') as f:
+        sign_layouts = json.load(f)
+        
     for obj in save_objects:
         if not obj.isActor():
             continue    
@@ -848,6 +885,11 @@ def import_signs_task(save: s.SaveGame,get_models_from_library,map_file):
         icons_attr = []
         ems_attr = []
         glos_attr = []
+        idx_map = {key: i for i, key in enumerate(sign_layouts)}
+        layout_data = sign_layouts[factory]
+        sign_lay_idx = idx_map.get(factory)
+        layouts_attr = []
+        layouts_text_attr = []
         color_idx_f = []
         color_idx_b = []
         color_idx_a = []
@@ -862,9 +904,21 @@ def import_signs_task(save: s.SaveGame,get_models_from_library,map_file):
             glos_check = False
             aux_check = False
             for prop in actor.Properties:
-                #if 'mSoftActivePrefabLayout' in prop.Name.Name:
-                #    #print(f"{prop.Name.Name}: {prop.Value.AssetPath.AssetName.Name}")
-                #    # TODO use a layout map
+                if 'mSoftActivePrefabLayout' in prop.Name.Name:
+                    layout_name = prop.Value.AssetPath.AssetName.Name
+                    layout_idx = layout_data[layout_name]["layout"]
+                    layout_text = layout_data[layout_name]["Text"]
+                    if layout_text:
+                        lt1 = 1 if layout_text.get('Text1') else 0
+                        lt2 = 1 if layout_text.get('Text2') else 0
+                        lt3 = 1 if layout_text.get('Text3') else 0
+                        layouts_text_attr.extend([lt1,lt2,lt3])
+                    else:
+                        layouts_text_attr.extend([0,0,0])
+                    layouts_attr.append(sign_lay_idx)
+                    layouts_attr.append(layout_idx)
+                    #print(f"{prop.Name.Name}: {prop.Value.AssetPath.AssetName.Name}")
+                    # TODO use a layout map
                 
                 if 'mPrefabTextElementSaveData' in prop.Name.Name:
                     text_attr.append(tuple([idx.Data[1].Value for idx in prop.Value.Values]))
@@ -940,6 +994,14 @@ def import_signs_task(save: s.SaveGame,get_models_from_library,map_file):
             "auxilary_color" : [(c["R"], c["G"], c["B"], c["A"]) for c in color_idx_a],
             "type":["FLOAT_COLOR","color"]
             })
+        prop_attr.append({
+            "layout" : layouts_attr,
+            "type":["FLOAT2","vector"]
+        })
+        prop_attr.append({
+            "layout_t" : layouts_text_attr,
+            "type":["FLOAT_VECTOR","vector"]
+        })
         
         #text_id = 0 
         ## text attributes
@@ -981,7 +1043,8 @@ def import_signs_task(save: s.SaveGame,get_models_from_library,map_file):
             bpy.app.timers.register(functools.partial(
                 append_assets, 
                 factory,
-                map_file
+                map_file,
+                is_sign=True
                 ), first_interval=0)
             time.sleep(0.1)
         
@@ -2469,7 +2532,7 @@ class ImportSaveButton(bpy.types.Operator):
             cls = save.allSaveObjects()
             
             color_map = import_color_slots(cls)
-            
+            print(color_map)
             #if get_lightweight or get_heavyweight:
             #    get_lib_result = get_lib_assets(data_type="NodeTree",asset_name="Buildables from Points",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
             #    
@@ -2496,6 +2559,11 @@ class ImportSaveButton(bpy.types.Operator):
             if get_lib_result:
                 self.report({'INFO'}, get_lib_result)
             
+            #if get_signs:
+            #    get_lib_result = get_lib_assets(data_type="Material",asset_name="MI_SignBackground",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
+            #    if get_lib_result:
+            #        print(get_lib_result)
+                    
             if get_models_from_library:
                 #if bpy.data.collections.get(mesh):
                     

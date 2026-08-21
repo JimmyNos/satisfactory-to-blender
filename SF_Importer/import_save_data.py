@@ -1,3 +1,4 @@
+import os
 import random
 import functools
 import bpy # type: ignore
@@ -12,6 +13,7 @@ import json
 from mathutils import Quaternion, Matrix, Vector
 from pathlib import Path
 import math
+from numpy import append
 import satisfactory_save as s
 import time
 
@@ -61,7 +63,7 @@ def create_sign_text_collection(sign_name,parent_name = 'Import') -> bpy.types.C
 def create_weight_collection(buildable_name,parent_name = 'Import') -> bpy.types.Collection:
     return get_or_create_collection(buildable_name,parent_name)
 
-def add_text_splines_to_curve(text: list, sign_name: str, text_n: int):
+def add_text_splines_to_curve(text: list, sign_name: str, text_n: int,layout:list):
     """
     Generates spline geometry from a text string and appends 
     those splines directly into an existing curve object.
@@ -73,37 +75,100 @@ def add_text_splines_to_curve(text: list, sign_name: str, text_n: int):
     text_set = set()
     text_id = []
     
-    for t in text:
-        text_set.add(t)
-        
-    for i, t in enumerate(text_set):
-        text_dict[t] = i
+    sign_layouts = {}
+    sign_layout_path = Path(__file__).parent / "sign_layouts.json"
+    with open(    sign_layout_path, 'r', encoding='utf-8') as f:
+        sign_layouts = json.load(f) # type: dict[str,dict]
     
-    #print(text_set)
-    #print(text_dict)
-    #print(text)
-    for t in text:
-        #print(repr(l[0]))
-        #print(test[l[0]])
-        text_id.append(text_dict[t])
+    layouts = sign_layouts[sign_name] # layouts used by sign
+    
+    layout_idx = []
+    for i in range(len(layout)):
+        if i % 2:
+            layout_idx.append(layout[i]) # only get layout idx
+    print(layout_idx)
+    print(layout)
+    idx_l = {i: key for i, key in enumerate(layouts)} # to get idx of sign layouts
+    l_data = []
+    l_name = []
+    for l in layout_idx:
+        sign_lay = idx_l[l]
+        l_name.append(sign_lay)
+        l_data.append(layouts[sign_lay]) # store layout data for each sign instance
+    
+    lay_dict = {} # type: dict[str,set[str]]
+    text_new = []
+    for i, t in enumerate(text):
+        #text_id.append(i)
+        lay_dict.update({l_name[i]:set()})
+        lay_dict[l_name[i]].add(t)
+    for n in lay_dict:
+        for t in lay_dict[n]:
+            text_new.append(t)
+        
+    #print(lay_dict)
+    #for t in text:
+    #    text_set.add(t)
+        
+    #for i, t in enumerate(text_set):
+    #    text_dict[t] = i
+        
+    #for t in lay_dict: # idx, layout name
+    #    for i,t in enumerate(lay_dict[t]):
+    #        text_dict[t] = i
+    
+    for i, t in enumerate(text):
+        #lay = lay_dict[l_name[i]]
+        #for idx, tx  in enumerate(lay):
+        #    text_dict[tx] = idx
+        #lt_idx = text_dict[t]
+        #text_id.append(text.index(t))
+        text_id.append(i)
                 
     #col_name = f"{sign_name}"
     text_set = set()
     text_length = len(text)
-    for i,text_string in enumerate(text_dict):
+    
+    font_bold_path = os.path.join(os.path.dirname(__file__),"resources","fonts", "NotoSansJP-Bold.ttf")
+    font_semibold_path = os.path.join(os.path.dirname(__file__),"resources","fonts", "NotoSans-SemiBold.ttf")
+    font_path = os.path.join(os.path.dirname(__file__),"resources","fonts", "NotoSansJP-Regular.ttf")
+    font_dict = {
+        "Regular":font_semibold_path,
+        "Bold":font_bold_path,
+        "SemiBold":font_semibold_path,
+    }
+    for i,text_string in enumerate(text):
+        l_d = l_data[i].get("Text")
+        print(l_data[i])
+        if l_d:
+            t_config = l_d.get(f"Text{text_n+1}")
+        else:
+            t_config = None
         # Create a text curve object
         
         text_name = f"{sign_name}_TextBlock_{text_n}_{i}"
         text_data = bpy.data.curves.new(name=text_name, type='FONT')
         text_data.body = text_string
+        if t_config:
+            font = font_dict[t_config["TypefaceFontName"]]
+            data_font = bpy.data.fonts.load(font)
+            text_data.font = data_font
+            text_data.align_x = t_config["Justification"].upper()
+            text_data.align_y = "CENTER"
+            text_data.space_line = 0.3
+            text_data.offset_x = t_config["Offset"]['X']
+            text_data.offset_y = t_config["Offset"]['Y']
+            text_data.size = t_config["Size"]
+            t_config.get("WrapTextAt",0.0)
+            text_data.text_boxes[0].width = t_config.get("WrapTextAt",0.0)
+            text_data.text_boxes[0].height = 0
         text_obj = bpy.data.objects.new(text_name, text_data)
-
         
         col = create_sign_text_collection(f"{sign_name}_TextBlock_{text_n}",sign_name)
         col.objects.link(text_obj)
         col.hide_viewport
         col.hide_render
-        
+        col.color_tag = "COLOR_01"
         
         # Link to the current collection to perform the conversion
         #current_collection = bpy.context.collection
@@ -233,11 +298,20 @@ def read_sign_colors(color_attr:dict) -> [Vec4, Vec4, Vec4]:
                 (b["R"], b["G"], b["B"], b["A"]),
                 None)
 
-def read_length(i: s.FRuntimeBuildableInstanceData) -> float:
+def read_prop(i: s.FRuntimeBuildableInstanceData,prop_name:str) -> float | str:
     for property in i.TypeSpecificData.StructInstance:
-        if property.Name.Name == "BeamLength":
+        if property.Name.Name == prop_name:
+            #if type(property.Value) == str:
+            #    return property.Value
             return property.Value / 100  # convert to m
-
+        
+    try:
+        if "PatternRotation" == prop_name:
+            return i.CustomizationData.PatternRotation
+        if "PatternDesc" == prop_name:
+            return i.CustomizationData.PatternDesc.PathName
+    except Exception as e:
+        print(e)
     return 0
 
 # end satisfactory api
@@ -344,73 +418,78 @@ def create_buildable_object(
         ]
     
     sign_text_col_list = []
+    sign_layout_attr = {}
     if prop_attr:
         for i,prop in enumerate(prop_attr):
             for attr in prop_attr[i]:
                 if 'type' == attr:
                     continue
                 
-                try:
-                    if 'WidgetSign' in cls:
-                        if 'color' in attr:
-                            mesh.attributes.new(attr, prop['type'][0], "POINT")
-                            flat = [c for att in prop[attr] for c in att]
-                            mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
-                        #elif 'ems' in attr or 'glos' in attr:# or 'length' in attr:
-                        #    mesh.attributes.new(attr, prop['type'][0], "POINT")
-                        #    mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
-                        #elif 'icons' in attr:
-                        #    mesh.attributes.new(attr, prop['type'][0], "POINT")
-                        #    flat = [c for att in prop[attr] for c in att]
-                        #    mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
-                        elif 'text' in attr:
-                            text1 = []
-                            text2 = []
-                            text3 = []
-                            text_id = 0
-                            for att in prop[attr]:
-                                if len(att) == 3:
-                                    text1.append(att[0])
-                                    text_id += 1
-                                    text2.append(att[1])
-                                    text3.append(att[2])
-                                else:
-                                    text1.append(att[0])
-                                    text_id += 1
-                                    text2.append(att[1])
-                            sign_name = f"{cls}"#_{text_id}"
-                            text_1_id,text_col = add_text_splines_to_curve( text1,sign_name,0)
-                            sign_text_col_list.append(text_col)
-                            text_2_id,text_col = add_text_splines_to_curve( text2,sign_name,1)
-                            sign_text_col_list.append(text_col)
-                            text_3_id,text_col = add_text_splines_to_curve( text3,sign_name,2)
-                            sign_text_col_list.append(text_col)
-                            text_ids = []
-                            for i in range(text_id):
-                                if text_3_id:
-                                    text_ids.append(
-                                        (text_1_id[i],
-                                        text_2_id[i],
-                                        text_3_id[i])
-                                    )
-                                else:
-                                    text_ids.append(
-                                        (text_1_id[i],
-                                        text_2_id[i],
-                                        0)
-                                    )
-                            flat = [c for vec in text_ids for c in vec]
-                            mesh.attributes.new("text_id", "FLOAT_VECTOR", "POINT")
-                            mesh.attributes["text_id"].data.foreach_set('vector', flat)
-                            #flat = [c for att in prop[attr] for c in att]
-                            ##print(flat)
-                            #mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
-                        else:
-                            mesh.attributes.new(attr, prop['type'][0], "POINT")
-                            mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
+                #try:
+                if 'WidgetSign' in cls:
+                    
+                    if 'layout' == attr:
+                        sign_layout_attr = prop[attr]
+                    if 'color' in attr:
+                        mesh.attributes.new(attr, prop['type'][0], "POINT")
+                        flat = [c for att in prop[attr] for c in att]
+                        mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
+                    #elif 'ems' in attr or 'glos' in attr:# or 'length' in attr:
+                    #    mesh.attributes.new(attr, prop['type'][0], "POINT")
+                    #    mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
+                    #elif 'icons' in attr:
+                    #    mesh.attributes.new(attr, prop['type'][0], "POINT")
+                    #    flat = [c for att in prop[attr] for c in att]
+                    #    mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
+                    elif 'text' in attr:
+                        layout = sign_layout_attr
+                        text1 = []
+                        text2 = []
+                        text3 = []
+                        text_id = 0
+                        for att in prop[attr]:
+                            if len(att) == 3:
+                                text1.append(att[0])
+                                text_id += 1
+                                text2.append(att[1])
+                                text3.append(att[2])
+                            else:
+                                text1.append(att[0])
+                                text_id += 1
+                                text2.append(att[1])
+                        sign_name = f"{cls}"#_{text_id}"
+                        text_1_id,text_col = add_text_splines_to_curve( text1,sign_name,0,layout)
+                        sign_text_col_list.append(text_col)
+                        text_2_id,text_col = add_text_splines_to_curve( text2,sign_name,1,layout)
+                        sign_text_col_list.append(text_col)
+                        text_3_id,text_col = add_text_splines_to_curve( text3,sign_name,2,layout)
+                        sign_text_col_list.append(text_col)
+                        text_ids = []
+                        for i in range(text_id):
+                            if text_3_id:
+                                text_ids.append(
+                                    (text_1_id[i],
+                                    text_2_id[i],
+                                    text_3_id[i])
+                                )
+                            else:
+                                text_ids.append(
+                                    (text_1_id[i],
+                                    text_2_id[i],
+                                    0)
+                                )
+                        flat = [c for vec in text_ids for c in vec]
+                        mesh.attributes.new("text_id", "FLOAT_VECTOR", "POINT")
+                        mesh.attributes["text_id"].data.foreach_set('vector', flat)
+                        #flat = [c for att in prop[attr] for c in att]
+                        ##print(flat)
+                        #mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
+                    else:
+                        mesh.attributes.new(attr, prop['type'][0], "POINT")
+                        mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
                         
-                except Exception as e:
-                    print(f"failed to create {{attr}} attribute for {cls}: {e}")
+                #except Exception as e:
+                #    print(f"failed to create {{attr}} attribute for {cls}: {e}")
 
                 if not 'WidgetSign' in cls:
                     

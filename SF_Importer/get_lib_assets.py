@@ -54,10 +54,13 @@ def get_lib_assets(
     if os.path.exists(asset_lib_blend_path):
         if asset_name and data_type == "Collection":
             if asset_name in bpy.data.collections:
-                bpy.data.collections.remove(bpy.data.collections[asset_name], do_unlink=True)
-                # purge the orphan data blocks to free up memory
-                bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
-                print(f"{asset_name} already exists in the current Blender session.")    
+                try:
+                    bpy.data.collections.remove(bpy.data.collections[asset_name], do_unlink=True)
+                    # purge the orphan data blocks to free up memory
+                    bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
+                    print(f"{asset_name} already exists in the current Blender session.")    
+                except Exception as e:
+                    print(e)
             
             inner_path = data_type
             active_col = bpy.context.view_layer.active_layer_collection.collection
@@ -68,6 +71,31 @@ def get_lib_assets(
                 clear_asset_data =True,
                 #active_collection = False
             )
+            col = bpy.data.collections.get(asset_name)
+            for ob in col.all_objects:
+                obj_materials = [slot.material.name for slot in ob.material_slots if slot.material]
+                for i,mat in enumerate(obj_materials):
+                    ast_mat = bpy.data.materials.get(mat)
+                    if ast_mat:
+                        if "." in ast_mat.name:
+                            dup_name = ast_mat.name
+                            new_name = dup_name.split('.')[0]
+                            new_mat = bpy.data.materials.get(new_name)
+                            ob.material_slots[i].material = new_mat
+                            
+                obj_mods = [mod for mod in ob.modifiers]
+                for i,mod in enumerate(obj_mods):
+                    #ast_mod = ob.modifiers.get(mod)
+                    #ast_mod.
+                    #node_group = bpy.data.node_groups.get("Decal_Normal_Copy_Color")
+                    
+                    if mod.type == "NODES":
+                        ast_node_group = mod.node_group
+                        if "." in ast_node_group.name:
+                            dup_name = ast_node_group.name
+                            new_name = dup_name.split('.')[0]
+                            new_mat = bpy.data.node_groups.get(new_name)
+                            mod.node_group = new_mat
             
             if asset_name in bpy.data.collections:
                 if col_type:
@@ -88,7 +116,10 @@ def get_lib_assets(
                 if bpy.context.scene.collection.children.get(asset_name):
                     bpy.context.scene.collection.children.unlink(bpy.data.collections[asset_name])
                 else:
-                    active_col.children.unlink(bpy.data.collections[asset_name])
+                    try:
+                        active_col.children.unlink(bpy.data.collections[asset_name])
+                    except Exception as e:
+                        print(e)
                     
                 view_layer = bpy.context.view_layer
                 sc_col = view_layer.layer_collection
@@ -120,9 +151,13 @@ def get_lib_assets(
                     if object_name in bpy.data.materials:
                         for mat in bpy.data.materials:
                             if mat.name.startswith("MI_SignBackground"):
+                                mat.use_fake_user = False
                                 bpy.data.materials.remove(mat, do_unlink=True)
-                        bpy.data.materials.remove(bpy.data.materials[object_name], do_unlink=True)
-                        bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
+                        try:
+                            bpy.data.materials.remove(bpy.data.materials[object_name], do_unlink=True)
+                            bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
+                        except Exception as e:
+                            print(e)
                     elif object_name in bpy.data.node_groups:
                         #bpy.data.node_groups[object_name].name = object_name + "_old"
                         #bpy.data.node_groups[object_name + "_old"].use_fake_user = False
@@ -136,10 +171,18 @@ def get_lib_assets(
                 
                 #append all materials that start with "MI_SignBackground" from the source .blend file
                 if object_name == "MI_SignBackground":
-                    with bpy.data.libraries.load(library_path, link=False) as (data_from, data_to):
+                    with bpy.data.libraries.load(asset_lib_blend_path, link=False) as (data_from, data_to):
                         for mat_name in data_from.materials:
                             if mat_name.startswith("MI_SignBackground_") and not "." in mat_name:
                                 data_to.materials.append(mat_name)
+                                #bpy.ops.wm.append(
+                                #    filepath=os.path.join(asset_lib_blend_path, "Material", mat_name),
+                                #    directory=os.path.join(asset_lib_blend_path, "Material"),
+                                #    filename=mat_name,
+                                #    clear_asset_data =True,
+                                #    set_fake=True
+                                #)
+                                
                                 print(f"Appended material: {mat_name}")
                     continue
                     

@@ -707,7 +707,16 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                     continue
                 print(b_texture.outputs["Color"])
                 print(sf_shader_node.inputs[tx_type])
-                links.new(b_texture.outputs["Color"], sf_shader_node.inputs[tx_type])
+                if "PolishedConcrete" in tex_file.name and tx_type == "Relf/MREA":
+                    rough_multi_node = nodes.new('ShaderNodeGroup')
+                    rough_multi_node.node_tree = bpy.data.node_groups['Rough_Multiplier']
+                    rough_multi_node.location.x = 200
+                    sf_shader_node.location.x = 400
+                    output_node.location.x = 600
+                    links.new(b_texture.outputs["Color"], rough_multi_node.inputs["Color"])
+                    links.new(rough_multi_node.outputs["Color"], sf_shader_node.inputs[tx_type])
+                else:
+                    links.new(b_texture.outputs["Color"], sf_shader_node.inputs[tx_type])
                 if tx_type_a:
                     links.new(b_texture.outputs["Alpha"], sf_shader_node.inputs[tx_type_a])
             except Exception as e:
