@@ -233,7 +233,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_BlueprintDesigner_Computer_01",
         "MI_MamMycelia",
         "MI_Book_02D",
-        "MI_MamNutrients"
+        "MI_MamNutrients",
+        "MI_ConveyorFloorHole_01"
     ]
     
     mra_mat = [
@@ -251,7 +252,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_Tack_01_NoDeform":"MI_Tack_01",
         "MM_ShutterGate_Inst":"MI_HyperTubeStart_01",
         "HubDecal_Opaque":"HubDecal_Masked",
-        "MI_Pipe_Static":"MI_Pipe"
+        "MI_Pipe_Static":"MI_Pipe",
+        "MI_HyperTube_Static":"MI_HyperTube"
     }
     
     search_mat = {"PipelineMK2":
@@ -262,6 +264,15 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     
     light_type_mat = [
         "MI_PriorityLights"
+    ]
+    
+    beam_mats = [
+        "MI_Beams_01",
+        "MI_Beam_04",
+        "MI_Beam_01",
+        "MI_Beam_07",
+        "MI_SM_BeamCable_02",
+        "MI_SM_BeamCable_01"
     ]
     
     find_path = Path(parent_path,"Material")
@@ -286,7 +297,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             if not replace_mat:
                 replace_mat = bpy.data.materials.new(obj_material)
             ob.material_slots[index].material = replace_mat
-    
+            
     #opa_name = ""
     #if "HubDecal_Opaque" in obj_material:
     #    opa_name = obj_material
@@ -574,6 +585,16 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             links.new(light_shader_node.outputs["Shader"], output_node.inputs["Surface"])
             return None
     
+    if "MI_ConveyorBelt_PowerStrip_MK6_01" == obj_material:
+        power_strip_shader_node = nodes.new('ShaderNodeGroup')
+        if bpy.data.node_groups.get("MI_ConveyorBelt_PowerStrip_01"):
+            power_strip_shader_node.node_tree = bpy.data.node_groups['MI_ConveyorBelt_PowerStrip_01']
+        else:
+            power_strip_shader_node.node_tree = bpy.data.node_groups['FallBack']
+        power_strip_shader_node.location.x = 200
+        links.new(power_strip_shader_node.outputs["Shader"], output_node.inputs["Surface"])
+        return None
+    
     # Start Textures logic
     if textures:
         print("getting mat tex")
@@ -586,6 +607,14 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         links.new(sf_shader_node.outputs["Shader"], output_node.inputs["Surface"])
         if any(mat == obj_material for mat in no_gb_mat):
             sf_shader_node.inputs["AO no GB packed?"].default_value = True
+            
+        use_beam_logic = False
+        if any(mat in obj_material for mat in beam_mats):
+            if bpy.data.node_groups.get("Beam_Logic"):
+                beam_logic_node = nodes.new('ShaderNodeGroup')
+                beam_logic_node.node_tree = bpy.data.node_groups['Beam_Logic']
+                beam_logic_node.location.x = -400
+                use_beam_logic = True
         #if any(mat == obj_material for mat in mra_mat):
         #    sf_shader_node.inputs["MRA?"].default_value = True
         has_cbp = False # CanBePainted
@@ -680,6 +709,9 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                         sf_shader_node.inputs["No Paint Finish?"].default_value = True
                         if "TX_HubDecal_BC" in img.name:
                             links.new(b_texture.outputs["Alpha"], sf_shader_node.inputs["Albedo Alpha"])
+                            
+                if use_beam_logic:
+                    links.new(beam_logic_node.outputs["Vector"], b_texture.inputs["Vector"])
                         
                 
                 tx_type = ""
