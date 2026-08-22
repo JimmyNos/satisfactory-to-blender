@@ -71,7 +71,7 @@ def add_text_splines_to_curve(text: list, sign_name: str, text_n: int,layout:lis
     # TODO: use name of sign for text obj and collection name
     # a set of text to not create duplicate text obj
     # if a sign uses a text from the set, use idx as id
-    text_dict = dict()
+    #text_dict = dict()
     text_set = set()
     text_id = []
     
@@ -97,33 +97,39 @@ def add_text_splines_to_curve(text: list, sign_name: str, text_n: int,layout:lis
         l_data.append(layouts[sign_lay]) # store layout data for each sign instance
     
     lay_dict = {} # type: dict[str,set[str]]
-    text_new = []
+    lay_data_dict = {} # type: dict[str,list[str]]
     for i, t in enumerate(text):
-        #text_id.append(i)
-        lay_dict.update({l_name[i]:set()})
+        #lay_dict.update({name:set()})
+        name = f"name{i}"
+        if not lay_dict.get(l_name[i]):
+            lay_dict[l_name[i]] = set()
         lay_dict[l_name[i]].add(t)
+        if not t in lay_dict[l_name[i]]:
+            lay_data_dict[l_name[i]].append(l_data[i])
+    
+    text_new = []
+    layout_new = []
+    idx_dict = {}
+    text_new_count = 0
+    text_new_idx = []
     for n in lay_dict:
-        for t in lay_dict[n]:
+        for i,t in enumerate(lay_dict[n]):
             text_new.append(t)
-        
-    #print(lay_dict)
-    #for t in text:
-    #    text_set.add(t)
-        
-    #for i, t in enumerate(text_set):
-    #    text_dict[t] = i
-        
-    #for t in lay_dict: # idx, layout name
-    #    for i,t in enumerate(lay_dict[t]):
-    #        text_dict[t] = i
+            layout_new.append(n)
+            text_new_idx.append(text_new_count)
+            if not idx_dict.get(n):
+                idx_dict[n] = {}
+            idx_dict[n].update({i:text_new_count})
+            text_new_count += 1
     
     for i, t in enumerate(text):
-        #lay = lay_dict[l_name[i]]
-        #for idx, tx  in enumerate(lay):
-        #    text_dict[tx] = idx
+        text_dict = dict()
+        lay = lay_dict[l_name[i]]
+        for idx, tx  in enumerate(lay):
+            text_dict[tx] = idx_dict[l_name[i]][idx]
         #lt_idx = text_dict[t]
         #text_id.append(text.index(t))
-        text_id.append(i)
+        text_id.append(text_dict[t])
                 
     #col_name = f"{sign_name}"
     text_set = set()
@@ -137,9 +143,11 @@ def add_text_splines_to_curve(text: list, sign_name: str, text_n: int,layout:lis
         "Bold":font_bold_path,
         "SemiBold":font_semibold_path,
     }
-    for i,text_string in enumerate(text):
-        l_d = l_data[i].get("Text")
-        print(l_data[i])
+    for i,text_string in enumerate(text_new):
+        print(layout_new[i])
+        l_data_new =  layouts[layout_new[i]]
+        print(l_data_new)
+        l_d = l_data_new.get("Text")
         if l_d:
             t_config = l_d.get(f"Text{text_n+1}")
         else:
@@ -151,7 +159,10 @@ def add_text_splines_to_curve(text: list, sign_name: str, text_n: int,layout:lis
         text_data.body = text_string
         if t_config:
             font = font_dict[t_config["TypefaceFontName"]]
-            data_font = bpy.data.fonts.load(font)
+            if not font_dict.get(t_config["TypefaceFontName"]):
+                data_font = bpy.data.fonts.load(font)
+            else:
+                data_font = bpy.data.fonts.get(font)
             text_data.font = data_font
             text_data.align_x = t_config["Justification"].upper()
             text_data.align_y = "CENTER"

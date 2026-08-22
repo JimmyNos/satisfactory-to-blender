@@ -41,8 +41,29 @@ TEXTURE_TPYE_WORDS = [
     "_RELF"
 ]
 
+shader_groups = [
+    "SatisfactoryToBlenderShader",
+    "TX2D_Shader"
+    "SF_display",
+    "TX2D_tile_mix_B",
+    "TX2D_tile_mix_N",
+    "TX2D_tile_mix_R",
+    "Rough_Multiplier",
+    "MI_ConveyorBelt_PowerStrip_01",
+    "Light_shader",
+    "FallBack",
+    "Beam_Logic"
+]
+
 def get_par_materials(sf_asset_export_path):
 #def get_par_materials():
+    missing_shaders = []
+    for sg in shader_groups:
+        if not bpy.data.node_groups.get(sg):
+            missing_shaders.append(sg)
+    
+    if missing_shaders:
+        return f"Shader groups not found in blender: {missing_shaders}"
     
     EXPORT_FILE_DIR = r"FactoryGame\Content"
     TX_EXPORT_FILE_DIR = r"Exports\FactoryGame\Content"

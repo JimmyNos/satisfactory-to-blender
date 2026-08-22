@@ -2098,6 +2098,9 @@ def run_mark_asset(a_coll,u_coll):
     global marking_asset
     marking_asset = True
     
+    def hide_obj(current_col):
+        current_col.hide_viewport = True
+    
     folder = Path(bpy.data.filepath).parent
     if Path(folder,"blender_assets.cats.txt").exists():
         target_catalogs = {
@@ -2119,11 +2122,15 @@ def run_mark_asset(a_coll,u_coll):
             for col in list(a_coll.children):
                 catalog_id = target_catalogs.get("Assets-"+col.name)
                 for b_col in list(col.children):
-                    col.hide_viewport = False
-                    a_coll.asset_clear()
+                    b_col.hide_viewport = False
+                    b_col.asset_clear()
                     b_col.asset_mark()
                     b_col.asset_generate_preview()
-                    col.hide_viewport = True
+                    bpy.app.timers.register(functools.partial(
+                        hide_obj,
+                        current_col=b_col
+                    ), first_interval=7)
+                    #col.hide_viewport = True
                     asset_data = b_col.asset_data
                     asset_data.catalog_id = catalog_id
                     
@@ -2135,7 +2142,10 @@ def run_mark_asset(a_coll,u_coll):
                 col.asset_clear()
                 col.asset_mark()
                 col.asset_generate_preview()
-                col.hide_viewport = True
+                bpy.app.timers.register(functools.partial(
+                    hide_obj,
+                    current_col=col
+                ), first_interval=1)
                 asset_data = col.asset_data 
                 asset_data.catalog_id = catalog_id
     else:
@@ -2617,6 +2627,16 @@ class BuildAssetsButton(bpy.types.Operator):
         build_materials = bpy.context.scene.sf_importer_props.build_materials
         
         if not is_scanning and not is_get_scanning and not is_asset_building:
+            is_asset_building = True
+            
+            if build_materials:
+                missing = get_par_materials(sf_asset_export_path)
+                if missing:
+                    self.report({'ERROR'}, missing)
+                    is_asset_building = False
+                    BuildAssetsButton.bl_label = "Start Building"
+                    return {'CANCELLED'}
+                
             clear_asset_col = True
             
             a_coll = get_or_create_collection('Assets')
@@ -2639,12 +2659,6 @@ class BuildAssetsButton(bpy.types.Operator):
             
             bpy.ops.outliner.orphans_purge(do_recursive=True)
             
-            is_asset_building = True
-            
-            build_materials = bpy.context.scene.sf_importer_props.build_materials
-            
-            if build_materials:
-                get_par_materials(sf_asset_export_path)
             
             self.report({'INFO'}, "Starting asset building...")
             mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
