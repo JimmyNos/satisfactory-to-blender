@@ -40,9 +40,6 @@ stop_requested = False
 stop_get_requested = False
 stop_building_requested = False
 buildable_to_asset_path = ""
-x_corr = -500.0
-y_corr = 2800.0
-distance = 1000.0
 obj_name=""
 prop_parent = None
 prop_parent_name = ""
@@ -52,6 +49,10 @@ build_execution_time = 0.0
 marking_asset = False
 is_appended = 0
 mapped_build = set()
+
+x_corr = -500.0
+y_corr = 2800.0
+distance = 1000.0
 
 # start common types
 Vec3 = tuple[float, float, float]
@@ -183,6 +184,28 @@ class SF_Importer_Properties(PropertyGroup):
         default=False
     ) # type: ignore
 
+    import_in_coords: bpy.props.BoolProperty(
+        name="Use Coordinates",
+        description="Use coordinates to only import buildables within the set distance of the coordinates.",
+        default=True
+    ) # type: ignore
+    
+    x_coords: bpy.props.IntProperty( #type: ignore
+        name="X Coords",
+        description="X coordinate for the SF importer",
+        default = 0
+    )
+    y_coords: bpy.props.IntProperty( #type: ignore
+        name="y Coords",
+        description="Y  coordinate for the SF importer",
+        default = 0
+    )
+    coord_distance: bpy.props.IntProperty( #type: ignore
+        name="Distance",
+        description="Max distance from the X and Y coordinates.",
+        default = 500,
+        min=0
+    )
 class SFImportPreferences(AddonPreferences):
     bl_idname = __package__
     
@@ -359,7 +382,16 @@ def append_assets(cls: str,map_file,is_light:bool = False,is_sign:bool = False):
         
             mapped_build.add(mesh)
 
-def import_lightweights_task(save: s.SaveGame, color_map: dict,get_models_from_library,map_file):
+def import_lightweights_task(
+    save: s.SaveGame, 
+    color_map: dict,
+    get_models_from_library,
+    map_file,
+    x_coords: int,
+    y_coords: int,
+    coord_distance: int,
+    import_in_coords: bool
+    ):
     global progress,progress_in, is_scanning, stop_requested,run_once,is_appended
     global total,total_imported,total_instances,current_buildable,buildable_to_asset_path
     progress = 0.0
@@ -391,6 +423,17 @@ def import_lightweights_task(save: s.SaveGame, color_map: dict,get_models_from_l
             raise Exception("Missing class path, how can this happen?")
     
         instances = instances_by_class_ref[class_ref]
+        if import_in_coords:
+            tmp_instances = []
+            for ints in instances:
+                t = ints.Transform.Translation
+                dx = x_coords - t.X/100
+                dy = y_coords - -t.Y/100
+                dist_squared = (dx ** 2) + (dy ** 2)
+                if dist_squared <= (coord_distance ** 2):
+                    tmp_instances.append(ints)
+            instances = tmp_instances
+            
         total_instances = len(instances)
         name = class_path.split(".")[-1]
     
@@ -400,10 +443,6 @@ def import_lightweights_task(save: s.SaveGame, color_map: dict,get_models_from_l
         if not instances:
             continue  
         
-        #tmp_instances = []
-        #for ints in instances:
-        #    if x_corr <= ints.X <= x_corr + distance:
-        #        tmp_instances.append(ints)
         
         current_buildable = f"{name}: {total_instances} instances"  
         verts, rotations, scales = map(
@@ -503,7 +542,15 @@ def import_lightweights_task(save: s.SaveGame, color_map: dict,get_models_from_l
     #stop_requested = False
     bpy.app.timers.register(update_ui)
 
-def import_heavyweights_task(save: s.SaveGame, color_map: dict,get_models_from_library,map_file):
+def import_heavyweights_task(
+    save: s.SaveGame, 
+    color_map: dict,
+    get_models_from_library,
+    map_file,
+    x_coords: int,
+    y_coords: int,
+    coord_distance: int,
+    import_in_coords: bool):
     global progress, is_scanning, stop_requested,run_once,total,total_imported,current_buildable,is_appended
     global total_instances,current_buildable,progress_in,buildable_to_asset_path
     save_objects = save.allSaveObjects()
@@ -615,8 +662,19 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict,get_models_from_l
             cls_name = header.ObjectHeader.Reference.PathName
             
             if factory in cls_name:
-                instances[0].append(transform)
-                instances[1].append(actor)
+                if import_in_coords:
+                    tmp_instances = []
+                    dx = x_coords - transform.Translation.X/100
+                    dy = y_coords - -transform.Translation.Y/100
+                    dist_squared = (dx ** 2) + (dy ** 2)
+                    if dist_squared <= (coord_distance ** 2):
+                        instances[0].append(transform)
+                        instances[1].append(actor)
+                else:
+                    instances[0].append(transform)
+                    instances[1].append(actor)
+        if not instances[0]:
+            continue
         
         total_instances = len(instances[0])
         
@@ -803,7 +861,14 @@ def import_heavyweights_task(save: s.SaveGame, color_map: dict,get_models_from_l
     #stop_requested = False
     bpy.app.timers.register(update_ui)
 
-def import_signs_task(save: s.SaveGame,get_models_from_library,map_file):
+def import_signs_task(
+    save: s.SaveGame,
+    get_models_from_library,
+    map_file,
+    x_coords: int,
+    y_coords: int,
+    coord_distance: int,
+    import_in_coords: bool):
     global progress, is_scanning, stop_requested,run_once,total,total_imported,is_appended
     global current_buildable,total_instances,current_buildable,progress_in,buildable_to_asset_path
     save_objects = save.allSaveObjects()
@@ -875,8 +940,19 @@ def import_signs_task(save: s.SaveGame,get_models_from_library,map_file):
             cls_name = header.ObjectHeader.Reference.PathName
             
             if factory in cls_name:
-                instances[0].append(transform)
-                instances[1].append(actor)
+                if import_in_coords:
+                    tmp_instances = []
+                    dx = x_coords - transform.Translation.X/100
+                    dy = y_coords - -transform.Translation.Y/100
+                    dist_squared = (dx ** 2) + (dy ** 2)
+                    if dist_squared <= (coord_distance ** 2):
+                        instances[0].append(transform)
+                        instances[1].append(actor)
+                else:
+                    instances[0].append(transform)
+                    instances[1].append(actor)
+        if not instances[0]:
+            continue
         
         total_instances = len(instances[0])
         prop_attr = []
@@ -1071,7 +1147,15 @@ def import_signs_task(save: s.SaveGame,get_models_from_library,map_file):
         
     bpy.app.timers.register(update_ui)
 
-def import_splines_task(save: s.SaveGame, color_map: dict,get_models_from_library,map_file):
+def import_splines_task(
+    save: s.SaveGame, 
+    color_map: dict,
+    get_models_from_library,
+    map_file,
+    x_coords: int,
+    y_coords: int,
+    coord_distance: int,
+    import_in_coords: bool):
     global progress, is_scanning, stop_requested,run_once,total,total_imported,is_appended
     global progress_in,total_instances,current_buildable,buildable_to_asset_path
     save_objects = save.allSaveObjects()
@@ -1239,11 +1323,19 @@ def import_splines_task(save: s.SaveGame, color_map: dict,get_models_from_librar
             type_mk = [0,0]
             type_mk_lift = []
             type_mk_belt = []
+            chains = actor.mChainSplineSegments
+            if import_in_coords:
+                tmp_chains = []
+                dx = x_coords - transform.Translation.X/100
+                dy = y_coords - -transform.Translation.Y/100
+                dist_squared = (dx ** 2) + (dy ** 2)
+                if not dist_squared <= (coord_distance ** 2):
+                    continue
             
-            total_cons = len(actor.mChainSplineSegments)
+            total_cons = len(chains)
             current_buildable = f"Conveyor chain: {total_cons} segments" 
             count_p = 0
-            for i, seg in enumerate(reversed(actor.mChainSplineSegments)):
+            for i, seg in enumerate(reversed(chains)):
                 if stop_requested:
                     progress = 0.0
                     break
@@ -1397,8 +1489,18 @@ def import_splines_task(save: s.SaveGame, color_map: dict,get_models_from_librar
             cls_name = header.ObjectHeader.Reference.PathName
             
             if factory in cls_name:
-                instances[0].append(transform)
-                instances[1].append(actor)
+                if import_in_coords:
+                    dx = x_coords - transform.Translation.X/100
+                    dy = y_coords - -transform.Translation.Y/100
+                    dist_squared = (dx ** 2) + (dy ** 2)
+                    if dist_squared <= (coord_distance ** 2):
+                        instances[0].append(transform)
+                        instances[1].append(actor)
+                else:
+                    instances[0].append(transform)
+                    instances[1].append(actor)
+        if not instances[0]:
+            continue
         
         total_instances = len(instances[0])
         
@@ -1572,11 +1674,19 @@ def import_save_task(save: s.SaveGame, color_map: dict,get_models_from_library):
     get_signs = bpy.context.scene.sf_importer_props.get_signs
     get_splines = bpy.context.scene.sf_importer_props.get_splines
     
+    x_coords = bpy.context.scene.sf_importer_props.x_coords
+    y_coords = bpy.context.scene.sf_importer_props.y_coords
+    coord_distance = bpy.context.scene.sf_importer_props.coord_distance
+    import_in_coords = bpy.context.scene.sf_importer_props.import_in_coords
+    #x_coords = x_coords * 100
+    #y_coords = y_coords * 100
+    #coord_distance = coord_distance * 100
+    
     with open(buildable_to_asset_path, 'r', encoding='utf-8') as f:
         map_file = json.load(f)
     
     if get_lightweight:
-        import_lightweights_task(save, color_map,get_models_from_library,map_file)
+        import_lightweights_task(save, color_map,get_models_from_library,map_file,x_coords,y_coords,coord_distance,import_in_coords)
         final_total = total
         current_imported = total_imported
         #progress = 0.0
@@ -1585,7 +1695,7 @@ def import_save_task(save: s.SaveGame, color_map: dict,get_models_from_library):
         light_end_time = datetime.now() - start_time
         partial_time[0] = f"Lightweight {str(light_end_time)[:-4]}"
     if get_heavyweight:
-        import_heavyweights_task(save, color_map,get_models_from_library,map_file)
+        import_heavyweights_task(save, color_map,get_models_from_library,map_file,x_coords,y_coords,coord_distance,import_in_coords)
         if final_total == 0:
             final_total = total
         else:
@@ -1601,7 +1711,7 @@ def import_save_task(save: s.SaveGame, color_map: dict,get_models_from_library):
             partial_time[1] = f"Heavyweight {str(heavy_end_time)[:-4]}"
     
     if get_signs:
-        import_signs_task(save,get_models_from_library,map_file)
+        import_signs_task(save,get_models_from_library,map_file,x_coords,y_coords,coord_distance,import_in_coords)
         if final_total == 0:
             final_total = total
         else:
@@ -1621,7 +1731,7 @@ def import_save_task(save: s.SaveGame, color_map: dict,get_models_from_library):
             partial_time[2] = f"Signs {str(sign_end_time)[:-4]}"
             
     if get_splines:    
-        import_splines_task(save, color_map,get_models_from_library,map_file)
+        import_splines_task(save, color_map,get_models_from_library,map_file,x_coords,y_coords,coord_distance,import_in_coords)
         if final_total == 0:
             final_total = total
         else:
@@ -2728,6 +2838,14 @@ class VIEW3D_PT_SF_Importer_panel(Panel):
         pro_col.prop(props, "hide_buildable", text="Hide Buildable")
     
         choose_box = layout.box()
+        coord_box = choose_box.box()
+        coord_box.prop(props, "import_in_coords")
+        choose_split = coord_box.split()
+        coord_col = choose_split.column(align=True)
+        coord_row = coord_col.row(align=True)
+        coord_row.prop(props, "x_coords")
+        coord_row.prop(props, "y_coords")
+        coord_col.prop(props, "coord_distance")
         choose_col = choose_box.column()
         choose_row = choose_col.row()
         choose_row.prop(props, "get_lightweight")

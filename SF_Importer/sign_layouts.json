@@ -1113,7 +1113,8 @@
     "BPW_Sign2x3_4_C": {
       "layout": 4,
       "Text": {
-        "Text1": {
+        "Text1":null,
+        "Text2": {
           "Size": 300.0,
           "WrapTextAt": 380.0,
           "Offset": {
@@ -1128,7 +1129,6 @@
             "Bottom": 15.0
           }
         },
-        "Text2":null,
         "Text3":null
       }
     }

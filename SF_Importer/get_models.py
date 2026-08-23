@@ -232,9 +232,44 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_BlueprintDesigner_Foundations_01",
         "MI_BlueprintDesigner_Computer_01",
         "MI_MamMycelia",
-        "MI_Book_02D",
+        "MI_Book_",
         "MI_MamNutrients",
-        "MI_ConveyorFloorHole_01"
+        "MI_ConveyorFloorHole_01",
+        "MI_HubPots",
+        "MI_PictureDiploma",
+        "MI_ToiletPoster_01",
+        "MI_Toothbrush",
+        "MI_HubMirror",
+        "MI_ToiletBag",
+        "MI_LunchTray",
+        "MI_OstHyvel",
+        "MI_Microwave",
+        "MI_Candle",
+        "MI_socks",
+        "MI_Snus",
+        "MI_RubiksCube",
+        "MI_Picture_01",
+        "MI_Alpaca",
+        "MI_Meseekbox",
+        "MI_HubSign",
+        "MI_Embroidery",
+        "MI_PostCard_01",
+        "MI_HubComputer",
+        "MI_GoldenJoystick",
+        "MI_Pencils_01",
+        "MI_Picture_02",
+        "MM_LavaLamp",
+        "MI_Matches",
+        "MI_Halmbock",
+        "MI_FicsmasCandle",
+        "MI_FicsmasBlanket",
+        "MI_SnowGlobe",
+        "MI_Glogg",
+        "MI_GingerBreadCookies",
+        "MI_Orange",
+        "MI_Bowl",
+        "MI_FicsmasCandle",
+        "MI_SantaStatue"
     ]
     
     mra_mat = [
@@ -401,7 +436,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         ob.material_slots[index].material = replace_mat
         obj_material = obj_material_dup
             
-    if "Glass" in obj_material or "MI_HadronEffect_01" in obj_material or "MM_Window_CC" in obj_material:
+    if "Glass" in obj_material or "MI_HadronEffect_01" in obj_material or "MM_Window_CC" in obj_material or "MI_BlenderPitcher" in obj_material:
         glass_mat = bpy.data.materials.get("Glass_mat")
         ob.material_slots[index].material = glass_mat
         return None

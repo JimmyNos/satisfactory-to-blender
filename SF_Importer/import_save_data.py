@@ -159,7 +159,7 @@ def add_text_splines_to_curve(text: list, sign_name: str, text_n: int,layout:lis
         text_data.body = text_string
         if t_config:
             font = font_dict[t_config["TypefaceFontName"]]
-            if not font_dict.get(t_config["TypefaceFontName"]):
+            if not bpy.data.fonts.get(font):
                 data_font = bpy.data.fonts.load(font)
             else:
                 data_font = bpy.data.fonts.get(font)
