@@ -4,15 +4,16 @@
       "layout": 0,
       "Text": {
         "Text1": {
-          "Size": 60.0,
-          "WrapTextAt": 780.0,
+          "Size": 0.555,
+          "WrapTextAt": 1.92,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.015,
+            "Y": 0.08
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.7,
+          "LineHeightPercentage": 0.55,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -26,15 +27,16 @@
       "layout": 1,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 420.0,
+          "Size": 0.542,
+          "WrapTextAt": 1.06,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.535,
+            "Y": 0.1
           },
           "Justification": "Left",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -48,15 +50,16 @@
       "layout": 2,
       "Text": {
         "Text1": {
-          "Size": 39.0,
-          "WrapTextAt": 420.0,
+          "Size": 0.323,
+          "WrapTextAt": 0.83,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.845,
+            "Y": 0.06
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.7,
+          "LineHeightPercentage": 0.34,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -74,18 +77,19 @@
       "layout": 4,
       "Text": {
         "Text1": {
-          "Size": 40.0,
-          "WrapTextAt": 370.0,
+          "Size": 0.323,
+          "WrapTextAt": 0.63,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.965,
+            "Y": 0.08
           },
           "Justification": "Left",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.37,
           "Margin": {
-            "Top": -5.0,
-            "Bottom": 15.0
+            "Top": -20.0,
+            "Bottom": 20.0
           }
         },
         "Text2": null,
@@ -96,15 +100,16 @@
       "layout": 5,
       "Text": {
         "Text1": {
-          "Size": 39.0,
-          "WrapTextAt": 420.0,
+          "Size": 0.323,
+          "WrapTextAt": 0.83,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.575,
+            "Y": -0.26
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.7,
+          "LineHeightPercentage": 0.55,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -128,13 +133,14 @@
         "Text1": null,
         "Text2": null,
         "Text3": {
-          "Size": 200.0,
-          "WrapTextAt": 800.0,
+          "Size": 2.0,
+          "WrapTextAt": 8,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -3.07,
+            "Y": 0.1
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "Bold",
           "LineHeightPercentage": 0.7,
           "Margin": {
@@ -150,60 +156,69 @@
       "layout": 0,
       "Text": {
         "Text1": {
-          "Size": 60.0,
-          "WrapTextAt": 780.0,
+          "Size": 2.22,
+          "WrapTextAt": 7.68,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -2.885,
+            "Y": 0.08
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.7,
+          "LineHeightPercentage": 0.55,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
           }
-        }
+        },
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x1_2_C": {
       "layout": 1,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 420.0,
+          "Size": 2.168,
+          "WrapTextAt": 4.24,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.785,
+            "Y": 0.32
           },
           "Justification": "Left",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
           }
-        }
+        },
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x1_4_C": {
       "layout": 2,
       "Text": {
         "Text1": {
-          "Size": 39.0,
-          "WrapTextAt": 420.0,
+          "Size": 1.32,
+          "WrapTextAt": 3.32,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.355,
+            "Y": 0.16
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.7,
+          "LineHeightPercentage": 0.34,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
           }
-        }
+        },
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x1_5_C": {
@@ -214,40 +229,46 @@
       "layout": 4,
       "Text": {
         "Text1": {
-          "Size": 40.0,
-          "WrapTextAt": 370.0,
+          "Size": 1.32,
+          "WrapTextAt": 2.52,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.965,
+            "Y": 0.08
           },
           "Justification": "Left",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.65,
           "Margin": {
-            "Top": -5.0,
-            "Bottom": 15.0
+            "Top": -20.0,
+            "Bottom": 20.0
           }
-        }
+        },
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x1_10_C": {
       "layout": 5,
       "Text": {
         "Text1": {
-          "Size": 39.0,
-          "WrapTextAt": 420.0,
+          "Size": 1.32,
+          "WrapTextAt": 3.32,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.605,
+            "Y": -1.14
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.7,
+          "LineHeightPercentage": 0.55,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
           }
-        }
+        },
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x1_12_C": {
@@ -261,14 +282,17 @@
     "BPW_Sign2x1_14_C": {
       "layout": 8,
       "Text": {
+        "Text1": null,
+        "Text2": null,
         "Text3": {
-          "Size": 200.0,
-          "WrapTextAt": 800.0,
+          "Size": 8.0,
+          "WrapTextAt": 32,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -15.11,
+            "Y": 0.19
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "Bold",
           "LineHeightPercentage": 0.7,
           "Margin": {
@@ -284,60 +308,69 @@
       "layout": 0,
       "Text": {
         "Text1": {
-          "Size": 60.0,
-          "WrapTextAt": 780.0,
+          "Size": 4.44,
+          "WrapTextAt": 15.36,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -6.505,
+            "Y": 0.37
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.7,
+          "LineHeightPercentage": 0.55,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
           }
-        }
+        },
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x1_2_C": {
       "layout": 1,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 420.0,
+          "Size": 4.336,
+          "WrapTextAt": 8.48,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -2.71,
+            "Y": 0.5
           },
           "Justification": "Left",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
           }
-        }
+        },
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x1_4_C": {
       "layout": 2,
       "Text": {
         "Text1": {
-          "Size": 39.0,
-          "WrapTextAt": 420.0,
+          "Size": 2.584,
+          "WrapTextAt": 6.64,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.375,
+            "Y": 0.3
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.7,
+          "LineHeightPercentage": 0.34,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
           }
-        }
+        },
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x1_5_C": {
@@ -348,40 +381,46 @@
       "layout": 4,
       "Text": {
         "Text1": {
-          "Size": 40.0,
-          "WrapTextAt": 370.0,
+          "Size": 2.584,
+          "WrapTextAt": 5.04,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.965,
+            "Y": 0.39
           },
           "Justification": "Left",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.39,
           "Margin": {
-            "Top": -5.0,
-            "Bottom": 15.0
+            "Top": -20.0,
+            "Bottom": 20.0
           }
-        }
+        },
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x1_10_C": {
       "layout": 5,
       "Text": {
         "Text1": {
-          "Size": 39.0,
-          "WrapTextAt": 420.0,
+          "Size": 2.584,
+          "WrapTextAt": 6.64,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -2.165,
+            "Y": -2.46
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.7,
+          "LineHeightPercentage": 0.55,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
           }
-        }
+        },
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x1_12_C": {
@@ -395,14 +434,17 @@
     "BPW_Sign2x1_14_C": {
       "layout": 8,
       "Text": {
+        "Text1": null,
+        "Text2": null,
         "Text3": {
-          "Size": 200.0,
-          "WrapTextAt": 800.0,
+          "Size": 16.0,
+          "WrapTextAt": 64,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -31.05,
+            "Y": 0.38
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "Bold",
           "LineHeightPercentage": 0.7,
           "Margin": {
@@ -418,15 +460,16 @@
       "layout": 0,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 790.2,
+          "Size": 0.506,
+          "WrapTextAt": 1.892,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.03,
+            "Y": 0.09
           },
+          "Align_y": "Center",
           "Justification": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -440,15 +483,16 @@
       "layout": 1,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 530.2,
+          "Size": 0.506,
+          "WrapTextAt": 1.372,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.52,
+            "Y": 0.1
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -462,15 +506,16 @@
       "layout": 2,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 530.2,
+          "Size": 0.506,
+          "WrapTextAt": 1.372,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.46,
+            "Y": 0.07
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -484,26 +529,27 @@
       "layout": 3,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 530.2,
+          "Size": 0.506,
+          "WrapTextAt": 1.422,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.48,
+            "Y": 0.09
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
-            "Bottom": 0.0
+            "Bottom": 20.0
           }
         },
         "Text2": {
-          "Size": 80.0,
+          "Size": 0.992,
           "WrapTextAt": 0.0,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.11,
+            "Y": -0.06
           },
           "Justification": "Left",
           "TypefaceFontName": "Bold",
@@ -520,18 +566,19 @@
       "layout": 4,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 570.2,
+          "Size": 0.506,
+          "WrapTextAt": 1.372,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.48,
+            "Y": 0.09
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
-            "Bottom": 0.0
+            "Bottom": 20.0
           }
         },
         "Text2": null,
@@ -542,18 +589,19 @@
       "layout": 5,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 400.2,
+          "Size": 0.506,
+          "WrapTextAt": 0.942,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.84,
+            "Y": 0.08
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
-            "Bottom": 0.0
+            "Bottom": 20.0
           }
         },
         "Text2": null,
@@ -566,15 +614,16 @@
       "layout": 0,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 790.2,
+          "Size": 0.506,
+          "WrapTextAt": 2.772,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.42,
+            "Y": 0.09
           },
+          "Align_y": "Center",
           "Justification": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -588,15 +637,16 @@
       "layout": 1,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 530.2,
+          "Size": 0.506,
+          "WrapTextAt": 2.482,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.06,
+            "Y": 0.1
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -610,15 +660,16 @@
       "layout": 2,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 530.2,
+          "Size": 0.506,
+          "WrapTextAt": 2.482,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.09,
+            "Y": 0.08
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -632,26 +683,27 @@
       "layout": 3,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 530.2,
+          "Size": 0.506,
+          "WrapTextAt": 2.482,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.03,
+            "Y": 0.08
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
-            "Bottom": 0.0
+            "Bottom": 20.0
           }
         },
         "Text2": {
-          "Size": 80.0,
+          "Size": 0.992,
           "WrapTextAt": 0.0,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.38,
+            "Y": -0.06
           },
           "Justification": "Left",
           "TypefaceFontName": "Bold",
@@ -668,18 +720,19 @@
       "layout": 4,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 570.2,
+          "Size": 0.506,
+          "WrapTextAt": 2.482,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.02,
+            "Y": 0.09
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
-            "Bottom": 0.0
+            "Bottom": 20.0
           }
         },
         "Text2": null,
@@ -690,18 +743,19 @@
       "layout": 5,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 400.2,
+          "Size": 0.506,
+          "WrapTextAt": 2.062,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.4,
+            "Y": 0.08
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
-            "Bottom": 0.0
+            "Bottom": 20.0
           }
         },
         "Text2": null,
@@ -714,15 +768,16 @@
       "layout": 0,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 790.2,
+          "Size": 0.506,
+          "WrapTextAt": 3.842,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.96,
+            "Y": 0.09
           },
+          "Align_y": "Center",
           "Justification": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -736,15 +791,16 @@
       "layout": 1,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 530.2,
+          "Size": 0.506,
+          "WrapTextAt": 3.382,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.48,
+            "Y": 0.09
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -758,15 +814,16 @@
       "layout": 2,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 530.2,
+          "Size": 0.506,
+          "WrapTextAt": 3.052,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.53,
+            "Y": 0.07
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
             "Bottom": 20.0
@@ -780,26 +837,27 @@
       "layout": 3,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 530.2,
+          "Size": 0.506,
+          "WrapTextAt": 3.442,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.55,
+            "Y": 0.09
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
-            "Bottom": 0.0
+            "Bottom": 20.0
           }
         },
         "Text2": {
-          "Size": 80.0,
+          "Size": 0.992,
           "WrapTextAt": 0.0,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.87,
+            "Y": -0.06
           },
           "Justification": "Left",
           "TypefaceFontName": "Bold",
@@ -816,18 +874,19 @@
       "layout": 4,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 570.2,
+          "Size": 0.506,
+          "WrapTextAt": 3.442,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.53,
+            "Y": 0.09
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
-            "Bottom": 0.0
+            "Bottom": 20.0
           }
         },
         "Text2": null,
@@ -838,18 +897,19 @@
       "layout": 5,
       "Text": {
         "Text1": {
-          "Size": 55.0,
-          "WrapTextAt": 400.2,
+          "Size": 0.506,
+          "WrapTextAt": 2.982,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.04,
+            "Y": 0.08
           },
+          "Align_y": "Center",
           "Justification": "Left",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.38,
           "Margin": {
             "Top": -20.0,
-            "Bottom": 0.0
+            "Bottom": 20.0
           }
         },
         "Text2": null,
@@ -870,15 +930,16 @@
       "layout": 2,
       "Text": {
         "Text1": {
-          "Size": 34.0,
-          "WrapTextAt": 340.2,
+          "Size": 0.657,
+          "WrapTextAt": 1.652,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.14,
+            "Y": 0.11
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.35,
           "Margin": {
             "Top": -5.0,
             "Bottom": 15.0
@@ -891,18 +952,19 @@
     "BPW_Sign1x1_3_C": {
       "layout": 3,
       "Text": {
-        "Text1": {
-          "Size": 200.0,
-          "WrapTextAt": 400.2,
+        "Text1": null,
+        "Text2": {
+          "Size": 4.0,
+          "WrapTextAt": 4.002,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -1.05,
+            "Y": 0.15
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "Bold",
           "LineHeightPercentage": 0.8
         },
-        "Text2": null,
         "Text3": null
       }
     }
@@ -920,15 +982,16 @@
       "layout": 2,
       "Text": {
         "Text1": {
-          "Size": 34.0,
-          "WrapTextAt": 340.2,
+          "Size": 0.3285,
+          "WrapTextAt": 0.826,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.54,
+            "Y": 0.11
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.35,
           "Margin": {
             "Top": -5.0,
             "Bottom": 15.0
@@ -941,18 +1004,19 @@
     "BPW_Sign1x1_3_C": {
       "layout": 3,
       "Text": {
-        "Text1": {
-          "Size": 200.0,
-          "WrapTextAt": 400.2,
+        "Text1": null,
+        "Text2": {
+          "Size": 2.0,
+          "WrapTextAt": 2.001,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.06,
+            "Y": 0.15
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "Bold",
           "LineHeightPercentage": 0.8
         },
-        "Text2": null,
         "Text3": null
       }
     }
@@ -970,15 +1034,16 @@
       "layout": 2,
       "Text": {
         "Text1": {
-          "Size": 34.0,
-          "WrapTextAt": 340.2,
+          "Size": 0.16425,
+          "WrapTextAt": 0.413,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.75,
+            "Y": 0.07
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.35,
           "Margin": {
             "Top": -5.0,
             "Bottom": 15.0
@@ -991,18 +1056,19 @@
     "BPW_Sign1x1_3_C": {
       "layout": 3,
       "Text": {
-        "Text1": {
-          "Size": 200.0,
-          "WrapTextAt": 400.2,
+        "Text1": null,
+        "Text2": {
+          "Size": 1.0,
+          "WrapTextAt": 1.002,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.44,
+            "Y": 0.15
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "Bold",
           "LineHeightPercentage": 0.8
         },
-        "Text2": null,
         "Text3": null
       }
     }
@@ -1012,116 +1078,121 @@
       "layout": 0,
       "Text": {
         "Text1": {
-          "Size": 40.0,
-          "WrapTextAt": 340.0,
+          "Size": 0.746,
+          "WrapTextAt": 1.37,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.28,
+            "Y": -0.7
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.37,
           "Margin": {
             "Top": -5.0,
             "Bottom": 15.0
           }
         },
-        "Text2":null,
-        "Text3":null
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x3_1_C": {
       "layout": 1,
       "Text": {
         "Text1": {
-          "Size": 40.0,
-          "WrapTextAt": 340.0,
+          "Size": 0.746,
+          "WrapTextAt": 1.37,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.28,
+            "Y": -0.7
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.37,
           "Margin": {
             "Top": -5.0,
             "Bottom": 15.0
           }
         },
-        "Text2":null,
-        "Text3":null
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x3_2_C": {
       "layout": 2,
       "Text": {
         "Text1": {
-          "Size": 30.0,
-          "WrapTextAt": 0.0,
+          "Size": 0.594,
+          "WrapTextAt": 1.93,
           "Offset": {
             "X": 0,
-            "Y": 0
+            "Y": -1.09
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.37,
           "Margin": {
             "Top": -5.0,
             "Bottom": 15.0
           }
         },
         "Text2": {
-          "Size": 45.0,
-          "WrapTextAt": 340.0,
+          "Size": 0.851,
+          "WrapTextAt": 1.77,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.1,
+            "Y": -0.79
           },
           "Justification": "Center",
           "TypefaceFontName": "Bold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.34,
           "Margin": {
             "Top": -22.0,
             "Bottom": -5.0
           }
         },
-        "Text3":null
+        "Text3": null
       }
     },
     "BPW_Sign2x3_3_C": {
       "layout": 3,
       "Text": {
         "Text1": {
-          "Size": 40.0,
-          "WrapTextAt": 380.0,
+          "Size": 0.746,
+          "WrapTextAt": 1.37,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": 0.28,
+            "Y": 0.1
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "SemiBold",
-          "LineHeightPercentage": 0.8,
+          "LineHeightPercentage": 0.37,
           "Margin": {
             "Top": -5.0,
             "Bottom": 15.0
           }
         },
-        "Text2":null,
-        "Text3":null
+        "Text2": null,
+        "Text3": null
       }
     },
     "BPW_Sign2x3_4_C": {
       "layout": 4,
       "Text": {
-        "Text1":null,
+        "Text1": null,
         "Text2": {
-          "Size": 300.0,
-          "WrapTextAt": 380.0,
+          "Size": 6.513,
+          "WrapTextAt": 3.74,
           "Offset": {
-            "X": 0,
-            "Y": 0
+            "X": -0.9,
+            "Y": 0.28
           },
           "Justification": "Center",
+          "Align_y": "Center",
           "TypefaceFontName": "Bold",
           "LineHeightPercentage": 0.8,
           "Margin": {
@@ -1129,7 +1200,7 @@
             "Bottom": 15.0
           }
         },
-        "Text3":null
+        "Text3": null
       }
     }
   }

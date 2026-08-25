@@ -136,12 +136,12 @@ def add_text_splines_to_curve(text: list, sign_name: str, text_n: int,layout:lis
     text_length = len(text)
     
     font_bold_path = os.path.join(os.path.dirname(__file__),"resources","fonts", "NotoSansJP-Bold.ttf")
-    font_semibold_path = os.path.join(os.path.dirname(__file__),"resources","fonts", "NotoSans-SemiBold.ttf")
+    font_semibold_path = os.path.join(os.path.dirname(__file__),"resources","fonts", "NotoSansJP-SemiBold.ttf")
     font_path = os.path.join(os.path.dirname(__file__),"resources","fonts", "NotoSansJP-Regular.ttf")
     font_dict = {
-        "Regular":font_semibold_path,
+        "Regular":font_path,
         "Bold":font_bold_path,
-        "SemiBold":font_semibold_path,
+        "SemiBold":font_path,
     }
     for i,text_string in enumerate(text_new):
         print(layout_new[i])
@@ -165,12 +165,12 @@ def add_text_splines_to_curve(text: list, sign_name: str, text_n: int,layout:lis
                 data_font = bpy.data.fonts.get(font)
             text_data.font = data_font
             text_data.align_x = t_config["Justification"].upper()
-            text_data.align_y = "CENTER"
-            text_data.space_line = 0.3
+            text_data.align_y = t_config.get("Align_y","TOP_BASELINE").upper()
+            text_data.space_line = t_config["LineHeightPercentage"]
+            text_data.space_character = 0.985
             text_data.offset_x = t_config["Offset"]['X']
             text_data.offset_y = t_config["Offset"]['Y']
             text_data.size = t_config["Size"]
-            t_config.get("WrapTextAt",0.0)
             text_data.text_boxes[0].width = t_config.get("WrapTextAt",0.0)
             text_data.text_boxes[0].height = 0
         text_obj = bpy.data.objects.new(text_name, text_data)
