@@ -8,7 +8,9 @@ VERSION 1
 
 809223b2-471e-4c5c-b319-430d7cdf8f56:Assets:Assets
 72c8cc9b-76a2-4548-9c8f-f8589f62a679:Assets/Building:Assets-Building
+51177392-4dfa-4132-991f-b08d01817643:Assets/Equipment:Assets-Equipment
 e4da2415-20dc-4dd8-9460-fba56fbcac61:Assets/Factory:Assets-Factory
+a4a11e1f-7c5e-4daa-a9f7-2a7b907821a9:Assets/Resource:Assets-Resource
 f4d31c59-bf55-442b-b038-d4687a662903:Utility:Utility
 3a89ba57-dde4-4dcb-b5d0-2fd8a89ab2b5:Utility/Geo Nodes:Utility-Geo Nodes
 ad650b7b-d4b1-4560-870e-a23215ea7e0d:Utility/Materials:Utility-Materials

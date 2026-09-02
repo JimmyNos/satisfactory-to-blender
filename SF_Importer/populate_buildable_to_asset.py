@@ -14,7 +14,7 @@ import time
 EXCLUDE_LIST = [
     "Cheat",
     "Build_VehiclePath",
-    "Build_HubTerminal_C",
+    "Build_HubTerminal",
     "Build_AutomatedWorkBench",
     "BUILD_SingleDoor_Base_01",
     "Build_RailroadTrackIntegrated",
@@ -34,7 +34,11 @@ EXCLUDE_LIST = [
     "Cinematic",
     "BP_Wheel_",
     "SoundComponent",
-    "PassengerSeat"
+    "PassengerSeat",
+    "Hookshot",
+    "DowsingStick",
+    "Build_Locker_MK1",
+    "Build_VehiclePathNode_DockingStation"
     #"Integrate",
     #"Build_TradingPost",
     #"Build_Blueprint",
@@ -83,7 +87,8 @@ MESH_TYPES = [
     "mCapMesh",
     "mLadderSegmentMesh",
     "mButtonMesh",
-    "mContainerMeshLiquid"
+    "mContainerMeshLiquid",
+    "mGroundMesh"
 ]
 
 MESH_NODE_TYPES = [
@@ -104,7 +109,8 @@ MESH_NODE_TYPES = [
     "Build_TradingPost_C",
     "BP_ElevatorCabin_C",
     "Xmass",
-    "BP_FreightWagon_C"
+    "BP_FreightWagon_C",
+    "Statue_C",
 ]
 
 CONVEYOR_LIFT_MESHES = [
@@ -329,8 +335,6 @@ def extract_build_data(json_file_path,PI_mesh):
             if node_props:
                 models_list = get_Components(node_props,node_name,parent_nodes)
             
-            
-            
             if models_list:
                 if len(models_list) == 1:
                     if models_list[0].get("Parent"):
@@ -496,7 +500,8 @@ def get_ProIndicatorComponents(
 def get_Components(
     node_props: dict,
     node_name: str,
-    parent_nodes:dict,):
+    parent_nodes:dict,
+    ex_parent:bool = False):
     m_type = []
     model_mesh = ""
     model_translation = None
@@ -527,13 +532,15 @@ def get_Components(
                 model_rotation['Pitch'] = model_rotation['Pitch']*-1
                 if model_rotation['Pitch'] == -180:
                     model_rotation['Pitch'] = 0
+        if m == "mGroundMesh":
+            model_scale = node_props.get("mGroundMeshScale")
             
     
         if any(ex in model_mesh for ex in EXCLUDE_MESH_LIST):
             print(f"excluding {model_mesh}")
             return None
     
-        if not parent_nodes:
+        if not parent_nodes or ex_parent:
             #models[node_name].update({"12":2})
             models_list.append({
                 "Mesh": model_mesh,
@@ -678,11 +685,15 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
         beam_build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Prototype", "Buildable", "Beams")
         events_build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Events")
         vehicle_build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Buildable","Vehicle")
+        statue_build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Resource","Equipment","Decoration")
+        equip_build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Equipment")
     else:
         build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Buildable")
         beam_build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Prototype", "Buildable", "Beams")
         events_build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Events")
-        vehicle_build_files_dir = Path(SF_export_dir, "Exports", "FactoryGame", "Content", "FactoryGame", "Buildable","Vehicle")
+        vehicle_build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Buildable","Vehicle")
+        statue_build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Resource","Equipment","Decoration")
+        equip_build_files_dir = Path(SF_export_dir, "FactoryGame", "Content", "FactoryGame", "Equipment")
     
     start_time = time.perf_counter()
     all_data = {}
@@ -691,6 +702,8 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
     beam_build_dir = Path(beam_build_files_dir)
     events_build_dir = Path(events_build_files_dir)
     vehicle_build_dir = Path(vehicle_build_files_dir)
+    statue_build_dir = Path(statue_build_files_dir)
+    equip_build_dir = Path(equip_build_files_dir)
     
     if not build_dir.exists():# or not build_beam_dir.exists():
         print(f"Error: Directory does not exist: {build_dir}")# or {build_beam_dir}")
@@ -708,6 +721,8 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
     build_files = build_files + list(events_build_dir.rglob("build_*.json"))
     build_files = build_files + list(vehicle_build_dir.rglob("BP_*.json"))
     build_files = build_files + list(build_dir.rglob("BP_DroneTransport.json"))
+    build_files = build_files + list(statue_build_dir.rglob("Desc_*Statue.json"))
+    build_files = build_files + list(equip_build_dir.rglob("Equip_*.json"))
     #build_files(list(build_dir.rglob("BP_ProductionIndicatorInstanced.json"))[0])
     print(f"Found {len(build_files)} build files")
     count = 0
@@ -781,3 +796,5 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
     
     return len(all_data) # return the number of entries populated
 
+#SF_export_dir=r"F:\blenber\SF to blend\fmodel export"
+#populate_buildable_to_asset(SF_export_dir)

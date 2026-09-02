@@ -452,9 +452,9 @@ def import_lightweights_task(
         colors = [read_colors(i,color_map) for i in instances]
         primary_colors, secondary_colors, paint_type = zip(*colors)   
     
-        lengths = [read_prop(i,"BeamLength") for i in instances]
+        lengths = [float(read_prop(i,"BeamLength")) for i in instances]
         if 'Build_Beam_Painted_C' in name or 'Build_Beam_C' == name:
-            lengths = [read_prop(i,"BeamLength") for i in instances]
+            #lengths = [read_prop(i,"BeamLength") for i in instances]
             lengths = [l / 4.0 for l in lengths]
             
         prop_attr = []
@@ -1325,7 +1325,6 @@ def import_splines_task(
             type_mk_belt = []
             chains = actor.mChainSplineSegments
             if import_in_coords:
-                tmp_chains = []
                 dx = x_coords - transform.Translation.X/100
                 dy = y_coords - -transform.Translation.Y/100
                 dist_squared = (dx ** 2) + (dy ** 2)
@@ -1838,9 +1837,11 @@ def get_buildable_models(sf_asset_export_path):
     #mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
     #build_materials = bpy.context.scene.sf_importer_props.build_materials
     
-    search_dir = Path(r"FactoryGame\Content\FactoryGame\Buildable")
+    #search_dir = Path(r"FactoryGame\Content\FactoryGame\Buildable")
+    search_dir = Path(r"FactoryGame\Content\FactoryGame")
     base_file_dir = Path(sf_asset_export_path, search_dir)
     event_file_dir = Path(sf_asset_export_path, search_dir.parent,"Events")
+    #equip_file_dir = Path(sf_asset_export_path, search_dir.parent,"Equipment")
     base_tex_dir = base_file_dir
     if Path(sf_asset_export_path,"Exports").exists():
         base_tex_dir = Path(sf_asset_export_path,"Exports", search_dir)
@@ -2216,6 +2217,8 @@ def run_mark_asset(a_coll,u_coll):
         target_catalogs = {
         "Assets-Factory":"",
         "Assets-Building":"",
+        "Assets-Equipment":"",
+        "Assets-Resource":"",
         "Utility":""
         }
         with (folder / "blender_assets.cats.txt").open() as f:
@@ -2259,7 +2262,7 @@ def run_mark_asset(a_coll,u_coll):
                 asset_data = col.asset_data 
                 asset_data.catalog_id = catalog_id
     else:
-        print("blender_assets.cats.txt not in perant folder")
+        print("blender_assets.cats.txt not in parent folder")
     marking_asset = False
     
 def import_models_task(a_coll,u_coll,sf_asset_export_path,mark_as_asset):
@@ -2334,6 +2337,11 @@ def import_models_task(a_coll,u_coll,sf_asset_export_path,mark_as_asset):
 
 def get_total_instances_task(save: s.SaveGame):
     global total_all_instances,is_get_scanning,stop_get_requested
+    x_coords = bpy.context.scene.sf_importer_props.x_coords
+    y_coords = bpy.context.scene.sf_importer_props.y_coords
+    coord_distance = bpy.context.scene.sf_importer_props.coord_distance
+    import_in_coords = bpy.context.scene.sf_importer_props.import_in_coords
+    
     lbs = get_lbs(save)
     instances_by_class_ref = lbs.mBuildableClassToInstanceArray
     
@@ -2347,6 +2355,18 @@ def get_total_instances_task(save: s.SaveGame):
         instances = instances_by_class_ref[buildable]
         if not instances: 
             continue  
+        
+        if import_in_coords:
+            tmp_instances = []
+            for ints in instances:
+                t = ints.Transform.Translation
+                dx = x_coords - t.X/100
+                dy = y_coords - -t.Y/100
+                dist_squared = (dx ** 2) + (dy ** 2)
+                if dist_squared <= (coord_distance ** 2):
+                    tmp_instances.append(ints)
+            instances = tmp_instances
+        
         l_total += 1
         total_all_instances += len(instances)#= l_total
     print(f"l_total: {l_total} (instances: {total_all_instances})")
@@ -2369,6 +2389,7 @@ def get_total_instances_task(save: s.SaveGame):
         "Build_Pipeline_",
         "Build_RailroadTrack",
         "Build_PipeHyper_C",
+        "Build_PowerLine_"
     ]
     
     save_objects = save.allSaveObjects()
@@ -2397,10 +2418,20 @@ def get_total_instances_task(save: s.SaveGame):
         if not obj.isActor():
             continue
         header = obj.Header
+        transform = header.Transform
         className =  header.ObjectHeader.ClassName
         
         if className.startswith( '/Script/FactoryGame.FGConveyorChainActor'):
-            tot_chains += 1
+            if import_in_coords:
+                dx = x_coords - transform.Translation.X/100
+                dy = y_coords - -transform.Translation.Y/100
+                dist_squared = (dx ** 2) + (dy ** 2)
+                if dist_squared <= (coord_distance ** 2):
+                    tot_chains += 1
+                    total_all_instances += 1
+            else:
+                tot_chains += 1
+                total_all_instances += 1
     
     h_total = 0
     s_total = 0
@@ -2415,18 +2446,37 @@ def get_total_instances_task(save: s.SaveGame):
             continue
         for factory_class in factory_classes:
             header = factory_class.Header
+            transform = header.Transform
             cls_name = header.ObjectHeader.Reference.PathName
             if any(spline in cls_name for spline in spline_buildables):
-                s_total += 1
-                s_total_set.add(cls_name)
+                print(cls_name)
+                if import_in_coords:
+                    dx = x_coords - transform.Translation.X/100
+                    dy = y_coords - -transform.Translation.Y/100
+                    dist_squared = (dx ** 2) + (dy ** 2)
+                    if not dist_squared <= (coord_distance ** 2):
+                        s_total += 1
+                        s_total_set.add(cls_name)
+                else:
+                    s_total += 1
+                    s_total_set.add(cls_name)
                 #print(cls_name,s_total,len(factory_classes))
                 #print(len(s_total_set))
                 #print("spline",cls_name)
-                #continue
+                continue
             
             if factory in cls_name:
-                h_total += 1
-                total_all_instances += 1
+                if import_in_coords:
+                    tmp_instances = []
+                    dx = x_coords - transform.Translation.X/100
+                    dy = y_coords - -transform.Translation.Y/100
+                    dist_squared = (dx ** 2) + (dy ** 2)
+                    if not dist_squared <= (coord_distance ** 2):
+                        h_total += 1
+                        total_all_instances += 1
+                else:
+                    h_total += 1
+                    total_all_instances += 1
                 #print("not spline",cls_name)
     print(f"h_total: {h_total}, s_total: {s_total}, splines: {len(s_total_set)}")
     print(s_total)
@@ -2445,9 +2495,10 @@ class GetTotIntButton(bpy.types.Operator):
         global total_all_instances,is_scanning,is_get_scanning,is_asset_building,stop_get_requested
         save_path = bpy.context.scene.sf_importer_props.save_path
         
+        
         if not is_get_scanning and not is_scanning and not is_asset_building:
             save = s.SaveGame(Path(save_path))
-        
+            total_all_instances = 0
             is_get_scanning = True
             self.report({'INFO'}, "Calculating total instances...")
             t1_thread = threading.Thread(target=get_total_instances_task,args=(save,))
@@ -2583,7 +2634,9 @@ class ImportSaveButton(bpy.types.Operator):
             buildable_to_asset_path = os.path.join(os.path.dirname(__file__), "buildable_to_asset.json")
         else:
             buildable_to_asset_path = os.path.join(bpy.context.preferences.addons[__package__].preferences.custom_buildable_to_asset_path, "buildable_to_asset.json")
-        
+        if not os.path.exists(buildable_to_asset_path):
+            self.report({'ERROR'}, "Buildable to asset file does not exists.")
+            return {'CANCELLED'}
         if not sf_asset_lib_path:
             self.report({'ERROR'}, "Please set the asset library path in the addon preferences.")
             return {'CANCELLED'}
@@ -2815,22 +2868,20 @@ class VIEW3D_PT_SF_Importer_panel(Panel):
         save_button = layout.column()
         save_button.scale_y = 1.5
         save_button.operator("button.import_save", text="Stop Scan" if is_scanning else "Start Scan")
-        if is_get_scanning or is_asset_building or is_save_valid == False:
-            save_button.active = False
-        else:
-            save_button.active = True
+        #if is_get_scanning or is_asset_building or is_save_valid == False:
+        #    save_button.active = False
+        #else:
+        #    save_button.active = True
     
-        get_i_button = layout.column(align=True)
-        get_i_button.operator("button.total_instances", text="Stop Calculating" if is_get_scanning else "Get Total Instances")
-        if is_scanning or is_asset_building or is_save_valid == False:
-            get_i_button.active = False
-        else:
-            get_i_button.active = True
-        if total_all_instances:
-            get_i_box = get_i_button.box()
-            get_i_box.label(text=f"Total Instances: {total_all_instances}")
-    
-        # TODO: button to swap all to proxy mesh
+        #get_i_button = layout.column(align=True)
+        #get_i_button.operator("button.total_instances", text="Stop Calculating" if is_get_scanning else "Get Total Instances")
+        #if is_scanning or is_asset_building or is_save_valid == False:
+        #    get_i_button.active = False
+        #else:
+        #    get_i_button.active = True
+        #if total_all_instances:
+        #    get_i_box = get_i_button.box()
+        #    get_i_box.label(text=f"Total Instances: {total_all_instances}")
     
         pro_col = layout.column()
         pro_col.prop(props, "get_models_from_library")

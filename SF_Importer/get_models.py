@@ -20,11 +20,13 @@ def set_geonode_input(modifier: bpy.types.Modifier, label: str, value):
             return
     raise KeyError(f"Input '{label}' not found")
 
-def get_or_create_collection(name,parent_name = "") -> bpy.types.Collection:
+def get_or_create_collection(name,parent_name = "",col_color = "NONE") -> bpy.types.Collection:
     col = bpy.data.collections.get(name)
     parent_col = bpy.data.collections.get(parent_name)
     if not col:
         col = bpy.data.collections.new(name)
+        if col_color != "NONE":
+            col.color_tag = col_color
         if not parent_name:
             bpy.context.scene.collection.children.link(col)
         else:
@@ -33,7 +35,7 @@ def get_or_create_collection(name,parent_name = "") -> bpy.types.Collection:
     return col
 
 def get_asset_collection() -> bpy.types.Collection:
-    return get_or_create_collection('Assets')
+    return get_or_create_collection('Assets',"COLOR_01")
 
 def get_essential_collection() -> bpy.types.Collection:
     return get_or_create_collection('essentials')
@@ -72,6 +74,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     nor_type_tex = [
         "_N",
         "Nor",
+        "nor",
     ]
     
     rough_type_tex = [
@@ -87,14 +90,19 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     color_type_tex = [
         "BC",
         "BaseColor",
-        "Alb",
-        "Pattern_02"
+        "Alb"
+        #,"Pattern_02"
     ]
     
     extra_type_tex = [
         "Pattern_02",
         "POS",
-        "QUAT"
+        "QUAT",
+        "TX_PowerLineLights_MASKS"
+    ]
+    
+    exclude_tex = [
+        "T_Water_Normal_Large"
     ]
     
     ao_type_tex = [
@@ -275,7 +283,10 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     mra_mat = [
         "MI_CPWall",
         "MI_FactoryBaked_Workshop_01",
-        "MI_Foundation_LOD0"
+        "MI_Foundation_LOD0",
+        "JumpingStilts02_Inst",
+        "parachute_01_Inst",
+        "MI_SnowFicsmas_01"
     ]
     
     emision_type_mats = [
@@ -291,10 +302,9 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_HyperTube_Static":"MI_HyperTube"
     }
     
-    search_mat = {"PipelineMK2":
-        "MI_PipeMK2",
-        "Pipeline":
-        "MI_Pipe"
+    search_mat = {
+        "PipelineMK2":"MI_PipeMK2",
+        "Pipeline":"MI_Pipe"
         }
     
     light_type_mat = [
@@ -445,8 +455,27 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     is_hub = False
     search_file = list(Path(sf_asset_export_path,"Exports").rglob(f"{obj_material}.json"))
     if search_file:
-        mat_path = search_file[0]
-        mat_file = search_file[0]
+        if len(search_file) > 1:
+            if "MI_Door_01" in obj_material:
+                search_sort = search_file
+                if "Door_Basic_01" in search_file[0].parent.name:
+                    search_sort = [search_file[1],search_file[0]]
+                    
+                if "SM_Door_Basic_01" in ob.name:
+                    mat_path = search_sort[1]
+                elif "SM_InsetDoorway_01" in ob.name:
+                    mat_path = search_sort[0]
+                    obj_material_dup = "MI_Doorway"
+                    material_dup = ob.material_slots[index].material.copy()
+                    ob.material_slots[index].material = material_dup
+                    replace_mat = bpy.data.materials.get(obj_material_dup)
+                    if not replace_mat:
+                        replace_mat = bpy.data.materials.new(obj_material_dup)
+                    ob.material_slots[index].material = replace_mat
+                    obj_material = obj_material_dup
+        else:
+            mat_path = search_file[0]
+    
     
     # search Exports path if not found in mesh path 
     if not mat_path: # TODO
@@ -490,33 +519,64 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             if props.get("TextureParameterValues"):
                 is_tpv = True
                 for tex in props["TextureParameterValues"]:
+                    skip_tex = False
+                    for ext in exclude_tex:
+                        if ext in tex["ParameterValue"]["ObjectPath"][6:].split('.')[0]:
+                            skip_tex = True
+                            break
+                    if skip_tex:
+                        print(f"skipping {tex["ParameterValue"]["ObjectPath"][6:].split('.')[0]}")
+                        continue
                     textures.append(
                         {tex["ParameterInfo"]["Name"]:tex["ParameterValue"]["ObjectPath"][6:].split('.')[0]}
                     )
                 if props.get("TextureStreamingData"):
                     for tsd in props["TextureStreamingData"]:
-                        if "_N" in tsd["TextureName"]:
-                            normal_name = tsd["TextureName"]
-                            has_normal = False
-                            alb_tex = ""
-                            for t in textures:
-                                for k in t:
-                                    if k.startswith('N'):
-                                        has_normal = True
-                                    if k.startswith('A'):
-                                        alb_tex = t[k]
-                            if not has_normal:    
-                                alb_parts = alb_tex.split('/')
-                                alb_parts[-1] = normal_name
-                                mat_tex = '/'.join(alb_parts)
-                                textures.append(
-                                    {"Normal":mat_tex}
-                                )
+                        skip_tex = False
+                        for ext in exclude_tex:
+                            if ext in tsd["TextureName"]:
+                                skip_tex = True
+                                break
+                        if skip_tex:
+                            print(f"skipping {tsd["TextureName"]}")
+                            continue
+                        continue
+                        if tsd["TextureName"].startswith("TX_") or tsd["TextureName"].startswith("T_"):
+                            for t in nor_type_tex:
+                                if t in tsd["TextureName"]:
+                                    normal_name = tsd["TextureName"]
+                                    has_normal = False
+                                    alb_tex = ""
+                                    for t in textures:
+                                        for k in t:
+                                            if k.startswith('N'):
+                                                has_normal = True
+                                            if k.startswith('A'):
+                                                alb_tex = t[k]
+                                    if not has_normal and alb_tex:    
+                                        alb_parts = alb_tex.split('/')
+                                        alb_parts[-1] = normal_name
+                                        mat_tex = '/'.join(alb_parts)
+                                        textures.append(
+                                            {"Normal":mat_tex}
+                                        )
             
             if props.get("TextureStreamingData") and len(textures) <= 1:# not props.get("TextureParameterValues"):
+                found_tex_type = ""
+                if textures:
+                    found_tex_type = list(textures[0].keys())[0]
+                    print(found_tex_type)
                 for tsd in props["TextureStreamingData"]:
+                    skip_tex = False
+                    for ext in exclude_tex:
+                        if ext in tsd["TextureName"]:
+                            skip_tex = True
+                            break
+                    if skip_tex:
+                        print(f"skipping {tsd["TextureName"]}")
+                        continue
                     for t in nor_type_tex:
-                        if t in tsd["TextureName"]:
+                        if t in tsd["TextureName"] and "Normal" not in found_tex_type:
                             tex_name = tsd["TextureName"]
                             search_tex_path = mat_path.parent.parent
                             search_tex = list(search_tex_path.rglob(f"{tex_name}.png"))
@@ -525,7 +585,17 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                                 textures.append(
                                     {"Normal":mat_tex.split('.')[0]}
                                 )
-                    if "_AO" in tsd["TextureName"]:
+                                break
+                            else:
+                                print(f"{tex_name} not found trying wider search")
+                                search_tex = list(Path(sf_asset_export_path).rglob(f"{tex_name}.png"))
+                                if search_tex:
+                                    mat_tex = str(search_tex[0]).replace("\\Exports\\","\\")
+                                    textures.append(
+                                        {"Normal":mat_tex.split('.')[0]}
+                                    )
+                                    break
+                    if "_AO" in tsd["TextureName"] and "AOMasks" not in found_tex_type:
                         tex_name = tsd["TextureName"]
                         search_tex_path = mat_path.parent.parent
                         search_tex = list(search_tex_path.rglob(f"{tex_name}.png"))
@@ -534,8 +604,17 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                             textures.append(
                                 {"AOMasks":mat_tex.split('.')[0]}
                             )
+                        else:
+                            print(f"{tex_name} not found trying wider search")
+                            search_tex = list(Path(sf_asset_export_path).rglob(f"{tex_name}.png"))
+                            if search_tex:
+                                mat_tex = str(search_tex[0]).replace("\\Exports\\","\\")
+                                textures.append(
+                                    {"Normal":mat_tex.split('.')[0]}
+                                )
+                                break
                     for t in color_type_tex:
-                        if t in tsd["TextureName"]:
+                        if t in tsd["TextureName"] and "Albedo" not in found_tex_type:
                             tex_name = tsd["TextureName"]
                             search_tex_path = mat_path.parent.parent
                             search_tex = list(search_tex_path.rglob(f"{tex_name}.png"))
@@ -544,8 +623,18 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                                 textures.append(
                                     {"Albedo":mat_tex.split('.')[0]}
                                 )
+                                break
+                            else:
+                                print(f"{tex_name} not found trying wider search")
+                                search_tex = list(Path(sf_asset_export_path).rglob(f"{tex_name}.png"))
+                                if search_tex:
+                                    mat_tex = str(search_tex[0]).replace("\\Exports\\","\\")
+                                    textures.append(
+                                        {"Normal":mat_tex.split('.')[0]}
+                                    )
+                                    break
                     for t in rough_type_tex:
-                        if t in tsd["TextureName"]:
+                        if t in tsd["TextureName"] and "ReflectionMap" not in found_tex_type:
                             tex_name = tsd["TextureName"]
                             search_tex_path = mat_path.parent.parent
                             search_tex = list(search_tex_path.rglob(f"{tex_name}.png"))
@@ -554,6 +643,16 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                                 textures.append(
                                     {"ReflectionMap":mat_tex.split('.')[0]}
                                 )
+                                break
+                            else:
+                                print(f"{tex_name} not found trying wider search")
+                                search_tex = list(Path(sf_asset_export_path).rglob(f"{tex_name}.png"))
+                                if search_tex:
+                                    mat_tex = str(search_tex[0]).replace("\\Exports\\","\\")
+                                    textures.append(
+                                        {"Normal":mat_tex.split('.')[0]}
+                                    )
+                                    break
                     for t in extra_type_tex:
                         if t in tsd["TextureName"]:
                             tex_name = tsd["TextureName"]
@@ -564,6 +663,15 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                                 textures.append(
                                     {"Extra":mat_tex.split('.')[0]}
                                 )
+                            else:
+                                print(f"{tex_name} not found trying wider search")
+                                search_tex = list(Path(sf_asset_export_path).rglob(f"{tex_name}.png"))
+                                if search_tex:
+                                    mat_tex = str(search_tex[0]).replace("\\Exports\\","\\")
+                                    textures.append(
+                                        {"Normal":mat_tex.split('.')[0]}
+                                    )
+                                    break
             
             if props.get("StaticParametersRuntime"):
                 for ssp in props["StaticParametersRuntime"]["StaticSwitchParameters"]:
@@ -596,6 +704,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                     textures.append(
                         {"AOMasks":ref_tex["ObjectPath"][6:].split('.')[0]}
                     )
+    print(f"Found {len(textures)} textures: {textures}")
     b_material = bpy.data.materials.get(obj_material)
     if not b_material:
         print(f"Material not found: {obj_material}")
@@ -609,6 +718,15 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     links = b_material.node_tree.links
     output_node = nodes.new('ShaderNodeOutputMaterial')
     output_node.location.x = 400
+    
+    if "MI_Cyberwagon_Window" in obj_material:
+        glossy_node = nodes.new(type="ShaderNodeBsdfGlossy")
+        glossy_node.location.x = 200
+        glossy_node.inputs["Roughness"].default_value = 0.01
+
+        links.new(glossy_node.outputs["BSDF"], output_node.inputs["Surface"])
+        return None
+    
     for l_mat in light_type_mat:
         if l_mat in obj_material:
             light_shader_node = nodes.new('ShaderNodeGroup')
@@ -642,6 +760,13 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         links.new(sf_shader_node.outputs["Shader"], output_node.inputs["Surface"])
         if any(mat == obj_material for mat in no_gb_mat):
             sf_shader_node.inputs["AO no GB packed?"].default_value = True
+        if "SM_Door_Basic_01" in ob.name:
+            sf_shader_node.inputs["Swap AO Channels?"].default_value = True
+            sf_shader_node.inputs["Emission colour?"].default_value = True
+        
+        if "SM_BigDoor_01" in ob.name:
+            sf_shader_node.inputs["Emission colour?"].default_value = True
+            
             
         use_beam_logic = False
         if any(mat in obj_material for mat in beam_mats):
@@ -742,7 +867,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                         sf_shader_node.inputs["No AO?"].default_value = False
                         sf_shader_node.inputs["Alpha?"].default_value = True
                         sf_shader_node.inputs["No Paint Finish?"].default_value = True
-                        if "TX_HubDecal_BC" in img.name:
+                        if "TX_HubDecal_BC" in tex_file.name:
                             links.new(b_texture.outputs["Alpha"], sf_shader_node.inputs["Albedo Alpha"])
                             
                 if use_beam_logic:
@@ -958,15 +1083,20 @@ def import_model(
         support_ob_dp.location = support_ob_dp.location
         print(f"support name:{support_ob_dp.name}⚠️")
         
+    base_color = "COLOR_01"
+    type_color = "COLOR_02"
+    sub_color = "COLOR_03"
     sc_col = bpy.context.scene.collection
     as_col = get_asset_collection()
-    get_or_create_collection("Utility")
-    conveyor_lifts_col = get_or_create_collection("ConveyorLifts","Utility")
-    get_or_create_collection("Factory","Assets")
-    get_or_create_collection("Building","Assets")
-    lift_parts_col = get_or_create_collection("LiftParts","ConveyorLifts")
-    lifts_col = get_or_create_collection("Lifts","ConveyorLifts")
-    conveyor_belts_col = get_or_create_collection("ConveyorBelts","Utility")
+    get_or_create_collection("Utility",base_color)
+    conveyor_lifts_col = get_or_create_collection("ConveyorLifts","Utility",type_color)
+    get_or_create_collection("Factory","Assets",type_color)
+    get_or_create_collection("Building","Assets",type_color)
+    get_or_create_collection("Equipment","Assets",type_color)
+    get_or_create_collection("Resource","Assets",type_color)
+    lift_parts_col = get_or_create_collection("LiftParts","ConveyorLifts",sub_color)
+    lifts_col = get_or_create_collection("Lifts","ConveyorLifts",sub_color)
+    conveyor_belts_col = get_or_create_collection("ConveyorBelts","Utility",type_color)
     conveyor_belts_col.hide_viewport = True
     conveyor_lifts_col.hide_viewport = True
     
@@ -979,12 +1109,16 @@ def import_model(
         bpy.context.scene.collection.objects.unlink(ob_sk_mesh) 
     
     if any(build in buildable_name for build in INTEGRATED_BUILD_LIST):
-        col = get_or_create_collection(buildable_name,"Utility")
+        col = get_or_create_collection(buildable_name,"Utility",type_color)
     else:
         if "Building" in os.fspath(file) or "Prototype" in os.fspath(file):
-            col = get_or_create_collection(buildable_name,"Building")
+            col = get_or_create_collection(buildable_name,"Building",sub_color)
+        elif "Equipment" in os.fspath(file):
+            col = get_or_create_collection(buildable_name,"Equipment",sub_color)
+        elif "Resource" in os.fspath(file) and "Equipment" not in os.fspath(file) and "Sink" not in os.fspath(file):
+            col = get_or_create_collection(buildable_name,"Resource",sub_color)
         else:
-            col = get_or_create_collection(buildable_name,"Factory")
+            col = get_or_create_collection(buildable_name,"Factory",sub_color)
         
         
     if parent_col:
@@ -1005,8 +1139,8 @@ def import_model(
         
     is_SK_Tradingpost = False
     if "TradingPost" in buildable_name:
-        stg_col = get_or_create_collection("TradingpostStages",buildable_name)
-        sk_col = get_or_create_collection("SK_Tradingpost",buildable_name)
+        stg_col = get_or_create_collection("TradingpostStages",buildable_name,sub_color)
+        sk_col = get_or_create_collection("SK_Tradingpost",buildable_name,sub_color)
         #props_col = get_or_create_collection("TradingpostProps",buildable_name)
         
         if "SM_Hub_Stg_" in file_name:

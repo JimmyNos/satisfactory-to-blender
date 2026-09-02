@@ -162,7 +162,8 @@ def get_lib_assets(
                         #bpy.data.node_groups[object_name].name = object_name + "_old"
                         #bpy.data.node_groups[object_name + "_old"].use_fake_user = False
                         #bpy.data.node_groups.remove(bpy.data.node_groups[object_name], do_unlink=True)
-                        return f"{object_name} already exists in the current Blender session."
+                        print(f"{object_name} already exists in the current Blender session.")
+                        continue
                     elif object_name in bpy.data.collections:
                         bpy.data.collections.remove(bpy.data.collections[object_name], do_unlink=True)
                         

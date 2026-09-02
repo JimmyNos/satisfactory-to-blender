@@ -43,7 +43,7 @@ TEXTURE_TPYE_WORDS = [
 
 shader_groups = [
     "SatisfactoryToBlenderShader",
-    "TX2D_Shader"
+    "TX2D_Shader",
     "SF_display",
     "TX2D_tile_mix_B",
     "TX2D_tile_mix_N",
