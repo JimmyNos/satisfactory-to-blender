@@ -2678,23 +2678,23 @@ class ImportSaveButton(bpy.types.Operator):
                 for col in list(get_or_create_collection('Lightweights','Import',col_color = "COLOR_05").children):
                     bpy.data.collections.remove(col, do_unlink=True)
             if get_heavyweight:
-                for obj in list(get_or_create_collection('Heavyweights','Import').objects):
+                for obj in list(get_or_create_collection('Heavyweights','Import',col_color = "COLOR_05").objects):
                     bpy.data.objects.remove(obj, do_unlink=True)
-                for col in list(get_or_create_collection('Heavyweights','Import').children):
+                for col in list(get_or_create_collection('Heavyweights','Import',col_color = "COLOR_05").children):
                     if col == bpy.data.collections.get("Signs") or col == bpy.data.collections.get("Splines"):
                         continue
                     bpy.data.collections.remove(col, do_unlink=True)
             if get_signs:
                 get_or_create_collection('Heavyweights','Import')
-                for obj in list(get_or_create_collection('Signs','Heavyweights').objects):
+                for obj in list(get_or_create_collection('Signs','Heavyweights',col_color = "COLOR_07").objects):
                     bpy.data.objects.remove(obj, do_unlink=True)
-                for col in list(get_or_create_collection('Signs','Heavyweights').children):
+                for col in list(get_or_create_collection('Signs','Heavyweights',col_color = "COLOR_07").children):
                     bpy.data.collections.remove(col, do_unlink=True)
             if get_splines:
                 get_or_create_collection('Heavyweights','Import')
-                for obj in list(get_or_create_collection('Splines','Heavyweights').objects):
+                for obj in list(get_or_create_collection('Splines','Heavyweights',col_color = "COLOR_07").objects):
                     bpy.data.objects.remove(obj, do_unlink=True)
-                for col in list(get_or_create_collection('Splines','Heavyweights').children):
+                for col in list(get_or_create_collection('Splines','Heavyweights',col_color = "COLOR_07").children):
                     bpy.data.collections.remove(col, do_unlink=True)
                 
             #for obj in list(get_or_create_collection('Import').objects):

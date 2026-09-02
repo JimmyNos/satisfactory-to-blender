@@ -3,14 +3,6 @@ import os
 from pathlib import Path
 import time
 
-# path to build files
-#BUILD_FILES_DIR = r"PATH-TO-FMODEL-EXPORTS\FactoryGame\Content\FactoryGame\Buildable"
-#BEAM_BUILD_FILES_DIR = r"PATH-TO-FMODEL-EXPORTS\FactoryGame\Content\FactoryGame\Prototype\Buildable\Beams"
-
-# Output file location (in the script directory)
-#OUTPUT_FILE = Path(__file__).parent / "buildable_to_asset.json"
-#OUTPUT_FAILED_FILE = Path(__file__).parent / "failed_to_asset.json"
-
 EXCLUDE_LIST = [
     "Cheat",
     "Build_VehiclePath",
@@ -155,11 +147,9 @@ def extract_build_data(json_file_path,PI_mesh):
     print(f" len(data): {len(data)}")
     
     entries = {}
-    #entries = []
     meshes = []
     entry_name = os.path.basename(json_file_path).split(".")[0]+"_C"
     mesh = {}
-    #mesh['ObjectName'] = entry_name.split('_')[1]
     mesh['ObjectName'] = "_".join(entry_name.split('_')[1:-1])
     mesh_duplicate = {}
     mesh_temp = {}
@@ -235,7 +225,6 @@ def extract_build_data(json_file_path,PI_mesh):
                     
                     if child_child_nodes:
                         for i in range(len(child_child_nodes)):
-                            child_child_node_name = child_child_nodes[i].get("ObjectName").split('.')[1][:-1]
                             child_child_node_path = int(child_child_nodes[i].get("ObjectPath").split('.')[1])
                             child_child_node = data[int(child_child_node_path)]
                             child_child_node_comp = child_child_node.get("Properties").get("ComponentTemplate")
@@ -252,12 +241,6 @@ def extract_build_data(json_file_path,PI_mesh):
                             "Props" : None
                             }
                         child_nodes = {}
-                        
-                        
-            #print(f"parent nodes: {parent_nodes.keys()}")
-            #print(f"parent and children: {parent_nodes}")    
-            #print(f"models: {models}")    
-            
 
     print("Getting models in the files")
     for i in range(len(data)):
@@ -268,29 +251,16 @@ def extract_build_data(json_file_path,PI_mesh):
         if not node_props:
             continue
         
-        if "FloorMesh" in node_name:# or "PoleMeshProxy" in node_name:
+        if "FloorMesh" in node_name:
             continue
         
-        #if "Props" in node_name:
-        #    if node_props:
-        #        model_translation = node_props.get("RelativeLocation")
-        #        model_rotation = node_props.get("RelativeRotation")
-        #        model_scale = node_props.get("RelativeScale3D")
-        #        models_list = {
-        #            #"Mesh": "Empty",
-        #            "RelativeLocation": model_translation,
-        #            "RelativeRotation": model_rotation,
-        #            "RelativeScale3D": model_scale
-        #        }
-        #    
-        #    #models.update({node_name:models_list})
         
         if "Build_TradingPost_C" in node_type:
             if node_props:
                 models_list,stage_list = get_TradingPostComponents(node_props,data)
-                
-            models.update({"TP_Stage":stage_list})
-            models.update({node_name:models_list})
+            
+                models.update({"TP_Stage":stage_list})
+                models.update({node_name:models_list})
         
         elif "Props" in node_name:
             if node_props:
@@ -304,7 +274,7 @@ def extract_build_data(json_file_path,PI_mesh):
                     "RelativeScale3D": model_scale
                 }
             
-            models.update({node_name:models_list})        
+                models.update({node_name:models_list})        
         elif "AbstractInstanceDataObject" in node_type:
             if "PowerPole" in entry_name:
                 continue
@@ -313,7 +283,7 @@ def extract_build_data(json_file_path,PI_mesh):
             if node_props:
                 models_list = get_AbstractInstanceComponent(node_props)
 
-            models.update({node_name:models_list})
+                models.update({node_name:models_list})
         elif any(st in node_type for st in SUPPORT_MESHES):
             node_props = data[i].get("Properties")
             node_poles = node_props.get("mPoleVariations")
@@ -330,28 +300,28 @@ def extract_build_data(json_file_path,PI_mesh):
             if node_props:
                 model = get_ProIndicatorComponents(node_props,PI_mesh)
             
-            models.update({node_name:model})  
+                models.update({node_name:model})  
         elif any(st in node_type for st in MESH_NODE_TYPES):
             if node_props:
                 models_list = get_Components(node_props,node_name,parent_nodes)
             
-            if models_list:
-                if len(models_list) == 1:
-                    if models_list[0].get("Parent"):
-                        if "Props" in models_list[0].get("Parent"):
-                            if models[models_list[0].get("Parent")].get("Props"):
-                                models[models_list[0].get("Parent")].get("Props").update({node_name:models_list[0]})
+                if models_list:
+                    if len(models_list) == 1:
+                        if models_list[0].get("Parent"):
+                            if "Props" in models_list[0].get("Parent"):
+                                if models[models_list[0].get("Parent")].get("Props"):
+                                    models[models_list[0].get("Parent")].get("Props").update({node_name:models_list[0]})
+                                else:
+                                    models[models_list[0].get("Parent")]["Props"] = {node_name:models_list[0]}
+                                if mesh.get(node_name):
+                                    mesh.pop(node_name)
+                                    models.pop(node_name)
                             else:
-                                models[models_list[0].get("Parent")]["Props"] = {node_name:models_list[0]}
-                            if mesh.get(node_name):
-                                mesh.pop(node_name)
-                                models.pop(node_name)
+                                models.update({node_name:models_list[0]})
                         else:
                             models.update({node_name:models_list[0]})
                     else:
-                        models.update({node_name:models_list[0]})
-                else:
-                    models.update({node_name:models_list})
+                        models.update({node_name:models_list})
         else:
             continue
         
@@ -383,7 +353,7 @@ def extract_build_data(json_file_path,PI_mesh):
     if "Build_DroneStation_C" in entry_name:
         if "FGColoredInstanceMeshProxy_GEN_VARIABLE" in mesh and "BP_ProductionIndicatorInstanced_GEN_VARIABLE" in mesh:
             object_name = mesh['ObjectName']
-            station = mesh["FGColoredInstanceMeshProxy_GEN_VARIABLE"]    
+            #station = mesh["FGColoredInstanceMeshProxy_GEN_VARIABLE"]    
             indicator = mesh["BP_ProductionIndicatorInstanced_GEN_VARIABLE"]    
             update_indicator = {
                 "Parent": "FGColoredInstanceMeshProxy_GEN_VARIABLE",
@@ -394,8 +364,6 @@ def extract_build_data(json_file_path,PI_mesh):
             }
             mesh["BP_ProductionIndicatorInstanced_GEN_VARIABLE"] = update_indicator
             
-        
-    #print(mesh)
     remove_mesh = []
     for m in mesh:
         if not mesh[m]:
@@ -411,8 +379,6 @@ def extract_build_data(json_file_path,PI_mesh):
     if 1 == len(mesh):
         return None 
     
-    
-    
     return entries
 
 def get_TradingPostComponents(
@@ -426,7 +392,6 @@ def get_TradingPostComponents(
     model_scale = None
     models_list = []
     stage_list = []
-    models_p_list = []
     
     for prop in node_props:
         for tp_mesh_type in TRADING_POST_MESHES:
@@ -435,7 +400,7 @@ def get_TradingPostComponents(
                 #break
                 
     if not m_type:
-        return None
+        return None,None
     
     for m in m_type:
         if "mStages" in m:
@@ -455,14 +420,14 @@ def get_TradingPostComponents(
             if len(stage_list) == 7:
                 if stage_list[4] == stage_list [5]:
                     stage_list.pop(5)
-                ...
         else:
-            mesh_idx = int(node_props.get(m)["ObjectPath"].split('.')[1])
-            model_mesh = node_props.get(m)["ObjectName"].split(':')[1][:-1]
-            mesh_data = data[mesh_idx].get("Properties")
-            model_translation = mesh_data.get("RelativeLocation")
-            model_rotation = mesh_data.get("RelativeRotation")
-            model_scale = mesh_data.get("RelativeScale3D")
+            if node_props.get(m):
+                mesh_idx = int(node_props[m]["ObjectPath"].split('.')[1])
+                model_mesh = node_props[m]["ObjectName"].split(':')[1][:-1]
+                mesh_data = data[mesh_idx].get("Properties")
+                model_translation = mesh_data.get("RelativeLocation")
+                model_rotation = mesh_data.get("RelativeRotation")
+                model_scale = mesh_data.get("RelativeScale3D")
             
             models_list.append({
                 "Mesh": model_mesh,
@@ -541,7 +506,6 @@ def get_Components(
             return None
     
         if not parent_nodes or ex_parent:
-            #models[node_name].update({"12":2})
             models_list.append({
                 "Mesh": model_mesh,
                 "RelativeLocation": model_translation,
@@ -606,7 +570,6 @@ def get_AbstractInstanceComponent(
             }
         )
         
-    #models.update({node_name:models_list})
     return models_list
 
 def get_PoleComponents(
@@ -649,9 +612,6 @@ def get_PoleComponents(
         if m_type:
             model_mesh = node_poles[j].get(m_type)["ObjectName"].split("'")[1]
             pole_height = node_poles[j].get("Height")
-            #model_translation = node_poles[j].get("RelativeTransform").get("Translation")
-            #model_rotation = node_poles[j].get("RelativeTransform").get("Rotation")
-            #model_scale = node_poles[j].get("RelativeTransform").get("Scale3D")
         else:
             continue
         
@@ -668,7 +628,6 @@ def get_PoleComponents(
             }
         )
         
-    #models.update({node_name:models_list})
     return models_list,support_model
 
     
@@ -705,8 +664,8 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
     statue_build_dir = Path(statue_build_files_dir)
     equip_build_dir = Path(equip_build_files_dir)
     
-    if not build_dir.exists():# or not build_beam_dir.exists():
-        print(f"Error: Directory does not exist: {build_dir}")# or {build_beam_dir}")
+    if not build_dir.exists():
+        print(f"Error: Directory does not exist: {build_dir}")
         return
     
     # Find all build_*.json files recursively
@@ -723,7 +682,6 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
     build_files = build_files + list(build_dir.rglob("BP_DroneTransport.json"))
     build_files = build_files + list(statue_build_dir.rglob("Desc_*Statue.json"))
     build_files = build_files + list(equip_build_dir.rglob("Equip_*.json"))
-    #build_files(list(build_dir.rglob("BP_ProductionIndicatorInstanced.json"))[0])
     print(f"Found {len(build_files)} build files")
     count = 0
     ex_count = 0
@@ -746,13 +704,6 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
             
             if data:
                 count+=1
-                
-                #if data.get("Build_Pipeline_C"):
-                #    data["Build_Pipeline_NoIndicator"] = data.get("Build_Pipeline_C")
-                #    count+=1
-                #elif data.get("Build_PipelineMK2_C"):
-                #    data["Build_PipelineMK2_NoIndicator"] = data.get("Build_PipelineMK2_C")
-                #    count+=1
                 if data.get("Build_PowerTowerPlatform_C"):
                     if all_data.get("Build_PowerTower_C"):
                         Build_PowerTower_C = all_data["Build_PowerTower_C"]
@@ -777,9 +728,6 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
             print(f"⚠️ Failed to process {build_file.name}: {e}")
             failed_list.update({build_file.name: str(e)})
     
-    #print(f"Found {len(build_files)} build files")
-    #print(f"processed {count} buildables")
-    
     # Write to output file
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(all_data, f, indent=2)
@@ -795,6 +743,3 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
     print(f"Importing models time: {execution_time:.6f} seconds")
     
     return len(all_data) # return the number of entries populated
-
-#SF_export_dir=r"F:\blenber\SF to blend\fmodel export"
-#populate_buildable_to_asset(SF_export_dir)
