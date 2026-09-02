@@ -43,7 +43,6 @@ def get_lib_assets(
     sub_color = "COLOR_03"
     as_col = get_or_create_collection("Assets")
     as_col.color_tag = asset_color
-    bles_col = get_or_create_collection("Assets")
     f_col = get_or_create_collection("Factory","Assets")
     f_col.color_tag = util_color
     b_col = get_or_create_collection("Building","Assets")

@@ -13,7 +13,7 @@ BASE_TEX_DIR = TX_EXPORT_FILE_DIR + r"\FactoryGame\Buildable"
 ATLAS_MAT_DIR = Path(BASE_FILE_DIR,'-Shared') # textures and materials for the atlas materials (decal_color,decal_color_masked, decal_normal)
 ARR_TEX_DIR = Path(BASE_TEX_DIR,'-Shared','Material','Resources') # textures for the factory_inst material
 
-FILE_EXTENTIONS = [
+FILE_EXTENSIONS = [
     "png",
     "tga"
 ]
@@ -32,7 +32,7 @@ TEXTURE_KEY_WORDS = [
     #"TX2D_",
 ]
 
-TEXTURE_TPYE_WORDS = [
+TEXTURE_TYPE_WORDS = [
     "_N",
     "_Nor",
     "_MREO",
@@ -219,16 +219,16 @@ def get_par_materials(sf_asset_export_path):
                             step = 0
                             tile_pos_y += 1
                 
-                TX2D_tile_mix = ""
+                tx2D_tile_mix = ""
                 if "_N" in tex:
-                    TX2D_tile_mix = "TX2D_tile_mix_N"
+                    tx2D_tile_mix = "TX2D_tile_mix_N"
                 elif "_MREO" in tex:
-                    TX2D_tile_mix = "TX2D_tile_mix_R"
+                    tx2D_tile_mix = "TX2D_tile_mix_R"
                 else:
-                    TX2D_tile_mix = "TX2D_tile_mix_B"
+                    tx2D_tile_mix = "TX2D_tile_mix_B"
                 
                 txd_shader_node = txd_Shader.nodes.new('ShaderNodeGroup')
-                txd_shader_node.node_tree = bpy.data.node_groups[TX2D_tile_mix]
+                txd_shader_node.node_tree = bpy.data.node_groups[tx2D_tile_mix]
                 
                 #txd_shader_node.location.x = 200
                 txd_shader_node.location.x = 100
@@ -268,7 +268,7 @@ def get_par_materials(sf_asset_export_path):
                             print("img not in bl")
                             b_texture.image = bpy.data.images.load(os.fspath(tex_file))
                         
-                        for t in TEXTURE_TPYE_WORDS:
+                        for t in TEXTURE_TYPE_WORDS:
                             if t in tex_id:
                                 b_texture.image.colorspace_settings.name = 'Linear Rec.709'
                         
@@ -374,7 +374,7 @@ def get_par_materials(sf_asset_export_path):
                         b_texture.image = bpy.data.images.load(os.fspath(tex_file))
                     print(b_texture.image.name)
                     b_texture.hide = True
-                    for t in TEXTURE_TPYE_WORDS:
+                    for t in TEXTURE_TYPE_WORDS:
                         if t in tex:
                             b_texture.image.colorspace_settings.name = 'Linear Rec.709'
                     

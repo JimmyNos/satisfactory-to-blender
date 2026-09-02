@@ -39,11 +39,13 @@ def set_geonode_input(modifier: bpy.types.Modifier, label: str, value):
             return
     raise KeyError(f"Input '{label}' not found")
 
-def get_or_create_collection(name,parent_name = "") -> bpy.types.Collection:
+def get_or_create_collection(name,parent_name = "",col_color: str = "NONE") -> bpy.types.Collection:
     col = bpy.data.collections.get(name)
     parent_col = bpy.data.collections.get(parent_name)
     if not col:
         col = bpy.data.collections.new(name)
+        if col_color != "NONE":
+            col.color_tag = col_color
         if not parent_name:
             bpy.context.scene.collection.children.link(col)
         else:
@@ -57,11 +59,11 @@ def get_import_collection() -> bpy.types.Collection:
 def create_asset_collection() -> bpy.types.Collection:
     return get_or_create_collection('Assets')
 
-def create_sign_text_collection(sign_name,parent_name = 'Import') -> bpy.types.Collection:
-    return get_or_create_collection(sign_name,parent_name)
+def create_sign_text_collection(sign_name,parent_name = 'Import',col_color: str = "NONE") -> bpy.types.Collection:
+    return get_or_create_collection(sign_name,parent_name,col_color)
 
-def create_weight_collection(buildable_name,parent_name = 'Import') -> bpy.types.Collection:
-    return get_or_create_collection(buildable_name,parent_name)
+def create_weight_collection(buildable_name,parent_name = 'Import',col_color: str = "NONE") -> bpy.types.Collection:
+    return get_or_create_collection(buildable_name,parent_name,col_color)
 
 def add_text_splines_to_curve(text: list, sign_name: str, text_n: int,layout:list):
     """
@@ -401,18 +403,18 @@ def create_buildable_object(
     # object from the mesh
     obj = bpy.data.objects.new(f"{cls}_Points", mesh)
     
-    get_or_create_collection("Heavyweights","Import")
-    get_or_create_collection("Lightweights","Import")
+    get_or_create_collection("Heavyweights","Import",col_color = "COLOR_05")
+    #get_or_create_collection("Lightweights","Import",col_color = "COLOR_05")
     
     if not 'WidgetSign' in cls:
         if is_heavy:
-            create_weight_collection("Heavyweights").objects.link(obj)
+            get_or_create_collection("Heavyweight Buildings","Heavyweights",col_color = "COLOR_07").objects.link(obj)
         else:
-            create_weight_collection("Lightweights").objects.link(obj)
+            get_or_create_collection("Lightweights","Import",col_color = "COLOR_05").objects.link(obj)
     else:
-        get_or_create_collection("Signs","Heavyweights")
-        create_sign_text_collection(cls,"Signs").objects.link(obj)
-   
+        get_or_create_collection("Signs","Heavyweights",col_color = "COLOR_07")
+        create_sign_text_collection(cls,"Signs",col_color = "COLOR_08").objects.link(obj)
+    
     # set the various named attributes
     mesh.attributes.new("rotation", "FLOAT_VECTOR", "POINT")
     flat = [c for vec in rotations for c in vec]
@@ -699,9 +701,9 @@ def import_spline_buildables(name: str,
     obj = bpy.data.objects.new(name[:-2], curve)
     pos, rot, scale = read_transform(transform)
     obj.location = pos
-    get_or_create_collection("Heavyweights","Import")
-    get_or_create_collection("Splines","Heavyweights")
-    col = get_or_create_collection(name,"Splines").objects.link(obj)
+    get_or_create_collection("Heavyweights","Import",col_color = "COLOR_05")
+    get_or_create_collection("Splines","Heavyweights",col_color = "COLOR_07")
+    col = get_or_create_collection(name,"Splines",col_color = "COLOR_07").objects.link(obj)
     
     bpy.ops.object.select_all(action='DESELECT')
     bpy.context.view_layer.objects.active = obj
@@ -797,9 +799,9 @@ def import_powerlines(name: str,inst_splines: list,transform: list):
     pos, rot, scale = read_transform(transform)
     obj.location = pos
     obj.rotation_euler = rot
-    get_or_create_collection("Heavyweights","Import")
-    get_or_create_collection("Splines","Heavyweights")
-    get_or_create_collection(name,"Splines").objects.link(obj)
+    get_or_create_collection("Heavyweights","Import",col_color = "COLOR_05")
+    get_or_create_collection("Splines","Heavyweights",col_color = "COLOR_07")
+    get_or_create_collection(name,"Splines",col_color = "COLOR_07").objects.link(obj)
     
     node_group = bpy.data.node_groups["Buildables From Spline"]
     mod = obj.modifiers.new(name="GeometryNodes", type="NODES")
@@ -897,9 +899,9 @@ def import_conveyor_chain(
     pos, rot, scale = read_transform(transform)
     obj.location = pos
     obj.rotation_euler = rot
-    get_or_create_collection("Heavyweights","Import")
-    get_or_create_collection("Splines","Heavyweights")
-    get_or_create_collection("ConveyorChain","Splines").objects.link(obj)
+    get_or_create_collection("Heavyweights","Import",col_color = "COLOR_05")
+    get_or_create_collection("Splines","Heavyweights",col_color = "COLOR_07")
+    get_or_create_collection("ConveyorChain","Splines",col_color = "COLOR_07").objects.link(obj)
     
     bpy.ops.object.select_all(action='DESELECT')
     bpy.context.view_layer.objects.active = obj

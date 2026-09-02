@@ -74,11 +74,13 @@ def set_geonode_input(modifier: bpy.types.Modifier, label: str, value):
             return
     raise KeyError(f"Input '{label}' not found")
 
-def get_or_create_collection(name,parent_name = "") -> bpy.types.Collection:
+def get_or_create_collection(name,parent_name = "",col_color = "NONE") -> bpy.types.Collection:
     col = bpy.data.collections.get(name)
     parent_col = bpy.data.collections.get(parent_name)
     if not col:
         col = bpy.data.collections.new(name)
+        if col_color != "NONE":
+            col.color_tag = col_color
         if not parent_name:
             bpy.context.scene.collection.children.link(col)
         else:
@@ -2242,14 +2244,14 @@ def run_mark_asset(a_coll,u_coll):
                     bpy.app.timers.register(functools.partial(
                         hide_obj,
                         current_col=b_col
-                    ), first_interval=7)
+                    ), first_interval=20)
                     #col.hide_viewport = True
                     asset_data = b_col.asset_data
                     asset_data.catalog_id = catalog_id
                     
             for col in list(u_coll.children):
-                if "Conveyor" in col.name:
-                    col.hide_viewport = True
+                #if "Conveyor" in col.name:
+                #    col.hide_viewport = True
                 catalog_id = target_catalogs.get(u_coll.name)
                 col.hide_viewport = False
                 col.asset_clear()
@@ -2258,7 +2260,7 @@ def run_mark_asset(a_coll,u_coll):
                 bpy.app.timers.register(functools.partial(
                     hide_obj,
                     current_col=col
-                ), first_interval=1)
+                ), first_interval=20)
                 asset_data = col.asset_data 
                 asset_data.catalog_id = catalog_id
     else:
@@ -2281,7 +2283,7 @@ def import_models_task(a_coll,u_coll,sf_asset_export_path,mark_as_asset):
             a_coll=a_coll,
             u_coll=u_coll
             ), first_interval=0)
-        time.sleep(0.1)
+        time.sleep(2)
     
     #mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
     #if mark_as_asset and not stop_building_requested:
@@ -2668,12 +2670,12 @@ class ImportSaveButton(bpy.types.Operator):
                 f"\n\n\n\n---\n{saveHeader.SessionName} {saveHeader.SaveDateTime.toString()}\n---\n"
             )
             
-            get_or_create_collection('Import')
+            get_or_create_collection('Import',col_color = "COLOR_04")
             # clear the import collection before adding to it
             if get_lightweight:
-                for obj in list(get_or_create_collection('Lightweights','Import').objects):
+                for obj in list(get_or_create_collection('Lightweights','Import',col_color = "COLOR_05").objects):
                     bpy.data.objects.remove(obj, do_unlink=True)
-                for col in list(get_or_create_collection('Lightweights','Import').children):
+                for col in list(get_or_create_collection('Lightweights','Import',col_color = "COLOR_05").children):
                     bpy.data.collections.remove(col, do_unlink=True)
             if get_heavyweight:
                 for obj in list(get_or_create_collection('Heavyweights','Import').objects):
