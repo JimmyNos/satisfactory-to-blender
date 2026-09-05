@@ -82,9 +82,11 @@ def get_or_create_collection(name,parent_name = "",col_color = "NONE") -> bpy.ty
         if col_color != "NONE":
             col.color_tag = col_color
         if not parent_name:
-            bpy.context.scene.collection.children.link(col)
+            if bpy.context.scene:
+                bpy.context.scene.collection.children.link(col)
         else:
-            parent_col.children.link(col)
+            if parent_col:
+                parent_col.children.link(col)
             
     return col
 
@@ -108,10 +110,11 @@ def remap(value, from_min, from_max, to_min, to_max):
 
 def update_ui():
     # Force UI update
-    for window in bpy.context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == 'VIEW_3D':
-                area.tag_redraw()
+    if bpy.context.window_manager:
+        for window in bpy.context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == 'VIEW_3D':
+                    area.tag_redraw()
     
     if is_scanning:
         return 0.1  # Call every 0.1 seconds
@@ -134,13 +137,13 @@ class SF_Importer_Properties(PropertyGroup):
     
     get_lightweight: bpy.props.BoolProperty(
         name="Lightweight Buildables",
-        description="Get lightweight buildables used in save file. e.g. foundations, walls, pillers, etc ",
+        description="Get lightweight buildables used in save file. e.g. foundations, walls, pillars, etc ",
         default=False
     ) # type: ignore
     
     get_heavyweight: bpy.props.BoolProperty(
         name="Heavyweight Buildables",
-        description="Get heavyweigh buildables used in save file. e.g. construtor, smelter, pipeHyperSupport, etc ",
+        description="Get heavyweight buildables used in save file. e.g. constructor, smelter, pipeHyperSupport, etc ",
         default=False
     ) # type: ignore
     
@@ -158,13 +161,13 @@ class SF_Importer_Properties(PropertyGroup):
     
     hide_buildable: bpy.props.BoolProperty(
         name="Hide Buildables",
-        description="Hide buildable on import for buildables with a lot of instances for viewport proformace",
+        description="Hide buildable on import for buildables with a lot of instances for viewport performance",
         default=False
     ) # type: ignore
     
     use_proxy: bpy.props.BoolProperty(
         name="Use Proxy Mesh",
-        description="Use proxy mesh for viewport proformance. Use main mesh for render",
+        description="Use proxy mesh for viewport performance. Use main mesh for render",
         default=False
     ) # type: ignore
     
@@ -683,7 +686,7 @@ def import_heavyweights_task(
         if not factory.startswith('Build_StandaloneWidgetSign_') and not factory.startswith('Build_PowerLine_') and not any(building in factory for building in spline_buildables):
             prop_attr = []
             height_attr = []
-            passthorugh_thickness_attr = []
+            passthrough_thickness_attr = []
             pole_scale_attr = [[0.0,0.0]] * total_instances
             attr_dict = {}
             needs_attr = []
@@ -691,6 +694,11 @@ def import_heavyweights_task(
             pole_scale_used = False
             passthrough_type = [0] * total_instances
             progress_in = 0.0
+            
+            verts, rotations, scales = [],[],[]
+            primary_colors = [()]
+            secondary_colors = [(0.0, 0.0, 0.0, 1.0)]
+            paint_type = None
             
             current_buildable = f"{factory}: {total_instances} instances" 
                             
@@ -960,21 +968,36 @@ def import_signs_task(
         prop_attr = []
         color_attr = []
         text_attr= []
-        icons_attr = []
-        ems_attr = []
-        glos_attr = []
+        icons_attr = [[0,0,0]] * total_instances
+        ems_attr = [1.0] * total_instances
+        glos_attr = [0.0] * total_instances
         idx_map = {key: i for i, key in enumerate(sign_layouts)}
         layout_data = sign_layouts[factory]
-        sign_lay_idx = idx_map.get(factory)
-        layouts_attr = []
-        layouts_text_attr = []
-        color_idx_f = []
-        color_idx_b = []
-        color_idx_a = []
+        sign_lay_idx = idx_map.get(factory,0)
+        layouts_attr = [[0,0]] * total_instances
+        layouts_text_attr = [[0,0,0]] * total_instances
+        color_idx_f = [        {
+                        "R":0.0,
+                        "G":0.0,
+                        "B":0.0,
+                        "A":1.0
+                    }] * total_instances
+        color_idx_b = [        {
+                        "R":0.0,
+                        "G":0.0,
+                        "B":0.0,
+                        "A":1.0
+                    }] * total_instances
+        color_idx_a = [        {
+                        "R":0.0,
+                        "G":0.0,
+                        "B":0.0,
+                        "A":1.0
+                    }] * total_instances
         verts, rotations, scales = [],[],[]
     
         count_p = 0
-        for actor in instances[1]:
+        for idx,actor in enumerate(instances[1]):
             if stop_requested:
                 progress = 0.0
                 break
@@ -990,68 +1013,71 @@ def import_signs_task(
                         lt1 = 1 if layout_text.get('Text1') else 0
                         lt2 = 1 if layout_text.get('Text2') else 0
                         lt3 = 1 if layout_text.get('Text3') else 0
-                        layouts_text_attr.extend([lt1,lt2,lt3])
+                        layouts_text_attr[idx] = [lt1,lt2,lt3]
                     else:
-                        layouts_text_attr.extend([0,0,0])
-                    layouts_attr.append(sign_lay_idx)
-                    layouts_attr.append(layout_idx)
+                        layouts_text_attr[idx] = [0,0,0]
+                    layouts_attr[idx] = [sign_lay_idx, layout_idx]
                     #print(f"{prop.Name.Name}: {prop.Value.AssetPath.AssetName.Name}")
                     # TODO use a layout map
                 
                 if 'mPrefabTextElementSaveData' in prop.Name.Name:
-                    text_attr.append(tuple([idx.Data[1].Value for idx in prop.Value.Values]))
+                    text_attr.append(tuple([i.Data[1].Value for i in prop.Value.Values]))
                 if 'mPrefabIconElementSaveData' in prop.Name.Name:
-                    icons_attr.append(tuple([idx.Data[1].Value for idx in prop.Value.Values])) 
+                    #icons_attr.append(tuple([idx.Data[1].Value for idx in prop.Value.Values])) 
+                    icon_len = len(prop.Value.Values)
+                    icons = []
+                    for i in prop.Value.Values:
+                        icons.append(i.Data[1].Value)
+                    
+                    if icon_len == 2:
+                        icons_attr[idx] = [icons[0],icons[1],0]
+                    else:
+                        icons_attr[idx] = [icons[0],icons[1],icons[2]]
                 if 'mForegroundColor' in prop.Name.Name:
-                    color_idx_f.append(
-                        {
+                    color_idx_f[idx] = {
                             "R":prop.Value.Data.R,
                             "G":prop.Value.Data.G,
                             "B":prop.Value.Data.B,
                             "A":prop.Value.Data.A
                         }
-                    )
                 if 'mBackgroundColor' in prop.Name.Name:
-                    color_idx_b.append(
-                        {
+                    color_idx_b[idx] = {
                             "R":prop.Value.Data.R,
                             "G":prop.Value.Data.G,
                             "B":prop.Value.Data.B,
                             "A":prop.Value.Data.A
                         }
-                    )  
+                    
                 if 'mAuxilaryColor' in prop.Name.Name:
-                    color_idx_a.append(
-                        {
+                    color_idx_a[idx] = {
                             "R":prop.Value.Data.R,
                             "G":prop.Value.Data.G,
                             "B":prop.Value.Data.B,
                             "A":prop.Value.Data.A
                         }
-                    ) 
                     aux_check = True
                 if 'mEmissive' in prop.Name.Name:
-                    ems_attr.append(prop.Value)
+                    ems_attr[idx] = prop.Value
                     ems_check = True
                 if 'mGlossiness' in prop.Name.Name:
-                    glos_attr.append(prop.Value)
+                    glos_attr[idx] = prop.Value
                     glos_check = True
             
-            if not ems_check:
-                ems_attr.append(1.0)
+            #if not ems_check:
+            #    ems_attr.append(1.0)
             
-            if not glos_check:
-                glos_attr.append(0.0)
+            #if not glos_check:
+            #    glos_attr.append(0.0)
                 
-            if not aux_check:
-                color_idx_a.append(
-                    {
-                            "R":0.0,
-                            "G":0.0,
-                            "B":0.0,
-                            "A":1.0
-                        }
-                )
+            #if not aux_check:
+            #    color_idx_a.append(
+            #        {
+            #                "R":0.0,
+            #                "G":0.0,
+            #                "B":0.0,
+            #                "A":1.0
+            #            }
+            #    )
             
             verts, rotations, scales = map(
                 list, zip(*(read_transform(i) for i in instances[0]))
@@ -1073,11 +1099,11 @@ def import_signs_task(
             "type":["FLOAT_COLOR","color"]
             })
         prop_attr.append({
-            "layout" : layouts_attr,
+            "layout" : [l for lay in layouts_attr for l in lay],
             "type":["FLOAT2","vector"]
         })
         prop_attr.append({
-            "layout_t" : layouts_text_attr,
+            "layout_t" : [l for lay in layouts_text_attr for l in lay],
             "type":["FLOAT_VECTOR","vector"]
         })
         
@@ -1100,7 +1126,7 @@ def import_signs_task(
                 icons_attr_final.extend(icons)
         # icon attributes
         prop_attr.append({
-            "icons" : icons_attr_final,
+            "icons" : [i for icons in icons_attr for i in icons],
             "type":["FLOAT_VECTOR","vector"]
             }) 
         
@@ -1133,6 +1159,8 @@ def import_signs_task(
                 time.sleep(0.2)
                 
         progress_in = 99
+        #if stop_requested:
+        #    break
         bpy.app.timers.register(functools.partial(
             create_buildable_object, 
             factory,
@@ -1669,16 +1697,17 @@ def import_save_task(save: s.SaveGame, color_map: dict,get_models_from_library):
     sign_end_time = None
     spline_end_time = None
     partial_time = [""]*4
+    scene = bpy.context.scene
     
-    get_lightweight = bpy.context.scene.sf_importer_props.get_lightweight
-    get_heavyweight = bpy.context.scene.sf_importer_props.get_heavyweight
-    get_signs = bpy.context.scene.sf_importer_props.get_signs
-    get_splines = bpy.context.scene.sf_importer_props.get_splines
+    get_lightweight = scene.sf_importer_props.get_lightweight
+    get_heavyweight = scene.sf_importer_props.get_heavyweight
+    get_signs = scene.sf_importer_props.get_signs
+    get_splines = scene.sf_importer_props.get_splines
     
-    x_coords = bpy.context.scene.sf_importer_props.x_coords
-    y_coords = bpy.context.scene.sf_importer_props.y_coords
-    coord_distance = bpy.context.scene.sf_importer_props.coord_distance
-    import_in_coords = bpy.context.scene.sf_importer_props.import_in_coords
+    x_coords = scene.sf_importer_props.x_coords
+    y_coords = scene.sf_importer_props.y_coords
+    coord_distance = scene.sf_importer_props.coord_distance
+    import_in_coords = scene.sf_importer_props.import_in_coords
     #x_coords = x_coords * 100
     #y_coords = y_coords * 100
     #coord_distance = coord_distance * 100
@@ -1891,7 +1920,7 @@ def get_buildable_models(sf_asset_export_path):
                     print("--------------")
                     asset_name = ast.get('Mesh')
                     asset_dir = ""
-                    buildable_file = ""
+                    buildable_file = None
                     if '/' in asset_name:
                         asset_dir =Path(asset_name)
                         asset_name = asset_name.split('/')[-1]
@@ -1902,7 +1931,7 @@ def get_buildable_models(sf_asset_export_path):
                         for asset_file in asset_files:
                             if os.fspath(asset_dir) in os.fspath(asset_file):
                                 if asset_file.name.startswith(asset_name+'.'):
-                                    buildable_file = asset_file
+                                    buildable_file = [asset_file]
                     else:
                         buildable_file = [asset_file for asset_file in asset_files if asset_file.name.startswith(asset_name+'.')]
     
@@ -1911,7 +1940,7 @@ def get_buildable_models(sf_asset_export_path):
                         if type(buildable_file) == list:
                             file = buildable_file[0]
                         else:
-                            file = buildable_file # type: Path
+                            file = buildable_file[0] # type: Path
                     else:
                         print(f"Not Found: {asset_name}")
                         continue
@@ -1990,7 +2019,7 @@ def get_buildable_models(sf_asset_export_path):
                     ast = prop_components[prop]
                     asset_name = ast.get('Mesh')
                     asset_dir = ""
-                    buildable_file = ""
+                    buildable_file = None
                     if '/' in asset_name:
                         asset_dir =Path(asset_name)
                         asset_name = asset_name.split('/')[-1]
@@ -1999,7 +2028,7 @@ def get_buildable_models(sf_asset_export_path):
                         for asset_file in asset_files:
     
                             if os.fspath(asset_dir) in os.fspath(asset_file):
-                                buildable_file = asset_file
+                                buildable_file = [asset_file]
                     else:
                         buildable_file = [asset_file for asset_file in asset_files if asset_file.name.startswith(asset_name+'.')]
     
@@ -2007,7 +2036,7 @@ def get_buildable_models(sf_asset_export_path):
                         if type(buildable_file) == list:
                             file = buildable_file[0]
                         else:
-                            file = buildable_file
+                            file = buildable_file[0]
                     else:
                         print(f"Not Found: {asset_name}")
                         continue
@@ -2064,7 +2093,7 @@ def get_buildable_models(sf_asset_export_path):
             else:   
                 asset_name = asset.get('Mesh')
                 asset_dir = ""
-                buildable_file = ""
+                buildable_file = None
                 if '/' in asset_name:
                     asset_dir =Path(asset_name)
     
@@ -2078,13 +2107,13 @@ def get_buildable_models(sf_asset_export_path):
                     for asset_file in asset_files:
                         if os.fspath(asset_dir) in os.fspath(asset_file):
                             if asset_file.name.startswith(asset_name+'.'):
-                                buildable_file = asset_file
+                                buildable_file = [asset_file]
                                 print(buildable_file)
     
                         if asset_dir.name in asset_file.parent.name:
                             asset_file_l = asset_file.stem.lower()
                             if asset_file_l == asset_name.lower():
-                                buildable_file = asset_file
+                                buildable_file = [asset_file]
                                 print(buildable_file)
                 else:
                     buildable_file = [asset_file for asset_file in asset_files if asset_file.name.startswith(asset_name+'.')]
@@ -2098,7 +2127,7 @@ def get_buildable_models(sf_asset_export_path):
                     if type(buildable_file) == list:
                         if 1 < len(buildable_file):
                             print(f"Multiple files found: {buildable_file}")
-                            #multiple_files = builable_filea
+                            #multiple_files = buildable_file
                             if "TradingPost" in str(buildable_file[0]):
                                 file = buildable_file[1]
                             else:   
@@ -2106,7 +2135,7 @@ def get_buildable_models(sf_asset_export_path):
                         else:
                             file = buildable_file[0]
                     else:
-                        file = buildable_file # type: Path
+                        file = buildable_file[0] 
                 else:
                     print(f"Not Found: {asset_name}")
                     continue
@@ -2173,7 +2202,7 @@ def get_buildable_models(sf_asset_export_path):
     #if mark_as_asset and not stop_building_requested:
     #    folder = Path(bpy.data.filepath).parent
     #    if not Path(folder,"blender_assets.cats.txt").exists():
-    #        print("blender_assets.cats.txt not in perant folder")
+    #        print("blender_assets.cats.txt not in parent folder")
     #    target_catalogs = {
     #    "Assets-Factory":"",
     #    "Assets-Building":"",
@@ -2328,7 +2357,7 @@ def import_models_task(a_coll,u_coll,sf_asset_export_path,mark_as_asset):
     #                asset_data = col.asset_data 
     #                asset_data.catalog_id = catalog_id
     #    else:
-    #        print("blender_assets.cats.txt not in perant folder")
+    #        print("blender_assets.cats.txt not in parent folder")
     
     is_asset_building = False
     stop_building_requested = False
@@ -2948,7 +2977,7 @@ class VIEW3D_PT_SF_Asset_Builder_panel(Panel):
         scene = context.scene
         props = scene.sf_importer_props
         
-        # check if currrent blend file is asset library file, if not, show a warning message
+        # check if current blend file is asset library file, if not, show a warning message
         if not "SF_Asset_Lib.blend" in Path(bpy.data.filepath).name:
             layout.label(text="Current blend file is not 'SF_Asset_Lib.blend'", icon='INFO')
             layout.label(text="Open 'SF_Asset_Lib.blend' to continue building asset library", icon='INFO')

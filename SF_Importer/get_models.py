@@ -42,7 +42,7 @@ def get_essential_collection() -> bpy.types.Collection:
 
 def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_path:str,col):
     print("=================================>")
-    print("Getting Matetrals")
+    print("Getting Materials")
     print("=================================<")
     parent_path = file.parent
     print(parent_path)
@@ -289,12 +289,11 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         "MI_SnowFicsmas_01"
     ]
     
-    emision_type_mats = [
+    emission_type_mats = [
         "MI_PriorityLightsLift_01"
     ]
     
     force_replace_mat = {
-        #"MI_SK_Constructor":"MI_VAT_Constructorr",
         "MI_Tack_01_NoDeform":"MI_Tack_01",
         "MM_ShutterGate_Inst":"MI_HyperTubeStart_01",
         "HubDecal_Opaque":"HubDecal_Masked",
@@ -369,7 +368,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             obj_material = new_mat
     
     foundation_path = "Foundation" in list(parent_path.parts)
-    if "Concrete" in col.name and foundation_path:# and not "Wall" in col.name and not "Piller" in col.name and not "Barrier" in col.name:
+    if "Concrete" in col.name and foundation_path:# and not "Wall" in col.name and not "Pillar" in col.name and not "Barrier" in col.name:
         mat_re = con_mat_remap["Concrete"]
         if "Ramp" in col.name and not "DCorner" in col.name and not "DownCorner" in col.name:
             obj_material_dup = mat_re[1]
@@ -428,7 +427,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         ob.material_slots[index].material = replace_mat
         obj_material = obj_material_dup
     
-    if "Grip" in col.name or "Metal" in col.name and foundation_path:# and not "Wall" in col.name and not "Piller" in col.name and not "Barrier" in col.name:
+    if "Grip" in col.name or "Metal" in col.name and foundation_path:# and not "Wall" in col.name and not "Pillar" in col.name and not "Barrier" in col.name:
         mat_re = fic_mat_remap["Grip"]
         if "Corner" in col.name and "Ramp" in col.name and not "DC" in col.name and not "DownCorner" in col.name:
             obj_material_dup = mat_re[2]
@@ -1045,7 +1044,7 @@ def import_model(
             if len(ob_parent.users_collection) == 1:
                 for p_col in ob_parent.users_collection:
                     #if p_col.name == ob_parent.name:
-                    #    parant_col = p_col
+                    #    parent_col = p_col
                     parent_col = p_col
         #print(f"parent_name: {parent_name}")
         
@@ -1249,10 +1248,6 @@ def import_empty(
     
     return ob
 
-EXPORT_FILE_DIR = r"PATH-TO-FMODEL-EXPORTS"
-BASE_FILE_DIR = r"F:\blenber\SF to blend\fmodel export\FactoryGame\Content\FactoryGame\Buildable"
-EVENT_FILE_DIR = r"F:\blenber\SF to blend\fmodel export\FactoryGame\Content\FactoryGame\Events"
-BUILD_TO_ASSET_DIR = r"F:\blenber\SF to blend\SF-2-Blender addon\satisfactory-to-blender\import models\buildable_to_asset.json"   
 
 INTEGRATED_BUILD_LIST = [
     "ProductionIndicatorInstanced",

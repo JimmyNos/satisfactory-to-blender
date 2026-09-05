@@ -716,9 +716,9 @@ def populate_buildable_to_asset(SF_export_dir, custom_output_path=None):
                     if all_data.get("Build_MinerMk2_C"):
                         Build_MinerMk2_C = all_data["Build_MinerMk2_C"]
                         if Build_MinerMk2_C.get("MainMesh_GEN_VARIABLE"):
-                            minermk2_data = all_data["Build_MinerMk2_C"]["MainMesh_GEN_VARIABLE"]
+                            miner_mk2_data = all_data["Build_MinerMk2_C"]["MainMesh_GEN_VARIABLE"]
                             data["Build_MinerMk3_C"].update({
-                                "MainMesh_GEN_VARIABLE":minermk2_data
+                                "MainMesh_GEN_VARIABLE":miner_mk2_data
                                 })
                 all_data.update(data)
             else:

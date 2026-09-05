@@ -8,9 +8,11 @@ def get_or_create_collection(name,parent_name = "") -> bpy.types.Collection:
     if not col:
         col = bpy.data.collections.new(name)
         if not parent_name:
-            bpy.context.scene.collection.children.link(col)
+            if bpy.context.scene:
+                bpy.context.scene.collection.children.link(col)
         else:
-            parent_col.children.link(col)
+            if parent_col:
+                parent_col.children.link(col)
     return col
 
 #data block types ('Object', 'Collection', 'Material', etc.)
@@ -37,7 +39,10 @@ def get_lib_assets(
     col_type:bool =False,
     set_fake:bool = False,
     col_color:str = "") -> str:
-    library_path = bpy.context.preferences.filepaths.asset_libraries.get(asset_lib_name).path
+    library_path = ""
+    if bpy.context.preferences:
+        if bpy.context.preferences.filepaths.asset_libraries.get(asset_lib_name):
+            library_path = bpy.context.preferences.filepaths.asset_libraries[asset_lib_name].path
     asset_color = "COLOR_01"
     util_color = "COLOR_02"
     sub_color = "COLOR_03"
@@ -47,6 +52,9 @@ def get_lib_assets(
     f_col.color_tag = util_color
     b_col = get_or_create_collection("Building","Assets")
     b_col.color_tag = util_color
+    
+    view_layer = bpy.context.view_layer
+    scene = bpy.context.scene
     
     asset_lib_blend_path = os.path.join(library_path, asset_lib_blend)
     # get collections
@@ -62,7 +70,11 @@ def get_lib_assets(
                     print(e)
             
             inner_path = data_type
-            active_col = bpy.context.view_layer.active_layer_collection.collection
+            
+            active_col = None
+            if view_layer:
+                if view_layer.active_layer_collection:
+                    active_col = view_layer.active_layer_collection.collection
             bpy.ops.wm.append(
                 filepath=os.path.join(asset_lib_blend_path, inner_path, asset_name),
                 directory=os.path.join(asset_lib_blend_path, inner_path),
@@ -71,58 +83,62 @@ def get_lib_assets(
                 #active_collection = False
             )
             col = bpy.data.collections.get(asset_name)
-            for ob in col.all_objects:
-                obj_materials = [slot.material.name for slot in ob.material_slots if slot.material]
-                for i,mat in enumerate(obj_materials):
-                    ast_mat = bpy.data.materials.get(mat)
-                    if ast_mat:
-                        if "." in ast_mat.name:
-                            dup_name = ast_mat.name
-                            new_name = dup_name.split('.')[0]
-                            new_mat = bpy.data.materials.get(new_name)
-                            ob.material_slots[i].material = new_mat
-                            
-                obj_mods = [mod for mod in ob.modifiers]
-                for i,mod in enumerate(obj_mods):
-                    #ast_mod = ob.modifiers.get(mod)
-                    #ast_mod.
-                    #node_group = bpy.data.node_groups.get("Decal_Normal_Copy_Color")
-                    
-                    if mod.type == "NODES":
-                        ast_node_group = mod.node_group
-                        if "." in ast_node_group.name:
-                            dup_name = ast_node_group.name
-                            new_name = dup_name.split('.')[0]
-                            new_mat = bpy.data.node_groups.get(new_name)
-                            mod.node_group = new_mat
+            if col:
+                for ob in col.all_objects:
+                    obj_materials = [slot.material.name for slot in ob.material_slots if slot.material]
+                    for i,mat in enumerate(obj_materials):
+                        ast_mat = bpy.data.materials.get(mat)
+                        if ast_mat:
+                            if "." in ast_mat.name:
+                                dup_name = ast_mat.name
+                                new_name = dup_name.split('.')[0]
+                                new_mat = bpy.data.materials.get(new_name)
+                                ob.material_slots[i].material = new_mat
+                                
+                    obj_mods = [mod for mod in ob.modifiers]
+                    for i,mod in enumerate(obj_mods):
+                        #ast_mod = ob.modifiers.get(mod)
+                        #ast_mod.
+                        #node_group = bpy.data.node_groups.get("Decal_Normal_Copy_Color")
+                        
+                        if mod.type == "NODES":
+                            ast_node_group = mod.node_group # type: ignore
+                            if "." in ast_node_group.name:
+                                dup_name = ast_node_group.name
+                                new_name = dup_name.split('.')[0]
+                                new_mat = bpy.data.node_groups.get(new_name)
+                                mod.node_group = new_mat # type: ignore
             
             if asset_name in bpy.data.collections:
                 if col_type:
                     f_col.children.link(bpy.data.collections[asset_name])
                     bpy.data.collections[asset_name].color_tag = sub_color
-                    for ccol in bpy.data.collections[asset_name].children_recursive:
-                        ccol.color_tag = sub_color
+                    for child_col in bpy.data.collections[asset_name].children_recursive:
+                        child_col.color_tag = sub_color
                 else:
                     if "Utility" in asset_name:
                         as_col.children.link(bpy.data.collections[asset_name])
                         bpy.data.collections[asset_name].color_tag = util_color
-                        for ccol in bpy.data.collections[asset_name].children_recursive:
-                            ccol.color_tag = sub_color
+                        for child_col in bpy.data.collections[asset_name].children_recursive:
+                            child_col.color_tag = sub_color
                     else:
                         b_col.children.link(bpy.data.collections[asset_name])
                         bpy.data.collections[asset_name].color_tag = sub_color
                 
-                if bpy.context.scene.collection.children.get(asset_name):
-                    bpy.context.scene.collection.children.unlink(bpy.data.collections[asset_name])
-                else:
-                    try:
-                        active_col.children.unlink(bpy.data.collections[asset_name])
-                    except Exception as e:
-                        print(e)
+                if scene:
+                    if scene.collection.children.get(asset_name):
+                        scene.collection.children.unlink(bpy.data.collections[asset_name])
+                    else:
+                        try:
+                            if active_col:
+                                active_col.children.unlink(bpy.data.collections[asset_name])
+                        except Exception as e:
+                            print(e)
                     
-                view_layer = bpy.context.view_layer
-                sc_col = view_layer.layer_collection
-                sc_col.children[as_col.name].exclude = True
+                #view_layer = bpy.context.view_layer
+                if view_layer:
+                    sc_col = view_layer.layer_collection
+                    sc_col.children[as_col.name].exclude = True
                 #if "Utility" in asset_name:
                 #    sc_col.children[as_col.name].children[asset_name].exclude = True
                 #if col_type:
@@ -175,13 +191,6 @@ def get_lib_assets(
                         for mat_name in data_from.materials:
                             if mat_name.startswith("MI_SignBackground_") and not "." in mat_name:
                                 data_to.materials.append(mat_name)
-                                #bpy.ops.wm.append(
-                                #    filepath=os.path.join(asset_lib_blend_path, "Material", mat_name),
-                                #    directory=os.path.join(asset_lib_blend_path, "Material"),
-                                #    filename=mat_name,
-                                #    clear_asset_data =True,
-                                #    set_fake=True
-                                #)
                                 
                                 print(f"Appended material: {mat_name}")
                     continue
@@ -197,10 +206,11 @@ def get_lib_assets(
                 
                 if object_name in bpy.data.collections:
                     as_col.children.link(bpy.data.collections[object_name])
-                    bpy.context.scene.collection.children.unlink(bpy.data.collections[object_name])
-                    view_layer = bpy.context.view_layer
-                    sc_col = view_layer.layer_collection
-                    sc_col.children[as_col.name].children[object_name].exclude = True
+                    if scene:
+                        scene.collection.children.unlink(bpy.data.collections[object_name])
+                    if view_layer:
+                        sc_col = view_layer.layer_collection
+                        sc_col.children[as_col.name].children[object_name].exclude = True
         return f"Appended {data_type} assets from {asset_lib_blend_path}"
     else:
         return f"Blend file not found: {asset_lib_blend_path}"

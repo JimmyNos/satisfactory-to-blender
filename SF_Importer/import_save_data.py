@@ -177,7 +177,7 @@ def add_text_splines_to_curve(text: list, sign_name: str, text_n: int,layout:lis
             text_data.text_boxes[0].height = 0
         text_obj = bpy.data.objects.new(text_name, text_data)
         
-        col = create_sign_text_collection(f"{sign_name}_TextBlock_{text_n}",sign_name)
+        col = create_sign_text_collection(f"{sign_name}_TextBlock_{text_n}",sign_name,col_color = "COLOR_01")
         col.objects.link(text_obj)
         col.hide_viewport
         col.hide_render
@@ -199,7 +199,7 @@ def get_lbs(save: s.SaveGame) -> s.AFGLightweightBuildableSubsystem:
     )[0].Object
 
 
-# read the buildale transform and convert to blender coords
+# read the buildable transform and convert to blender coords
 def read_transform(transform: s.FTransform3f):
 
     t = transform.Translation
@@ -212,7 +212,7 @@ def read_transform(transform: s.FTransform3f):
     euler = quat.to_euler("XYZ")
     rot = euler.x, euler.y, euler.z
 
-    # this isnt used since vanilla doesnt allow scaling, but include it for completeness
+    # this isn't used since vanilla doesn't allow scaling, but include it for completeness
     s = transform.Scale3D
     scale = s.X, s.Y, s.Z
 
@@ -331,7 +331,7 @@ def read_prop(i: s.FRuntimeBuildableInstanceData,prop_name:str) -> float | str:
 
 # start geonode
 
-# map make buildable classes to corrisponding asset
+# map make buildable classes to corresponding asset
 def buildable_class_to_object(cls: str,buildable_to_asset_path: str,is_factory:bool = False) -> [bpy.types.Object,Vec3,Vec3]:# | None:
     json_file_path = buildable_to_asset_path
     print(json_file_path)
@@ -413,14 +413,14 @@ def create_buildable_object(
             get_or_create_collection("Lightweights","Import",col_color = "COLOR_05").objects.link(obj)
     else:
         get_or_create_collection("Signs","Heavyweights",col_color = "COLOR_07")
-        create_sign_text_collection(cls,"Signs",col_color = "COLOR_08").objects.link(obj)
+        create_sign_text_collection(cls,"Signs",col_color = "COLOR_07").objects.link(obj)
     
     # set the various named attributes
     mesh.attributes.new("rotation", "FLOAT_VECTOR", "POINT")
     flat = [c for vec in rotations for c in vec]
     mesh.attributes["rotation"].data.foreach_set("vector", flat)
 
-    # apply the beam length addjustment to scale
+    # apply the beam length adjustment to scale
     if not lengths == []:
         adj_scales = [
             (s[0] * l, s[1], s[2]) if l != 0 else s for s, l in zip(scales, lengths)
@@ -438,71 +438,71 @@ def create_buildable_object(
                 if 'type' == attr:
                     continue
                 
-                #try:
-                if 'WidgetSign' in cls:
-                    
-                    if 'layout' == attr:
-                        sign_layout_attr = prop[attr]
-                    if 'color' in attr:
-                        mesh.attributes.new(attr, prop['type'][0], "POINT")
-                        flat = [c for att in prop[attr] for c in att]
-                        mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
-                    #elif 'ems' in attr or 'glos' in attr:# or 'length' in attr:
-                    #    mesh.attributes.new(attr, prop['type'][0], "POINT")
-                    #    mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
-                    #elif 'icons' in attr:
-                    #    mesh.attributes.new(attr, prop['type'][0], "POINT")
-                    #    flat = [c for att in prop[attr] for c in att]
-                    #    mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
-                    elif 'text' in attr:
-                        layout = sign_layout_attr
-                        text1 = []
-                        text2 = []
-                        text3 = []
-                        text_id = 0
-                        for att in prop[attr]:
-                            if len(att) == 3:
-                                text1.append(att[0])
-                                text_id += 1
-                                text2.append(att[1])
-                                text3.append(att[2])
-                            else:
-                                text1.append(att[0])
-                                text_id += 1
-                                text2.append(att[1])
-                        sign_name = f"{cls}"#_{text_id}"
-                        text_1_id,text_col = add_text_splines_to_curve( text1,sign_name,0,layout)
-                        sign_text_col_list.append(text_col)
-                        text_2_id,text_col = add_text_splines_to_curve( text2,sign_name,1,layout)
-                        sign_text_col_list.append(text_col)
-                        text_3_id,text_col = add_text_splines_to_curve( text3,sign_name,2,layout)
-                        sign_text_col_list.append(text_col)
-                        text_ids = []
-                        for i in range(text_id):
-                            if text_3_id:
-                                text_ids.append(
-                                    (text_1_id[i],
-                                    text_2_id[i],
-                                    text_3_id[i])
-                                )
-                            else:
-                                text_ids.append(
-                                    (text_1_id[i],
-                                    text_2_id[i],
-                                    0)
-                                )
-                        flat = [c for vec in text_ids for c in vec]
-                        mesh.attributes.new("text_id", "FLOAT_VECTOR", "POINT")
-                        mesh.attributes["text_id"].data.foreach_set('vector', flat)
-                        #flat = [c for att in prop[attr] for c in att]
-                        ##print(flat)
-                        #mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
-                    else:
-                        mesh.attributes.new(attr, prop['type'][0], "POINT")
-                        mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
+                try:
+                    if 'WidgetSign' in cls:
                         
-                #except Exception as e:
-                #    print(f"failed to create {{attr}} attribute for {cls}: {e}")
+                        if 'layout' == attr:
+                            sign_layout_attr = prop[attr]
+                        if 'color' in attr:
+                            mesh.attributes.new(attr, prop['type'][0], "POINT")
+                            flat = [c for att in prop[attr] for c in att]
+                            mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
+                        #elif 'ems' in attr or 'glos' in attr:# or 'length' in attr:
+                        #    mesh.attributes.new(attr, prop['type'][0], "POINT")
+                        #    mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
+                        #elif 'icons' in attr:
+                        #    mesh.attributes.new(attr, prop['type'][0], "POINT")
+                        #    flat = [c for att in prop[attr] for c in att]
+                        #    mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
+                        elif 'text' in attr:
+                            layout = sign_layout_attr
+                            text1 = []
+                            text2 = []
+                            text3 = []
+                            text_id = 0
+                            for att in prop[attr]:
+                                if len(att) == 3:
+                                    text1.append(att[0])
+                                    text_id += 1
+                                    text2.append(att[1])
+                                    text3.append(att[2])
+                                else:
+                                    text1.append(att[0])
+                                    text_id += 1
+                                    text2.append(att[1])
+                            sign_name = f"{cls}"#_{text_id}"
+                            text_1_id,text_col = add_text_splines_to_curve( text1,sign_name,0,layout)
+                            sign_text_col_list.append(text_col)
+                            text_2_id,text_col = add_text_splines_to_curve( text2,sign_name,1,layout)
+                            sign_text_col_list.append(text_col)
+                            text_3_id,text_col = add_text_splines_to_curve( text3,sign_name,2,layout)
+                            sign_text_col_list.append(text_col)
+                            text_ids = []
+                            for i in range(text_id):
+                                if text_3_id:
+                                    text_ids.append(
+                                        (text_1_id[i],
+                                        text_2_id[i],
+                                        text_3_id[i])
+                                    )
+                                else:
+                                    text_ids.append(
+                                        (text_1_id[i],
+                                        text_2_id[i],
+                                        0)
+                                    )
+                            flat = [c for vec in text_ids for c in vec]
+                            mesh.attributes.new("text_id", "FLOAT_VECTOR", "POINT")
+                            mesh.attributes["text_id"].data.foreach_set('vector', flat)
+                            #flat = [c for att in prop[attr] for c in att]
+                            ##print(flat)
+                            #mesh.attributes[attr].data.foreach_set(prop['type'][1], flat)
+                        else:
+                            mesh.attributes.new(attr, prop['type'][0], "POINT")
+                            mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
+                            
+                except Exception as e:
+                    print(f"failed to create {{attr}} attribute for {cls}: {e}")
 
                 if not 'WidgetSign' in cls:
                     
@@ -577,7 +577,7 @@ def create_buildable_object(
     if is_heavy or 'WidgetSign' in cls:
         is_factory = True
     result = buildable_class_to_object(cls,buildable_to_asset_path,is_factory)
-    print(f"maping name: {result}")
+    print(f"mapping name: {result}")
     if result is not None:
         asset_obj, pos_offset, rot_offset = result
     else:
@@ -600,6 +600,22 @@ def create_buildable_object(
     set_geonode_input(mod, "Mesh Pos", pos_offset)
     # remember to convert to rad for the socket input
     set_geonode_input(mod, "Mesh Rot", tuple(x for x in rot_offset))
+    
+    #if "Build_Elevator_" in cls:
+    #    
+    
+    if "ElevatorFloorStop" in cls:
+        set_geonode_input(mod, "Pass Original Geometry", True)
+        Elevator_obj = bpy.data.objects.get("Build_Elevator_C_Points")
+        if Elevator_obj:
+            elevator_mods = [mod for mod in Elevator_obj.modifiers]
+            for elevator_mod in elevator_mods:
+                if elevator_mod.type == 'NODES':
+                    if elevator_mod.node_group.name == "Buildables from Points":
+                        set_geonode_input(elevator_mod, "ElevatorFloorStop", obj)
+            Elevator_obj.hide_viewport = True
+            time.sleep(0.5)
+            Elevator_obj.hide_viewport = False
     
     if hide_buildable:
         bpy.ops.object.select_all(action='DESELECT')
@@ -739,6 +755,8 @@ def import_spline_buildables(name: str,
         result = buildable_class_to_object("Build_PipelineMK2_C",buildable_to_asset_path,True)
     else:
         result = buildable_class_to_object(name,buildable_to_asset_path,True)
+    
+    if "Pipeline" in name and not "_NoIndicator" in name:
         f_indicator_result = buildable_class_to_object("Build_PipelineFlowIndicator_C",buildable_to_asset_path,True)
 
     if f_indicator_result is not None:
