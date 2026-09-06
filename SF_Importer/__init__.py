@@ -932,7 +932,6 @@ def import_signs_task(
             break
         progress_in = 0.0
         
-        current_buildable = f"{factory}: {total_instances} instances" 
         instances = [[], []] # --> [transforms], [actors]
         
         # group buildable instances by buildable class 
@@ -958,6 +957,7 @@ def import_signs_task(
             continue
         
         total_instances = len(instances[0])
+        current_buildable = f"{factory}: {total_instances} instances" 
         prop_attr = []
         color_attr = []
         text_attr= []
@@ -2897,7 +2897,7 @@ class VIEW3D_PT_SF_Importer_panel(Panel):
             bar_sub = bar_box_r.row(align=True)
             bar_sub.scale_y = 0.5
             bar_sub.progress(factor=value_in, text=f"{progress_in:.1f}%")
-            bar_box_r.label(text=f"{current_buildable or "stuff"}")
+            bar_box_r.label(text=f"{current_buildable or " "}")
         save_box.label(text=f"Start Time: {str(start_process)[:-4]}")
         save_box.label(text=f"Execution Time: {str(execution_time)[:-4]}")
         if per_time:
