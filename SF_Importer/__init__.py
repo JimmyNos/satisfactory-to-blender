@@ -74,13 +74,13 @@ def set_geonode_input(modifier: bpy.types.Modifier, label: str, value):
             return
     raise KeyError(f"Input '{label}' not found")
 
-def get_or_create_collection(name,parent_name = "",col_color = "NONE") -> bpy.types.Collection:
+def get_or_create_collection(name:str,parent_name:str = "",col_color:str = "NONE") -> bpy.types.Collection:
     col = bpy.data.collections.get(name)
     parent_col = bpy.data.collections.get(parent_name)
     if not col:
         col = bpy.data.collections.new(name)
         if col_color != "NONE":
-            col.color_tag = col_color
+            col.color_tag = col_color # type: ignore
         if not parent_name:
             if bpy.context.scene:
                 bpy.context.scene.collection.children.link(col)
@@ -528,14 +528,7 @@ def import_lightweights_task(
             buildable_to_asset_path=buildable_to_asset_path
             ), first_interval=0)
         progress_in = 100.0
-        #print(class_path.split('.')[1],len(instances))
         time.sleep(0.1)
-        
-        #while not bpy.data.objects.get(name+"_Points"):
-        #    if stop_building_requested:
-        #        break 
-        #    print("waiting for model to finish importing")
-        #    time.sleep(0.5)   
         
         count += 1
         total_imported += 1#count
@@ -696,9 +689,9 @@ def import_heavyweights_task(
             progress_in = 0.0
             
             verts, rotations, scales = [],[],[]
-            primary_colors = [()]
-            secondary_colors = [(0.0, 0.0, 0.0, 1.0)]
-            paint_type = None
+            primary_colors = ()
+            secondary_colors = ()
+            paint_type = ()
             
             current_buildable = f"{factory}: {total_instances} instances" 
                             
@@ -1017,8 +1010,6 @@ def import_signs_task(
                     else:
                         layouts_text_attr[idx] = [0,0,0]
                     layouts_attr[idx] = [sign_lay_idx, layout_idx]
-                    #print(f"{prop.Name.Name}: {prop.Value.AssetPath.AssetName.Name}")
-                    # TODO use a layout map
                 
                 if 'mPrefabTextElementSaveData' in prop.Name.Name:
                     text_attr.append(tuple([i.Data[1].Value for i in prop.Value.Values]))
@@ -1305,7 +1296,7 @@ def import_splines_task(
         total_types = 1
     total_types += total_spline_buildables
     total_percent = 100 / total_types
-    print("    total_percent: ",total_percent)
+    print("Total_percent: ",total_percent)
     spline_set = set()
     # conveyor belt chains   
     has_con = False   
@@ -1504,7 +1495,6 @@ def import_splines_task(
     
     for factory in all_classes:
         total_types_imported = len(spline_set)
-        print(total_types_imported)
         if stop_requested:
             progress = 0.0
             break
@@ -1863,6 +1853,7 @@ def get_buildable_models(sf_asset_export_path):
     global buildable_to_asset_path,build_total,total_buildings_imported
     global is_asset_building,stop_building_requested,obj_name,prop_parent_name
     print("---------------------------------------------------------")
+    print("Importing buildable models from Satisfactory asset library...")
     #sf_asset_export_path = bpy.context.preferences.addons[__package__].preferences.sf_asset_export_path
     
     #mark_as_asset = bpy.context.scene.sf_importer_props.mark_as_asset
@@ -2148,8 +2139,6 @@ def get_buildable_models(sf_asset_export_path):
                     if asset_list.get(parent_comp_name):
                         parent_name = asset_list.get(parent_comp_name,"") 
                     else:
-                        print(asset)
-                        print(buildable.get(parent_comp_name))
                         #if buildable.get(parent_comp_name):
                         parent_name = buildable[parent_comp_name].get('Mesh',"")
                     print(f"parent_name: {parent_name}")
@@ -2480,7 +2469,6 @@ def get_total_instances_task(save: s.SaveGame):
             transform = header.Transform
             cls_name = header.ObjectHeader.Reference.PathName
             if any(spline in cls_name for spline in spline_buildables):
-                print(cls_name)
                 if import_in_coords:
                     dx = x_coords - transform.Translation.X/100
                     dy = y_coords - -transform.Translation.Y/100
@@ -2510,7 +2498,6 @@ def get_total_instances_task(save: s.SaveGame):
                     total_all_instances += 1
                 #print("not spline",cls_name)
     print(f"h_total: {h_total}, s_total: {s_total}, splines: {len(s_total_set)}")
-    print(s_total)
     
     #if not stop_get_requested:
     #    total_all_instances = h_total# l_total + h_total
@@ -2736,49 +2723,19 @@ class ImportSaveButton(bpy.types.Operator):
             cls = save.allSaveObjects()
             
             color_map = import_color_slots(cls)
-            print(color_map)
-            #if get_lightweight or get_heavyweight:
-            #    get_lib_result = get_lib_assets(data_type="NodeTree",asset_name="Buildables from Points",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
-            #    
-            #    if get_lib_result:
-            #        self.report({'INFO'}, get_lib_result)
-            #if get_signs:
-            #    get_lib_result = get_lib_assets(data_type="NodeTree",asset_name="Buildables from Points(signs)",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
-            #    
-            #    if get_lib_result:
-            #        self.report({'INFO'}, get_lib_result)
-            #if get_splines:
-            #    get_lib_result = get_lib_assets(data_type="NodeTree",asset_name="Buildables From Spline",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
-            #    
-            #    if get_lib_result:
-            #        self.report({'INFO'}, get_lib_result)
-            #    
-            #    get_lib_result = get_lib_assets(data_type="NodeTree",asset_name="Conveyer Cains From Spline",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
-            #
-            #    if get_lib_result:
-            #        self.report({'INFO'}, get_lib_result)
+            #print(color_map)
                 
             get_lib_result = get_lib_assets(data_type="NodeTree",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend",set_fake=True)
 
             if get_lib_result:
                 self.report({'INFO'}, get_lib_result)
             
-            #if get_signs:
-            #    get_lib_result = get_lib_assets(data_type="Material",asset_name="MI_SignBackground",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
-            #    if get_lib_result:
-            #        print(get_lib_result)
-                    
             if get_models_from_library:
-                #if bpy.data.collections.get(mesh):
                     
                 get_lib_result = get_lib_assets(data_type="Collection",asset_name="Utility",asset_lib_name="SF Asset Lib",asset_lib_blend = "SF_Asset_Lib.blend")
 
                 if get_lib_result:
                     print(get_lib_result)
-            
-            #if get_models_from_library:
-            #    self.report({'INFO'}, "Getting Models from asset library...")
-            #    get_lib_assets_task(save)
             
             is_scanning = True
             self.report({'INFO'}, "Starting scan...")
@@ -2899,20 +2856,6 @@ class VIEW3D_PT_SF_Importer_panel(Panel):
         save_button = layout.column()
         save_button.scale_y = 1.5
         save_button.operator("button.import_save", text="Stop Scan" if is_scanning else "Start Scan")
-        #if is_get_scanning or is_asset_building or is_save_valid == False:
-        #    save_button.active = False
-        #else:
-        #    save_button.active = True
-    
-        #get_i_button = layout.column(align=True)
-        #get_i_button.operator("button.total_instances", text="Stop Calculating" if is_get_scanning else "Get Total Instances")
-        #if is_scanning or is_asset_building or is_save_valid == False:
-        #    get_i_button.active = False
-        #else:
-        #    get_i_button.active = True
-        #if total_all_instances:
-        #    get_i_box = get_i_button.box()
-        #    get_i_box.label(text=f"Total Instances: {total_all_instances}")
     
         pro_col = layout.column()
         pro_col.prop(props, "get_models_from_library")
@@ -3012,7 +2955,7 @@ classes = (
     VIEW3D_PT_SF_Importer_panel,
     VIEW3D_PT_SF_Asset_Builder_panel,
     ImportSaveButton,
-    GetTotIntButton,
+    #GetTotIntButton,
     BuildAssetsButton,
     SFImportPreferences,
     GenerateBuildableToAsset,

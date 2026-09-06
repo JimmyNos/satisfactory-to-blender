@@ -41,11 +41,10 @@ def get_essential_collection() -> bpy.types.Collection:
     return get_or_create_collection('essentials')
 
 def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_path:str,col):
-    print("=================================>")
+    print("=================================")
     print("Getting Materials")
-    print("=================================<")
+    print("=================================")
     parent_path = file.parent
-    print(parent_path)
     exports_parent_path = str(parent_path).replace(sf_asset_export_path,sf_asset_export_path+"Exports")
     
     PRO_MATERIALS = [
@@ -487,7 +486,6 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         #    mat_file = mat_path
         #else:
         #    mat_file = Path(mat_path,f"{obj_material}.json")
-        print(mat_file)
         with open(mat_file, 'r', encoding='utf-8') as f:
             m_data = json.load(f)
             
@@ -749,7 +747,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
     
     # Start Textures logic
     if textures:
-        print("getting mat tex")
+        print("Getting mat tex")
         sf_shader_node = nodes.new('ShaderNodeGroup')
         if bpy.data.node_groups.get("SatisfactoryToBlenderShader"):
             sf_shader_node.node_tree = bpy.data.node_groups['SatisfactoryToBlenderShader']
@@ -768,6 +766,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             
             
         use_beam_logic = False
+        beam_logic_node = None
         if any(mat in obj_material for mat in beam_mats):
             if bpy.data.node_groups.get("Beam_Logic"):
                 beam_logic_node = nodes.new('ShaderNodeGroup')
@@ -796,11 +795,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                 sf_shader_node.inputs["Emission Colour"].default_value = (r, g, b, 1)
         
         pos = 0
-        #tex_set = set([textures[tex] for tex in textures])
-        #print(tex_set)
         
         for tex in textures:
-            print(tex) 
             tex_type = ""
             tex_path = ""
             for tt,tp in tex.items(): #should only have one item {texture type: texture path}
@@ -812,15 +808,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                     continue
             
             exports_path = Path(sf_asset_export_path,"FactoryGame","Content")
-            print(exports_path)
             tex_file = Path(exports_path,f"{tex_path}.png")    
-            print(tex_file)
             model_parent_path = mat_path.parent
-            print("---")
-                
-            print(tex_file.name.startswith("TX_"))
-            print(tex_file.name.startswith("T_"))
-            print(tex_file.name)
             if not tex_file.exists():
                 print(f"Error: texture does not exist: {tex_file}")
                 continue
@@ -835,7 +824,6 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                 b_texture = b_material.node_tree.nodes.new('ShaderNodeTexImage')
                 x = -200
                 y = 0-(pos*50)
-                print(y)
                 pos += 1
                 b_texture.location = Vector((x,y))
                 #b_texture.image = bpy.data.images.load(os.fspath(tex_file))
@@ -849,7 +837,6 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                 else:
                     print("img not in bl")
                     b_texture.image = bpy.data.images.load(os.fspath(tex_file))
-                print(b_texture.image.name)
                 b_texture.hide = True
                 for mt in mirrored_tex:
                     if mt in obj_material:#tex_file.name:
@@ -869,7 +856,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                         if "TX_HubDecal_BC" in tex_file.name:
                             links.new(b_texture.outputs["Alpha"], sf_shader_node.inputs["Albedo Alpha"])
                             
-                if use_beam_logic:
+                if use_beam_logic and beam_logic_node:
                     links.new(beam_logic_node.outputs["Vector"], b_texture.inputs["Vector"])
                         
                 
@@ -896,8 +883,6 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                 
                 if not tx_type:
                     continue
-                print(b_texture.outputs["Color"])
-                print(sf_shader_node.inputs[tx_type])
                 if "PolishedConcrete" in tex_file.name and tx_type == "Relf/MREA":
                     rough_multi_node = nodes.new('ShaderNodeGroup')
                     rough_multi_node.node_tree = bpy.data.node_groups['Rough_Multiplier']
@@ -1018,26 +1003,32 @@ def import_model(
         else:
             is_pskx = "ALL"
         print(f"{file_name} not in blend file. Needs to be imported")
-        bpy.ops.psk.import_file(
-            filepath=os.fspath(file),
-            should_import_mesh=True, 
-            should_import_armature=True,
-            bone_length=30,
-            #scale=.01,
-            components=is_pskx
-        )
+        try:
+            bpy.ops.psk.import_file(
+                filepath=os.fspath(file),
+                should_import_mesh=True, 
+                should_import_armature=True,
+                bone_length=30,
+                #scale=.01,
+                components=is_pskx
+            )
+        except Exception as e:
+            print(f"⚠️Error importing {file_name}: {e}")
+            return None
         ob = bpy.data.objects.get(file_name)
-        
-        if "SM_Blender_01" in ob.name:
-            if not "Props" in str(file):
-                ob.name = "SM_Blender_factory"
-            
-            
-        if ob.type == "ARMATURE":
-            ob_sk_mesh = bpy.data.objects.get(sk_mesh_name)
-            if ob_sk_mesh != None:
-                ob_sk_mesh.name = sk_mesh_name.replace(".001","_mesh")
-    
+        if ob:
+            if "SM_Blender_01" in ob.name:
+                if not "Props" in str(file):
+                    ob.name = "SM_Blender_factory"
+                
+                
+            if ob.type == "ARMATURE":
+                ob_sk_mesh = bpy.data.objects.get(sk_mesh_name)
+                if ob_sk_mesh != None:
+                    ob_sk_mesh.name = sk_mesh_name.replace(".001","_mesh")
+    if not ob:
+        print(f"⚠️Error: {file_name} did not import into blend file.")
+        return None
     if parent_name:
         ob_parent = bpy.data.objects.get(parent_name)
         if ob_parent:
@@ -1046,18 +1037,16 @@ def import_model(
                     #if p_col.name == ob_parent.name:
                     #    parent_col = p_col
                     parent_col = p_col
-        #print(f"parent_name: {parent_name}")
-        
-        if parent_attach:
-            attach_bone = ob_parent.data.bones[parent_attach]
-            attach_bone_pos_head = ob_parent.matrix_world @ attach_bone.head_local
-            attach_bone_pos_tail = ob_parent.matrix_world @ attach_bone.tail_local
-            attach_bone_pos = attach_bone_pos_head-attach_bone_pos_tail
-            #print(f"attach_bone_pos: {attach_bone_pos}")
+            #print(f"parent_name: {parent_name}")
+            
+            if parent_attach:
+                attach_bone = ob_parent.data.bones[parent_attach]
+                attach_bone_pos_head = ob_parent.matrix_world @ attach_bone.head_local
+                attach_bone_pos_tail = ob_parent.matrix_world @ attach_bone.tail_local
+                attach_bone_pos = attach_bone_pos_head-attach_bone_pos_tail
+                #print(f"attach_bone_pos: {attach_bone_pos}")
     
     pos, rot, scale = read_transform(asset,attach_bone_pos,ob_parent)
-    print(pos)
-    print(asset)
     if parent_attach:
         ob.parent = ob_parent
         ob.parent_type = 'BONE'
@@ -1072,15 +1061,16 @@ def import_model(
     if support_name:
         print("duplicating support mesh..")
         support_ob_org = bpy.data.objects.get(support_name)
-        support_ob_org.scale = (1.0, 1.0, 1.0)
-        support_ob_dp = support_ob_org.copy()
-        support_ob_dp.data = support_ob_org.data.copy()
-        support_ob_dp_loc = support_ob_dp.location * 100 
-        support_ob_dp.parent = ob
-        #support_ob_dp.location = support_ob_dp_loc*100
-        support_ob_dp.location.z = support_ob_dp_loc.z + pole_height
-        support_ob_dp.location = support_ob_dp.location
-        print(f"support name:{support_ob_dp.name}⚠️")
+        if support_ob_org:
+            support_ob_org.scale = (1.0, 1.0, 1.0)
+            support_ob_dp = support_ob_org.copy()
+            support_ob_dp.data = support_ob_org.data.copy()
+            support_ob_dp_loc = support_ob_dp.location * 100 
+            support_ob_dp.parent = ob
+            #support_ob_dp.location = support_ob_dp_loc*100
+            support_ob_dp.location.z = support_ob_dp_loc.z + pole_height
+            support_ob_dp.location = support_ob_dp.location
+            print(f"support name:{support_ob_dp.name}")
         
     base_color = "COLOR_01"
     type_color = "COLOR_02"

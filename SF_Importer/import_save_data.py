@@ -88,8 +88,7 @@ def add_text_splines_to_curve(text: list, sign_name: str, text_n: int,layout:lis
     for i in range(len(layout)):
         if i % 2:
             layout_idx.append(layout[i]) # only get layout idx
-    print(layout_idx)
-    print(layout)
+    
     idx_l = {i: key for i, key in enumerate(layouts)} # to get idx of sign layouts
     l_data = []
     l_name = []
@@ -145,10 +144,9 @@ def add_text_splines_to_curve(text: list, sign_name: str, text_n: int,layout:lis
         "Bold":font_bold_path,
         "SemiBold":font_path,
     }
+    col = None
     for i,text_string in enumerate(text_new):
-        print(layout_new[i])
         l_data_new =  layouts[layout_new[i]]
-        print(l_data_new)
         l_d = l_data_new.get("Text")
         if l_d:
             t_config = l_d.get(f"Text{text_n+1}")
@@ -236,7 +234,7 @@ def read_colors_custom(i: s.FRuntimeBuildableInstanceData| str) -> [Vec4, Vec4,i
 
     return ((p.R, p.G, p.B, p.A), (s.R, s.G, s.B, s.A), f)
 
-def read_colors_swatch(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) -> [Vec4, Vec4,int]:
+def read_colors_swatch(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) -> tuple[Vec4, Vec4,int]:
     # todo swatch?
     if type(i) != str:
         swatch = color_map.get(str(i.CustomizationData.SwatchDesc.PathName).split('.')[-1], {})
@@ -244,7 +242,6 @@ def read_colors_swatch(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) 
         swatch = color_map.get(str(i).split('.')[-1], {})
         
     try:
-        #print(swatch)
         p = swatch["PrimaryColor"]
         s = swatch["SecondaryColor"]
         
@@ -266,7 +263,8 @@ def read_colors_swatch(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) 
         else:
             f = 0
         #f = swatch["PaintFinish"] 
-    except AttributeError:
+    except AttributeError as e:
+        print(f"AttributeError setting color: {e}")
         return ((1, 1, 1, 1), (1, 1, 1, 1),0)
     except Exception as e:
         print(f"err setting color: {e}")
@@ -274,7 +272,7 @@ def read_colors_swatch(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) 
     return ((p["R"], p["G"], p["B"], p["A"]), (s["R"], s["G"], s["B"], s["A"]),f)
 
 
-def read_colors(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) -> [Vec4, Vec4,int]:
+def read_colors(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) -> tuple[Vec4, Vec4,int]:
     # custom colors use the swatch "...SwatchDesc_Custom_C"
     #print(type(i))
     if type(i) == s.FRuntimeBuildableInstanceData:
@@ -290,7 +288,7 @@ def read_colors(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) -> [Vec
     return read_colors_swatch(i,color_map)
     
 
-def read_sign_colors(color_attr:dict) -> [Vec4, Vec4, Vec4]:
+def read_sign_colors(color_attr:dict) -> tuple[Vec4, Vec4, Vec4]:
     try:
         f = color_attr['mForegroundColor']
         b = color_attr['mBackgroundColor']
@@ -332,9 +330,8 @@ def read_prop(i: s.FRuntimeBuildableInstanceData,prop_name:str) -> float | str:
 # start geonode
 
 # map make buildable classes to corresponding asset
-def buildable_class_to_object(cls: str,buildable_to_asset_path: str,is_factory:bool = False) -> [bpy.types.Object,Vec3,Vec3]:# | None:
+def buildable_class_to_object(cls: str,buildable_to_asset_path: str,is_factory:bool = False):
     json_file_path = buildable_to_asset_path
-    print(json_file_path)
     with open(json_file_path, 'r', encoding='utf-8') as f:
         map_file = json.load(f)
 
@@ -379,7 +376,7 @@ def create_buildable_object(
     scales: list[Vec3],
     primary_colors: tuple = (),
     secondary_colors: tuple = (),
-    paint_type: tuple[int] = (0,),
+    paint_type: tuple = (0,),
     lengths: list[float] = [],
     prop_attr: list[dict] = [],
     is_heavy:bool = False,
@@ -431,7 +428,7 @@ def create_buildable_object(
         ]
     
     sign_text_col_list = []
-    sign_layout_attr = {}
+    sign_layout_attr = []
     if prop_attr:
         for i,prop in enumerate(prop_attr):
             for attr in prop_attr[i]:
@@ -502,7 +499,7 @@ def create_buildable_object(
                             mesh.attributes[attr].data.foreach_set(prop['type'][1], prop[attr])
                             
                 except Exception as e:
-                    print(f"failed to create {{attr}} attribute for {cls}: {e}")
+                    print(f"failed to create {attr} attribute for {cls}: {e}")
 
                 if not 'WidgetSign' in cls:
                     
@@ -577,7 +574,7 @@ def create_buildable_object(
     if is_heavy or 'WidgetSign' in cls:
         is_factory = True
     result = buildable_class_to_object(cls,buildable_to_asset_path,is_factory)
-    print(f"mapping name: {result}")
+    #print(f"mapping name: {result}")
     if result is not None:
         asset_obj, pos_offset, rot_offset = result
     else:
