@@ -2188,49 +2188,6 @@ def get_buildable_models(sf_asset_export_path):
             buildable_name=buildable_name
             ), first_interval=0)
         time.sleep(0.1)
-        #current_col = bpy.data.collections.get(buildable_name)
-        #if current_col:
-        #    current_col.hide_viewport = True
-        #print(asset_list)
-                
-    #a_coll = get_or_create_collection('Assets')
-    #u_coll = get_or_create_collection('Utility')
-    #if mark_as_asset and not stop_building_requested:
-    #    folder = Path(bpy.data.filepath).parent
-    #    if not Path(folder,"blender_assets.cats.txt").exists():
-    #        print("blender_assets.cats.txt not in parent folder")
-    #    target_catalogs = {
-    #    "Assets-Factory":"",
-    #    "Assets-Building":"",
-    #    "Utility":""
-    #    }
-    #    with (folder / "blender_assets.cats.txt").open() as f:
-    #        for line in f.readlines():
-    #            if line.startswith(("#", "VERSION", "\n")):
-    #                continue
-    #            # Each line contains : 'uuid:catalog_tree:catalog_name' + eol ('\n')
-    #            name = line.split(":")[2].split("\n")[0]
-    #            for cat in target_catalogs:
-    #                if name == cat:
-    #                    uuid = line.split(":")[0]
-    #                    target_catalogs[name] = uuid
-    #    
-    #        for col in list(a_coll.children):
-    #            catalog_id = target_catalogs.get("Assets-"+col.name)
-    #            for b_col in list(col.children):
-    #                a_coll.asset_clear()
-    #                b_col.asset_mark()
-    #                b_col.asset_generate_preview()
-    #                asset_data = b_col.asset_data
-    #                asset_data.catalog_id = catalog_id
-    #    
-    #        for col in list(u_coll.children):
-    #            catalog_id = target_catalogs.get(u_coll.name)
-    #            col.asset_clear()
-    #            col.asset_mark()
-    #            col.asset_generate_preview()
-    #            asset_data = col.asset_data 
-    #            asset_data.catalog_id = catalog_id
 
 def run_mark_asset(a_coll,u_coll):
     global marking_asset
