@@ -598,21 +598,32 @@ def create_buildable_object(
     # remember to convert to rad for the socket input
     set_geonode_input(mod, "Mesh Rot", tuple(x for x in rot_offset))
     
-    #if "Build_Elevator_" in cls:
-    #    
+    if "Build_Elevator_" in cls:
+        elevator_Floor_obj = bpy.data.objects.get("Build_ElevatorFloorStop_C_Points")
+        if elevator_Floor_obj:
+            elevator_mods = [mod for mod in obj.modifiers]
+            for elevator_mod in elevator_mods:
+                if elevator_mod.type == 'NODES':
+                    if elevator_mod.node_group.name == "Buildables from Points":
+                        set_geonode_input(elevator_mod, "ElevatorFloorStop", elevator_Floor_obj)
+            #elevator_Floor_obj.hide_viewport = True
+            #time.sleep(0.5)
+            #elevator_Floor_obj.hide_viewport = False
     
     if "ElevatorFloorStop" in cls:
         set_geonode_input(mod, "Pass Original Geometry", True)
-        Elevator_obj = bpy.data.objects.get("Build_Elevator_C_Points")
-        if Elevator_obj:
-            elevator_mods = [mod for mod in Elevator_obj.modifiers]
+        elevator_obj = bpy.data.objects.get("Build_Elevator_C_Points")
+        if elevator_obj:
+            elevator_mods = [mod for mod in elevator_obj.modifiers]
             for elevator_mod in elevator_mods:
                 if elevator_mod.type == 'NODES':
                     if elevator_mod.node_group.name == "Buildables from Points":
                         set_geonode_input(elevator_mod, "ElevatorFloorStop", obj)
-            Elevator_obj.hide_viewport = True
-            time.sleep(0.5)
-            Elevator_obj.hide_viewport = False
+            
+            if hide_buildable:
+                elevator_obj.hide_viewport = True
+                time.sleep(0.5)
+                elevator_obj.hide_viewport = False
     
     if hide_buildable:
         bpy.ops.object.select_all(action='DESELECT')
