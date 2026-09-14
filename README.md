@@ -55,15 +55,22 @@ To import the extracted models, open the copied blend file and then select **Sta
 1. Open the **SF IMPORTER** panel from the side panel and search or paste your `.sav` file in the  **Save File** field. The file has to be `.sav`.
 2. Select **Start Scan** in the side panel to start importing you save data into the blend file.
 
-Buildables are imported as points with attributes attached needed to reconstruct the logic in geometry nodes and model instancing. This allows for extra modification and implementation of your own logic.
-- Points can be deleted in ‘edit mode’ or separated into a different model for extra adjustments or modifications.
+- To make the addon use your **SF asset library**, enable `Use Library Models`. This will append models from the `SF_Asset_Lib` file before importing save data instead of using models in the current blend file. 
+   - Blender will hang while it appends a model, but will become responsive once appended. You can open the system console to see if it's still appending models.
+   - Appending models from your asset library will cause the save import to take longer, luckily, it only needs to be enabled if there's a buildables missing from your blend file.
+- You can enable **proxy mesh** to generate a proxy mesh for each instance
+- Enable **Hide buildable** to hide the buildable model after import, so not to lag blenders UI.
+-You can set a bounding box to only import within the set area
+   - Boundaries are calculated using the X and Y coordinates and a set distance.
+   - You can use SF coordinates, but the addon uses blender's coordinates, so both X and Y need to be divided by 100 and the Y axis needs to be flipped. i.e SF: (X)-500,000(Y)-2000,000 -> blender: (X)-500 (Y)2,000
 
 You can choose to import between 4 buildable types individually or all at once. Signs and spline buildables are usually the most heavy to import, so I recommend importing them separately. Hide/delete splines that will never be visible during render.
 
-The addon parses the save file in a separate thread, so it does not freeze blender’s ui. Blender api has to run on the main thread, so the ui will be frozen when creating/modifying objects and collections. This can be very noticeable when working with buildables with large amounts of instances.
+---
+Buildables are imported as points with attributes attached needed to reconstruct the logic in geometry nodes and model instancing. This allows for extra modification and implementation of your own logic.
+- Points can be deleted in ‘edit mode’ or separated into a different model for extra adjustments or modifications.
 
-You can choose to import between 4 buildable types individually or all at once
-- Signs and spline buildables are usually the most heavy to import, so I recommend importing them separately. Hide/delete splines that will never be visible during render.
+The addon parses the save file in a separate thread, so it does not freeze blender’s ui. Blender api has to run on the main thread, so the ui will be frozen when creating/modifying objects and collections. This can be very noticeable when working with buildables with large amounts of instances.
 
 Model instancing and buildable logic are done using geometry nodes
 - There are extra controls for instance position adjustments and object culling
@@ -71,33 +78,14 @@ Model instancing and buildable logic are done using geometry nodes
 - If an instance or spline will never be visible, it would be better to hide that spline or go into exit mode and delete that point.
 - To **reimport** the geo node groups, remove the **fake user** tag, so the addon and pull a new copy of the node group. It will not reimport if a node group of the same name exists in the blend file and has a ‘fake user’ tag applied.
 
-#### Use your asset library
-To make the addon use your **SF asset library**, enable `Use Library Models`. This will append models from the `SF_Asset_Lib` file before importing save data instead of using models in the current blend file. 
-- Blender will hang while it appends a model, but will become responsive once appended. You can open the system console to see if it's still appending models.
-- Appending models from your asset library will cause the save import to take longer, luckily, it only needs to be enabled if there's a buildables missing from your blend file.
-  
-#### proxy mesh
-You can enable **proxy mesh** to generate a proxy mesh for each instance
-#### Hide buildable
-Hide the buildable model after import, so not to lag blenders UI.
-
-#### bounding box
-You can set a bounding box to only import within the set area
-- Boundaries are calculated using the X and Y coordinates and a set distance.
-- You can use SF coordinates, but the addon uses blender's coordinates, so both X and Y need to be divided by 100 and the Y axis needs to be flipped. i.e SF: (X)-500,000(Y)-2000,000 -> blender: (X)-500 (Y)2,000
- 
 Some geo node logics aren't implemented very well, so some buildables won’t look exactly like your save.
 It is better to hide or delete buildable points/splines than relying on object culling.
 Note: Blender doesn't like multi-threading all that much, so this add-on can not be published on the blender extensions website :/
 
 > Note: Blender doesn't like multi-threading all that much, so this add-on can not be published on the blender extensions website :/
-> Note: this addon uses the Unreal PSK/PSA (.psk/.psa) addon for importing models. Make sure this is installed before using the addon
 
-You can choose to import between 4 buildable types individually or all at once
-Signs and spline buildables are usually the most heavy to import, I recommend importing them separately.
+> Note: this addon uses the Unreal PSK/PSA (.psk/.psa) addon for importing models. Make sure this is installed before using the addon
 
 ## Examples
 
 ## Links
-Blend files and models:
-https://drive.google.com/drive/folders/1WsMy-5pSLq6aG9CHV5y8WLRiKYzqA5k9
