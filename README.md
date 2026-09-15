@@ -31,7 +31,6 @@ Import models:
 
 ## Configuration
 ### addon preferences tab
-<img width="500" alt="image" src="https://github.com/user-attachments/assets/91b0286c-87f4-4cd6-aa34-bf76f1feb1be" />
 
 1. Open the preferences data, navigate to **Add-ons** and search for **Satisfactory Importer**
 2. In the addon preferences tab, add the path to where Fmodel extracted models.
@@ -41,7 +40,6 @@ Import models:
 > Note: Do **not** use your main asset library, as it will overwrite the `blender_assets.cats.txt`, deleting any categories you’ve made. **Copy the asset library in a different directory** from your main asset library.
 
 ## How to use
-<img width="250" alt="image" src="https://github.com/user-attachments/assets/4bd82c0c-8b66-4034-a8fb-81887fb1bed9" />
 
 ### Importing and building asset library
 To import the extracted models, open the copied blend file and then select **Start Building** in the **side panel**. The addon will import one model at a time and then hide the entire buildable collection to keep Blender from lagging or crashing.
