@@ -31,21 +31,25 @@ Import models:
 
 ## Configuration
 ### addon preferences tab
+<img width="500" alt="image" src="https://github.com/user-attachments/assets/91b0286c-87f4-4cd6-aa34-bf76f1feb1be" />
+
 1. Open the preferences data, navigate to **Add-ons** and search for **Satisfactory Importer**
 2. In the addon preferences tab, add the path to where Fmodel extracted models.
 3. Click the **generate buildable_to_asset.json** button to generate it in the addon's files, or to add a custom directory if you want to edit that file to choose what buildables the addon should try and import. You can add other models/buildables as long as you keep the same data structure in the file.
 4. Click **Copy asset library file to asset library path** button to get the `SF_Asset_lib.blend` file from the addon files, which will have the geo node groups and materials shader groups needed for the import save logic and material logic.
    
-> Note: Do not use your main asset library, as it will overwrite the `blender_assets.cats.txt`, deleting any categories you’ve made. Copy the asset library in a different directory from your main asset library
+> Note: Do **not** use your main asset library, as it will overwrite the `blender_assets.cats.txt`, deleting any categories you’ve made. **Copy the asset library in a different directory** from your main asset library.
 
 ## How to use
+<img width="250" alt="image" src="https://github.com/user-attachments/assets/4bd82c0c-8b66-4034-a8fb-81887fb1bed9" />
+
 ### Importing and building asset library
 To import the extracted models, open the copied blend file and then select **Start Building** in the **side panel**. The addon will import one model at a time and then hide the entire buildable collection to keep Blender from lagging or crashing.
 
 - If you try to import models again and select **Start Building**, it will erase everything in the assets collection.
 
 - Make sure you turn on **Mark as Asset** so that it can create your asset library. You can import models from another blend file, but it will not be able to build materials or create the asset library automatically.
-   - After importing all buildables, the addon will attempt to generate previews in the asset browser; however, if there are a large number of buildables, you will need to create previews manually. This is because the buldable collections must be unhidden in order to generate the preview, therefore the addon unhides them and then hides them again after 20 seconds.
+   - After importing all buildables, the addon will attempt to generate previews in the asset browser; however, if there are a large number of buildables, you will need to create previews manually. This is because the buildable collections must be unhidden in order to generate the preview, therefore the addon unhides them and then hides them again after 20 seconds.
 
 > Note: this process can take a while depending on the amount of models it needs to import. Also, I advise reviewing and verifying the models after import because some models and materials might not import properly.
 
@@ -62,7 +66,7 @@ To import the extracted models, open the copied blend file and then select **Sta
 - Enable **Hide buildable** to hide the buildable model after import, so not to lag blenders UI.
 -You can set a bounding box to only import within the set area
    - Boundaries are calculated using the X and Y coordinates and a set distance.
-   - You can use SF coordinates, but the addon uses blender's coordinates, so both X and Y need to be divided by 100 and the Y axis needs to be flipped. i.e SF: (X)-500,000(Y)-2000,000 -> blender: (X)-500 (Y)2,000
+   - You can use SF coordinates, but the addon uses blender's coordinates, so both X and Y need to be divided by 100 and the Y axis needs to be flipped. i.e. SF: (X)-500,000(Y)-2000,000 -> blender: (X)-500 (Y)2,000
 
 You can choose to import between 4 buildable types individually or all at once. Signs and spline buildables are usually the most heavy to import, so I recommend importing them separately. Hide/delete splines that will never be visible during render.
 
@@ -70,7 +74,7 @@ You can choose to import between 4 buildable types individually or all at once. 
 Buildables are imported as points with attributes attached needed to reconstruct the logic in geometry nodes and model instancing. This allows for extra modification and implementation of your own logic.
 - Points can be deleted in ‘edit mode’ or separated into a different model for extra adjustments or modifications.
 
-The addon parses the save file in a separate thread, so it does not freeze blender’s ui. Blender api has to run on the main thread, so the ui will be frozen when creating/modifying objects and collections. This can be very noticeable when working with buildables with large amounts of instances.
+The addon parses the save file in a separate thread, so it does not freeze blender’s UI. Blender API has to run on the main thread, so the UI will be frozen when creating/modifying objects and collections. This can be very noticeable when working with buildables with large amounts of instances.
 
 Model instancing and buildable logic are done using geometry nodes
 - There are extra controls for instance position adjustments and object culling
@@ -87,5 +91,45 @@ Note: Blender doesn't like multi-threading all that much, so this add-on can not
 > Note: this addon uses the Unreal PSK/PSA (.psk/.psa) addon for importing models. Make sure this is installed before using the addon
 
 ## Examples
+### Running
+### Culling
+### Renders
+
+**Couq's sav**
+
+---
+# buildable_to_asset format JSON Examples
+> Use this format when adding your own buildable or model. Id the object has a parent, then make sure the parent object sets before the child object.
+```
+"Build_Name_C": {
+    "ObjectName": "ObjectName",
+    "Internal_Object_name": {
+      "Mesh": "Path-To-Mesh/",
+      "RelativeLocation": null,
+      "RelativeRotation": null,
+      "RelativeScale3D": null
+    },
+    "Internal_Object_name2": {
+      "Parent": "Parent_ObjectName",
+      "ParentAttach": null,
+      "Mesh": "Path-To-Mesh/",
+      "RelativeLocation": null,
+      "RelativeRotation": null,
+      "RelativeScale3D": null
+    }
+  },
+```
+**Example**
+```
+"BP_ProductionIndicatorInstanced_C": {
+    "ObjectName": "ProductionIndicatorInstanced",
+    "Default__BP_ProductionIndicatorInstanced_C": {
+      "Mesh": "FactoryGame/Buildable/Factory/-Shared/ProductionIndicator/Mesh/SM_ProductionLight_01",
+      "RelativeLocation": null,
+      "RelativeRotation": null,
+      "RelativeScale3D": null
+    }
+  },
+```
 
 ## Links
