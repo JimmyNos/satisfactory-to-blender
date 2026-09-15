@@ -1,5 +1,5 @@
 # satisfactory-to-blender
-A **blender extension** that imports **save data** and **models** from Coffee Stain Studios' game Satisfactory. This addon reconstructs your SF save file utilising (repo) by (name) for save parsing and imports the models and materials you extracted using FModel.
+A **blender extension** that imports **save data** and **models** from Coffee Stain Studios' game [Satisfactory](https://www.satisfactorygame.com/). This addon reconstructs your SF save file utilising [satisfactory-3d-map](https://github.com/moritz-h/satisfactory-3d-map) for save parsing and imports the models and materials you extracted using FModel.
 
 ## Features
 Import save data:
@@ -20,8 +20,6 @@ Import models:
 - Builds and applies materials
 - Creates an asset library and the imported models
 
->Note: this addon is very memory heavy
-
 ## Installation
 1. Download the latest version of the extension as `.zip` file
 2. In Blender, go to Edit > Preferences > Get Extensions.
@@ -37,9 +35,25 @@ Import models:
 3. Click the **generate buildable_to_asset.json** button to generate it in the addon's files, or to add a custom directory if you want to edit that file to choose what buildables the addon should try and import. You can add other models/buildables as long as you keep the same data structure in the file.
 4. Click **Copy asset library file to asset library path** button to get the `SF_Asset_lib.blend` file from the addon files, which will have the geo node groups and materials shader groups needed for the import save logic and material logic.
    
-> Note: Do **not** use your main asset library, as it will overwrite the `blender_assets.cats.txt`, deleting any categories you’ve made. **Copy the asset library in a different directory** from your main asset library.
+> Note: Do **NOT** use your main asset library, as it will overwrite the `blender_assets.cats.txt`, deleting any categories you’ve made. **Copy the asset library in a different directory** from your main asset library.
 
 ## How to use
+### FModel
+Make sure you export models as
+Before you can import models, you need to first extract the following in FModel:
+- Build files (e.g. `Build_Blender.json`)
+- Models (`.psk` `.pskx`)
+- Textures (`.png`)
+- Materials (`.json`)
+
+You can export all properties files by right clicking the 'buildable' folder, select **Export Folder** and **Properties (.json)**. this will get both build files and material files.
+
+<img alt="prefrances" src="resources/images/FModel/fmodel 2.png" width="500" />
+
+> FModel settings
+<img alt="prefrances" src="resources/images/FModel/fmodel 1.png" width="500" />
+
+---
 
 ### Importing and building asset library
 To import the extracted models, open the copied blend file and then select **Start Building** in the **side panel**. The addon will import one model at a time and then hide the entire buildable collection to keep Blender from lagging or crashing.
@@ -53,7 +67,9 @@ To import the extracted models, open the copied blend file and then select **Sta
 
 > Note: There are still a few buildables and models that this addon doesn’t import yet, such as items, resources and vehicles. I will try to add them over time.
 
-### Importing SF sav data and building factories
+<img alt="prefrances" src="resources/images/ui/prefrences.png" width="500" />
+
+### Importing SF sav data and rebuilding factories
 1. Open the **SF IMPORTER** panel from the side panel and search or paste your `.sav` file in the  **Save File** field. The file has to be `.sav`.
 2. Select **Start Scan** in the side panel to start importing you save data into the blend file.
 
@@ -61,12 +77,14 @@ To import the extracted models, open the copied blend file and then select **Sta
    - Blender will hang while it appends a model, but will become responsive once appended. You can open the system console to see if it's still appending models.
    - Appending models from your asset library will cause the save import to take longer, luckily, it only needs to be enabled if there's a buildables missing from your blend file.
 - You can enable **proxy mesh** to generate a proxy mesh for each instance
-- Enable **Hide buildable** to hide the buildable model after import, so not to lag blenders UI.
+- Enable **Hide buildable** to hide the buildable model after import, so not to lag blenders UI. I recommend enabling this, if you are importing large sections.
 -You can set a bounding box to only import within the set area
    - Boundaries are calculated using the X and Y coordinates and a set distance.
    - You can use SF coordinates, but the addon uses blender's coordinates, so both X and Y need to be divided by 100 and the Y axis needs to be flipped. i.e. SF: (X)-500,000(Y)-2000,000 -> blender: (X)-500 (Y)2,000
 
 You can choose to import between 4 buildable types individually or all at once. Signs and spline buildables are usually the most heavy to import, so I recommend importing them separately. Hide/delete splines that will never be visible during render.
+
+<img alt="prefrances" src="resources/images/ui/side pannel.png" width="400" />
 
 ---
 Buildables are imported as points with attributes attached needed to reconstruct the logic in geometry nodes and model instancing. This allows for extra modification and implementation of your own logic.
@@ -80,6 +98,13 @@ Model instancing and buildable logic are done using geometry nodes
 - If an instance or spline will never be visible, it would be better to hide that spline or go into exit mode and delete that point.
 - To **reimport** the geo node groups, remove the **fake user** tag, so the addon and pull a new copy of the node group. It will not reimport if a node group of the same name exists in the blend file and has a ‘fake user’ tag applied.
 
+Sign text is enabled through the geo nodes modifier, but they are heavy work with. To get sign text, the addon creates text objects and saves them in a collection that the modifier references; however, the resolution of the text mask is determined by the number of faces on the screen, therefore there are two subdivision fields:
+- **Base subdivision**, subdivides the entire face.
+- **Text mask subdivision**, which only divides the masked area.
+Because of this, text has additional culling options to help with optimization.
+
+I recommend importing a section of your save without models, as a preview. The addon uses a default mesh with the primary colour applied, if there are no models.
+
 Some geo node logics aren't implemented very well, so some buildables won’t look exactly like your save.
 It is better to hide or delete buildable points/splines than relying on object culling.
 Note: Blender doesn't like multi-threading all that much, so this add-on can not be published on the blender extensions website :/
@@ -89,11 +114,23 @@ Note: Blender doesn't like multi-threading all that much, so this add-on can not
 > Note: this addon uses the Unreal PSK/PSA (.psk/.psa) addon for importing models. Make sure this is installed before using the addon
 
 ## Examples
-### Running
-### Culling
-### Renders
+### Viewport renders
+<img alt="prefrances" src="resources/images/viewport 3.png" width="500" />
 
-**Couq's sav**
+<img alt="prefrances" src="resources/images/viewport 2.png" width="500" />
+
+> A section of couq's save imported with Bounding box 
+<img alt="prefrances" src="resources/images/couq sav/01.png" width="500" />
+
+> Example with culling enabled
+<img alt="prefrances" src="resources/images/couq sav/culling exmaple.png" width="500" />
+
+### Renders
+<img alt="prefrances" src="resources/images/renders/render 1.jpg" width="500" />
+
+> Couq's sav
+
+<img alt="prefrances" src="resources/images/couq sav/04.png" width="500" /><img alt="prefrances" src="resources/images/couq sav/05.png" width="500" /><img alt="prefrances" src="resources/images/couq sav/02.png" width="500" />
 
 ---
 # buildable_to_asset format JSON Examples
