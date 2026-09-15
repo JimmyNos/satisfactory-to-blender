@@ -1,5 +1,5 @@
 # satisfactory-to-blender
-A **blender extension** that imports **save data** and **models** from Coffee Stain Studios' game [Satisfactory](https://www.satisfactorygame.com/). This addon reconstructs your SF save file utilising [satisfactory-3d-map](https://github.com/moritz-h/satisfactory-3d-map) for save parsing and imports the models and materials you extracted using FModel.
+A **blender extension** that imports **save data** and **models** from Coffee Stain Studios' game [Satisfactory](https://www.satisfactorygame.com/). This addon reconstructs your SF save file utilizing [satisfactory-3d-map](https://github.com/moritz-h/satisfactory-3d-map) for save parsing and imports the models and materials you extracted using FModel.
 
 ## Features
 Import save data:
@@ -32,33 +32,34 @@ Import models:
 
 1. Open the preferences data, navigate to **Add-ons** and search for **Satisfactory Importer**
 2. In the addon preferences tab, add the path to where Fmodel extracted models.
-3. Click the **generate buildable_to_asset.json** button to generate it in the addon's files, or to add a custom directory if you want to edit that file to choose what buildables the addon should try and import. You can add other models/buildables as long as you keep the same data structure in the file.
+3. Click the **generate buildable_to_asset.json** button to generate it in the addon's files, or to add a custom directory if you want to edit that file to choose what buildables the addon should try and import. It reads the `build.json` file to find all the models used in that buildable. If it can't find any `build.json` files, then the `buildable_to_asset.json` file will be empty. You can add other models/buildables as long as you keep the same data structure in the file.
 4. Click **Copy asset library file to asset library path** button to get the `SF_Asset_lib.blend` file from the addon files, which will have the geo node groups and materials shader groups needed for the import save logic and material logic.
-   
+
 > Note: Do **NOT** use your main asset library, as it will overwrite the `blender_assets.cats.txt`, deleting any categories you’ve made. **Copy the asset library in a different directory** from your main asset library.
 
 ## How to use
 ### FModel
 Make sure you export models as
 Before you can import models, you need to first extract the following in FModel:
-- Build files (e.g. `Build_Blender.json`)
-- Models (`.psk` `.pskx`)
+- Build files (e.g. `Build_Blender.json` or `BP_ProductionIndicatorInstanced.json`)
+- Models (`.psk`/`.pskx`)
 - Textures (`.png`)
 - Materials (`.json`)
 
-You can export all properties files by right clicking the 'buildable' folder, select **Export Folder** and **Properties (.json)**. this will get both build files and material files.
+You can export all properties files by right clicking the 'buildable' folder, select **Export Folder** and **Properties (.json)**. this will get both build files and material files. Not all buildables and models are in the 'buildable' folder, e.g. Beam Build files are stored in `/FactoryGame/Prototype/Buildable/Beams`.
 
-<img alt="prefrances" src="resources/images/FModel/fmodel 2.png" width="500" />
+<img alt="fmodel 2" src="resources/images/FModel/fmodel 2.png" width="500" />
 
 > FModel settings
-<img alt="prefrances" src="resources/images/FModel/fmodel 1.png" width="500" />
+
+<img alt="fmodel 1" src="resources/images/FModel/fmodel 1.png" width="500" />
 
 ---
 
 ### Importing and building asset library
 To import the extracted models, open the copied blend file and then select **Start Building** in the **side panel**. The addon will import one model at a time and then hide the entire buildable collection to keep Blender from lagging or crashing.
 
-- If you try to import models again and select **Start Building**, it will erase everything in the assets collection.
+- If you try to import models again and select **Start Building**, it will **delete** everything in the assets collection.
 
 - Make sure you turn on **Mark as Asset** so that it can create your asset library. You can import models from another blend file, but it will not be able to build materials or create the asset library automatically.
    - After importing all buildables, the addon will attempt to generate previews in the asset browser; however, if there are a large number of buildables, you will need to create previews manually. This is because the buildable collections must be unhidden in order to generate the preview, therefore the addon unhides them and then hides them again after 20 seconds.
@@ -67,7 +68,7 @@ To import the extracted models, open the copied blend file and then select **Sta
 
 > Note: There are still a few buildables and models that this addon doesn’t import yet, such as items, resources and vehicles. I will try to add them over time.
 
-<img alt="prefrances" src="resources/images/ui/prefrences.png" width="500" />
+<img alt="preferences" src="resources/images/ui/prefrences.png" width="500" />
 
 ### Importing SF sav data and rebuilding factories
 1. Open the **SF IMPORTER** panel from the side panel and search or paste your `.sav` file in the  **Save File** field. The file has to be `.sav`.
@@ -84,7 +85,7 @@ To import the extracted models, open the copied blend file and then select **Sta
 
 You can choose to import between 4 buildable types individually or all at once. Signs and spline buildables are usually the most heavy to import, so I recommend importing them separately. Hide/delete splines that will never be visible during render.
 
-<img alt="prefrances" src="resources/images/ui/side pannel.png" width="400" />
+<img alt="side panel" src="resources/images/ui/side pannel.png" width="400" />
 
 ---
 Buildables are imported as points with attributes attached needed to reconstruct the logic in geometry nodes and model instancing. This allows for extra modification and implementation of your own logic.
@@ -115,22 +116,26 @@ Note: Blender doesn't like multi-threading all that much, so this add-on can not
 
 ## Examples
 ### Viewport renders
-<img alt="prefrances" src="resources/images/viewport 3.png" width="500" />
+<img alt="viewport 3" src="resources/images/viewport 3.png" width="500" />
 
-<img alt="prefrances" src="resources/images/viewport 2.png" width="500" />
+<img alt="viewport 2" src="resources/images/viewport 2.png" width="500" />
 
 > A section of couq's save imported with Bounding box 
-<img alt="prefrances" src="resources/images/couq sav/01.png" width="500" />
+<img alt="couq sav 01" src="resources/images/couq sav/01.png" width="500" />
 
 > Example with culling enabled
-<img alt="prefrances" src="resources/images/couq sav/culling exmaple.png" width="500" />
+<img alt="culling example" src="resources/images/couq sav/culling exmaple.png" width="500" />
 
 ### Renders
-<img alt="prefrances" src="resources/images/renders/render 1.jpg" width="500" />
+<img alt="render 1" src="resources/images/renders/render 1.jpg" width="500" />
+
+> Corporate Ladder
+
+<img alt="ladder 1" src="resources/images/renders/ladder 1.png" width="500" />
 
 > Couq's sav
 
-<img alt="prefrances" src="resources/images/couq sav/04.png" width="500" /><img alt="prefrances" src="resources/images/couq sav/05.png" width="500" /><img alt="prefrances" src="resources/images/couq sav/02.png" width="500" />
+<img alt="couq sav 04" src="resources/images/couq sav/04.png" width="500" /><img alt="couq sav 05" src="resources/images/couq sav/05.png" width="500" /><img alt="couq sav 02" src="resources/images/couq sav/02.png" width="500" />
 
 ---
 # buildable_to_asset format JSON Examples
