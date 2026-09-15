@@ -171,5 +171,3 @@ Note: Blender doesn't like multi-threading all that much, so this add-on can not
     }
   },
 ```
-
-## Links
