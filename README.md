@@ -1,5 +1,5 @@
 # satisfactory-to-blender
-A **blender extension** that imports **save data** and **models** from Coffee Stain Studios' game [Satisfactory](https://www.satisfactorygame.com/). This addon reconstructs your SF save file utilizing [satisfactory-3d-map](https://github.com/moritz-h/satisfactory-3d-map) for save parsing and imports the models and materials you extracted using FModel.
+A **blender extension** that imports **save data** and **models** from Coffee Stain Studios' game [Satisfactory](https://www.satisfactorygame.com/). This addon reconstructs your SF save file using [satisfactory-3d-map](https://github.com/moritz-h/satisfactory-3d-map) for save parsing and imports the models and materials you extracted using FModel.
 
 ## Features
 Import save data:
