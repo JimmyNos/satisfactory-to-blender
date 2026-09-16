@@ -3,20 +3,13 @@ A **blender extension** that imports **save data** and **models** from Coffee St
 
 ## Features
 Import save data:
-- Rebuild save file in blender
-- Rebuild the buildable logic using geometry nodes
-- Auto appends models from asset library into file or use models in blend files
-- Option to only import buildables with a set boundary 
-- Option to import specific buildable types
-- Option to generate a proxy mesh in viewport 
-- Option to hide buildable after import
-- Shows import progress for each buildable
-- Show execution time for each buildable type
+- Rebuilds factories from save data in blender
+- Shows import progress for each buildable and execution time for each buildable type
 - Object culling based on their distance from an object (e.g. camera)
 - Random object scale to help with clipping
 
 Import models:
-- Uses the json build file to look for and import the models used by that buildable.
+- Read json build files to look for and import the models.
 - Builds and applies materials
 - Creates an asset library and the imported models
 
