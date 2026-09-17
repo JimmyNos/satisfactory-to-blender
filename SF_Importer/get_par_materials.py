@@ -99,11 +99,6 @@ def get_par_materials(sf_asset_export_path):
         nodes = material.node_tree.nodes
         links = material.node_tree.links
         
-        txd_Shader_node = None
-        txd_Shader = None
-        txd_Shader_out = None
-        txd_Shader_in = None
-        txd_Shader_links = None
         for tex in mat_tex:
             if "TX2D_" in tex:
                 txd_Shader_node = nodes.new('ShaderNodeGroup')
@@ -139,13 +134,11 @@ def get_par_materials(sf_asset_export_path):
             sf_shader_node.node_tree = bpy.data.node_groups['FallBack']
         sf_shader_node.location.x = 500
         links.new(tex_coord_node.outputs["UV"], mapping_node.inputs["Vector"])
-        if txd_Shader_node:
-            links.new(mapping_node.outputs["Vector"], txd_Shader_node.inputs["UV"])
+        links.new(mapping_node.outputs["Vector"], txd_Shader_node.inputs["UV"])
         
         output_node = nodes.new('ShaderNodeOutputMaterial')
         output_node.location.x = 700
-        transparent_node = None
-        mix_shader_node = None
+        
         if "Decal_Normal" in mat:
             transparent_node = nodes.new('ShaderNodeBsdfTransparent')
             transparent_node.location.x = 200
@@ -191,14 +184,11 @@ def get_par_materials(sf_asset_export_path):
                     step = 0
                     for i in range(9):
                         #txd_Shader = bpy.data.node_groups['TX2D_Shader']
-                        if not txd_Shader:
-                            continue
                         tex_position_node = txd_Shader.nodes.new('ShaderNodeVectorMath')
                         tex_position_node.operation = "ADD"
                         tex_position_node.label = "tile X"
                         tex_position_node.location.x = -400
-                        if txd_Shader_links and txd_Shader_out and txd_Shader_in:
-                            txd_Shader_links.new(txd_Shader_out.outputs["UV"], tex_position_node.inputs["Vector"])
+                        txd_Shader_links.new(txd_Shader_out.outputs["UV"], tex_position_node.inputs["Vector"])
                         
                         if tile_pos_x < -2:
                             tile_pos_x = 0
@@ -224,8 +214,6 @@ def get_par_materials(sf_asset_export_path):
                 else:
                     tx2D_tile_mix = "TX2D_tile_mix_B"
                 
-                if not txd_Shader:
-                    continue
                 txd_shader_node = txd_Shader.nodes.new('ShaderNodeGroup')
                 txd_shader_node.node_tree = bpy.data.node_groups[tx2D_tile_mix]
 
@@ -250,8 +238,6 @@ def get_par_materials(sf_asset_export_path):
                         img_list = [img.name for img in bpy.data.images]
                         
                         # loading texture
-                        if not txd_Shader:
-                            continue
                         b_texture = txd_Shader.nodes.new('ShaderNodeTexImage')
                         b_texture.hide = True
                         b_texture.extension = 'CLIP'
@@ -268,9 +254,6 @@ def get_par_materials(sf_asset_export_path):
                             if t in tex_id:
                                 if b_texture.image.colorspace_settings:
                                     b_texture.image.colorspace_settings.name = 'Linear Rec.709'
-                                
-                        if not txd_Shader_links or not txd_Shader_in or not txd_Shader_node:
-                            continue
                         
                         txd_Shader_links.new(tex_position_node_list[i].outputs["Vector"], b_texture.inputs["Vector"])
                         txd_Shader_links.new(b_texture.outputs["Color"], txd_shader_node.inputs[f"tile {i+1}"])
@@ -300,8 +283,6 @@ def get_par_materials(sf_asset_export_path):
                     
             if t_match:
                 if "Decal_Normal" in mat:
-                    uv_fact_node = None
-                    txd_mapping_node = None
                     if not tsd_shaders_made:
                         tsd_shaders_made = True
                         txd_mapping_node = nodes.new('ShaderNodeMapping')
@@ -329,8 +310,6 @@ def get_par_materials(sf_asset_export_path):
                     sf_shader_node.location.x = 200
                     sf_shader_node.location.y = 300
                     
-                    if not mix_shader_node or not transparent_node or not uv_fact_node or not txd_mapping_node or not txd_Shader_node:
-                        continue
                     links.new(transparent_node.outputs["BSDF"], mix_shader_node.inputs["Shader"])
                     links.new(sf_shader_node.outputs["Shader"], mix_shader_node.inputs[2])
                     links.new(mix_shader_node.outputs["Shader"], output_node.inputs["Surface"])
@@ -352,7 +331,7 @@ def get_par_materials(sf_asset_export_path):
                 
                 print("---")
                 if not tex_file.exists():
-                    print(f"Error: texture does not exist: {tex_file}")
+                    print(f"Error: texture does not exist in directory: {tex_file}")
                     continue
                 
                 try:
@@ -377,21 +356,20 @@ def get_par_materials(sf_asset_export_path):
                                 b_texture.image.colorspace_settings.name = 'Linear Rec.709'
                     
                     links.new(mapping_node.outputs["Vector"], b_texture.inputs["Vector"])
-                    if not img:
-                        print(f"Error: texture image not found: {tex_file}")
-                        continue
+                    #if not img:
+                    #    print(f"Error: texture image not found: {tex_file}")
+                    #    continue
                     if "MI_Factory_01" in mat:
-                        if "Mask_Factory_02" in img.name:
+                        if "Mask_Factory_02" in tex:
                             b_texture.location.y = 100
                             b_texture.location.x = -400
                     if "Decal_Normal" in mat:
                         sf_shader_node.inputs["No AO?"].default_value = False
-                        if "_Mask" in img.name:
-                            if mix_shader_node:
-                                links.new(b_texture.outputs["Color"], mix_shader_node.inputs["Factor"])
+                        if "_Mask" in tex:
+                            links.new(b_texture.outputs["Color"], mix_shader_node.inputs[0])
                     
                     if "Decal_Color" in mat or "DecalColor_Masked" in mat:
-                        if "ColorAtlas_Alb" in img.name:
+                        if "ColorAtlas_Alb" in tex:
                             sf_shader_node.inputs["No AO?"].default_value = False
                             sf_shader_node.inputs["Alpha?"].default_value = True
                             sf_shader_node.inputs["No Paint Finish?"].default_value = True
