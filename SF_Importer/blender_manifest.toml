@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "satisfactory_importer_extension"
-version = "0.1.1"
+version = "1.1.0"
 name = "Satisfactory Importer"
 tagline = "Imports Satisfactory assets and save data into Blender"
 maintainer = "JimmyNoStar"
