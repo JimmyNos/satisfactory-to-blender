@@ -1,121 +1,324 @@
 # satisfactory-to-blender
-A **blender extension** that imports **save data** and **models** from Coffee Stain Studios' game [Satisfactory](https://www.satisfactorygame.com/). This addon reconstructs your SF save file using [satisfactory-3d-map](https://github.com/moritz-h/satisfactory-3d-map) for save parsing and imports the models and materials you extracted using FModel.
 
-## Features
-Import save data:
-- Rebuilds factories from save data in blender
-- Shows import progress for each buildable and execution time for each buildable type
-- Object culling based on their distance from an object (e.g. camera)
-- Random object scale to help with clipping
+A **Blender extension** that imports **save data and models** from Coffee Stain Studios' game [Satisfactory](https://www.satisfactorygame.com/).
 
-Import models:
-- Read json build files to look for and import the models.
-- Builds and applies materials
-- Creates an asset library and the imported models
-
-## Requirements
-- Blender 5.2 or higher
-- [Unreal PSK/PSA (.psk/.psa)](https://extensions.blender.org/add-ons/io-scene-psk-psa/) blender extension
-
-## Installation
-1. Download the latest version of the extension as `.zip` file
-2. In Blender, go to Edit > Preferences > Get Extensions.
-3. Click Install from disk and select the .zip file.
-4. Blender will then install the addon and a new panel called ‘SF Importer’ will appear in the side panel.
-
-## Configuration
-### addon preferences tab
-
-1. Open the preferences data, navigate to **Add-ons** and search for **Satisfactory Importer**
-2. In the addon preferences tab, add the path to where Fmodel extracted models.
-3. Click the **generate buildable_to_asset.json** button to generate it in the addon's files, or to add a custom directory if you want to edit that file to choose what buildables the addon should try and import. It reads the `build.json` file to find all the models used in that buildable. If it can't find any `build.json` files, then the `buildable_to_asset.json` file will be empty. You can add other models/buildables as long as you keep the same data structure in the file.
-4. Click **Copy asset library file to asset library path** button to get the `SF_Asset_lib.blend` file from the addon files, which will have the geo node groups and materials shader groups needed for the import save logic and material logic.
-
-> Note: Do **NOT** use your main asset library, as it will overwrite the `blender_assets.cats.txt`, deleting any categories you’ve made. **Copy the asset library in a different directory** from your main asset library.
-
-## How to use
-### FModel
-Make sure you export models as
-Before you can import models, you need to first extract the following in FModel:
-- Build files (e.g. `Build_Blender.json` or `BP_ProductionIndicatorInstanced.json`)
-- Models (`.psk`/`.pskx`)
-- Textures (`.png`)
-- Materials (`.json`)
-
-You can export all properties files by right clicking the 'buildable' folder, select **Export Folder** and **Properties (.json)**. this will get both build files and material files. Not all buildables and models are in the 'buildable' folder, e.g. Beam Build files are stored in `/FactoryGame/Prototype/Buildable/Beams`.
-
-<img alt="fmodel 2" src="resources/images/FModel/fmodel 2.png" width="500" />
-
-> FModel settings
-
-<img alt="fmodel 1" src="resources/images/FModel/fmodel 1.png" width="500" />
+The extension reconstructs your Satisfactory factories inside Blender using [satisfactory-3d-map](https://github.com/moritz-h/satisfactory-3d-map) for save parsing. Models and materials are imported from assets extracted using FModel.
 
 ---
 
-### Importing and building asset library
-To import the extracted models, open the copied blend file and then select **Start Building** in the **side panel**. The addon will import one model at a time and then hide the entire buildable collection to keep Blender from lagging or crashing.
+## Features
 
-- If you try to import models again and select **Start Building**, it will **delete** everything in the assets collection.
+### Save Data Import
 
-- Make sure you turn on **Mark as Asset** so that it can create your asset library. You can import models from another blend file, but it will not be able to build materials or create the asset library automatically.
-   - After importing all buildables, the addon will attempt to generate previews in the asset browser; however, if there are a large number of buildables, you will need to create previews manually. This is because the buildable collections must be unhidden in order to generate the preview, therefore the addon unhides them and then hides them again after 20 seconds.
+- Rebuilds factories from Satisfactory save data in Blender.
+- Displays import progress for each buildable.
+- Displays execution time for each buildable type.
+- Object culling based on distance from an object, such as a camera.
+- Random object scaling to help reduce clipping.
 
-> Note: this process can take a while depending on the amount of models it needs to import. Also, I advise reviewing and verifying the models after import because some models and materials might not import properly.
+### Model Import
 
-> Note: There are still a few buildables and models that this addon doesn’t import yet, such as items, resources and vehicles. I will try to add them over time.
+- Reads build JSON files to determine which models are used by each buildable.
+- Imports models from FModel-extracted assets.
+- Builds and applies materials.
+- Creates an asset library containing the imported models.
+
+### Factory Reconstruction
+
+- Buildables are imported as points with attributes used by Geometry Nodes.
+- Geometry Nodes handles model instancing and buildable logic.
+- Proxy meshes.
+- Bounding-box imports.
+- Hiding buildables after import.
+- Importing different buildable types individually.
+
+---
+
+## Requirements
+- **Blender 5.2 or higher**
+- **Unreal PSK/PSA (.psk/.psa) Blender extension**
+
+The [Unreal PSK/PSA](https://extensions.blender.org/add-ons/io-scene-psk-psa/) extension is required to import the models extracted from Satisfactory
+
+---
+
+## Installation
+
+1. Download the latest version of the extension as `.zip` file
+2. In Blender, go to **Edit → Preferences → Get Extensions**.
+3. Select **Install from Disk**.
+5. Select the downloaded `.zip` file.
+6. After installation, the **SF Importer** panel will appear in Blender's side panel.
+
+---
+
+## Initial Setup
+
+Before importing Satisfactory models or save data, the extension needs to be configured.
+
+1. Open **Edit → Preferences**.
+2. Navigate to **Add-ons**.
+3. Search for **Satisfactory Importer**.
+4. In the add-on preferences, set the paths:
+   - Directory containing your FModel-extracted assets.
+   - Custom directory to generate the `buildable_to_asset.json` file.
+   - Directory specifing where to copy `SF_Asset_lib.blend` file to.
 
 <img alt="preferences" src="resources/images/ui/prefrences.png" width="500" />
 
-### Importing SF sav data and rebuilding factories
-1. Open the **SF IMPORTER** panel from the side panel and search or paste your `.sav` file in the  **Save File** field. The file has to be `.sav`.
-2. Select **Start Scan** in the side panel to start importing you save data into the blend file.
+### Generate `buildable_to_asset.json`
 
-- To make the addon use your **SF asset library**, enable `Use Library Models`. This will append models from the `SF_Asset_Lib` file before importing save data instead of using models in the current blend file. 
-   - Blender will hang while it appends a model, but will become responsive once appended. You can open the system console to see if it's still appending models.
-   - Appending models from your asset library will cause the save import to take longer, luckily, it only needs to be enabled if there's a buildables missing from your blend file.
-- You can enable **proxy mesh** to generate a proxy mesh for each instance
-- Enable **Hide buildable** to hide the buildable model after import, so not to lag blenders UI. I recommend enabling this, if you are importing large sections.
--You can set a bounding box to only import within the set area
-   - Boundaries are calculated using the X and Y coordinates and a set distance.
-   - You can use SF coordinates, but the addon uses blender's coordinates, so both X and Y need to be divided by 100 and the Y axis needs to be flipped. i.e. SF: (X)-500,000(Y)-2000,000 -> blender: (X)-500 (Y)2,000
+The extension uses `buildable_to_asset.json` to determine which models belong to each Satisfactory buildable.
 
-You can choose to import between 4 buildable types individually or all at once. Signs and spline buildables are usually the most heavy to import, so I recommend importing them separately. Hide/delete splines that will never be visible during render.
+In the add-on preferences:
 
-<img alt="side panel" src="resources/images/ui/side pannel.png" width="400" />
+1. Set your FModel asset path.
+2. Click **Generate `buildable_to_asset.json`**.
+
+The extension searches the extracted files for `build.json` files and uses them to determine which models are used by each buildable. If no `build.json` files can be found, `buildable_to_asset.json` will be empty.
+
+You can also specify a custom directory if you want to manually edit the file and choose which buildables the extension should import.
+
+You can add additional models or buildables as long as they follow the same data structure described in the [Custom Buildables](#custom-buildables) section.
+
+## Building the Asset Library
+
+The extension provides an asset library containing the Shader Groups and Geometry Node groups required for save importing.
+
+In the add-on preferences:
+
+**Copy asset library file to asset library path**
+
+This copies `SF_Asset_lib.blend` from the extension files to your selected asset-library location.
+
+> **Important:** Do **not** use your main Blender asset library.
+
+> The extension will overwrite `blender_assets.cats.txt`, which would remove categories created in your main asset library.
+
+Use a separate directory for the Satisfactory asset library.
 
 ---
-Buildables are imported as points with attributes attached needed to reconstruct the logic in geometry nodes and model instancing. This allows for extra modification and implementation of your own logic.
-- Points can be deleted in ‘edit mode’ or separated into a different model for extra adjustments or modifications.
 
-The addon parses the save file in a separate thread, so it does not freeze blender’s UI. Blender API has to run on the main thread, so the UI will be frozen when creating/modifying objects and collections. This can be very noticeable when working with buildables with large amounts of instances.
+## FModel Setup
 
-Model instancing and buildable logic are done using geometry nodes
-- There are extra controls for instance position adjustments and object culling
-- Object isn't perfect yet, and will change overtime
-- If an instance or spline will never be visible, it would be better to hide that spline or go into exit mode and delete that point.
-- To **reimport** the geo node groups, remove the **fake user** tag, so the addon and pull a new copy of the node group. It will not reimport if a node group of the same name exists in the blend file and has a ‘fake user’ tag applied.
+Before models can be imported, you need to extract the required files from Satisfactory using FModel:
+* **Build files** (`.json`)
+  * For example:
+    * `Build_Blender.json`
+    * `BP_ProductionIndicatorInstanced.json`
+* **Models**
+  * `.psk`
+  * `.pskx`
+* **Textures**
+  * `.png`
+* **Materials**
+  * `.json`
 
-Sign text is enabled through the geo nodes modifier, but they are heavy work with. To get sign text, the addon creates text objects and saves them in a collection that the modifier references; however, the resolution of the text mask is determined by the number of faces on the screen, therefore there are two subdivision fields:
-- **Base subdivision**, subdivides the entire face.
-- **Text mask subdivision**, which only divides the masked area.
-Because of this, text has additional culling options to help with optimization.
+You can export both build files and material files for most buildables by right-clicking the `buildable` folder in FModel and selecting:
 
-I recommend importing a section of your save without models, as a preview. The addon uses a default mesh with the primary colour applied, if there are no models.
+**Export Folder → Properties (.json)**
 
-Some geo node logics aren't implemented very well, so some buildables won’t look exactly like your save.
-It is better to hide or delete buildable points/splines than relying on object culling.
-Note: Blender doesn't like multi-threading all that much, so this add-on can not be published on the blender extensions website :/
+> Not all buildables and models are located in the `buildable` folder. For example, Beam build files are stored under `/FactoryGame/Prototype/Buildable/Beams`.
 
-> Note: Blender doesn't like multi-threading all that much, so this add-on can not be published on the blender extensions website :/
+![FModel export options](resources/images/FModel/fmodel%202.png)
 
-> Note: this addon uses the Unreal PSK/PSA (.psk/.psa) addon for importing models. Make sure this is installed before using the addon
+---
+
+## How to use
+
+### Importing Models
+
+To build the asset library from your FModel-extracted models:
+
+1. Open the copied `SF_Asset_lib.blend` file.
+2. Open the **SF Importer** side panel.
+3. Select **Start Building**.
+4. The extension will import the models one at a time.
+
+After importing each buildable, its collection is hidden to reduce Blender's memory usage and prevent the viewport from becoming unresponsive. Selecting **Start Building** again, everything in the assets collection will be deleted before the models are imported again.
+
+- Make sure **Mark as Asset** is enabled so Blender can create the asset library.
+  - After importing all buildables, the extension attempts to generate previews in Blender's Asset Browser, but fails if there are a lot of buildables, you may need to generate some previews manually.
+
+  Generating previews requires the buildable collections to be temporarily unhidden. The extension unhides them, generates the previews, and hides them again after approximately 20 seconds.
+
+> **Note:** Importing the models can take a significant amount of time depending on how many assets are being imported.
+
+I recommended that you review the imported models and materials because some assets may not import correctly.
+
+---
+
+## Importing a Satisfactory Save
+
+Once the asset library and models are configured, you can import your Satisfactory save.
+
+1. Open the **SF IMPORTER** panel from Blender's side panel.
+2. Select your `.sav` file in the **Save File** field.
+3. Make sure the selected file has a `.sav` extension.
+4. Select **Start Scan**.
+
+The extension will parse the save data and begin rebuilding the factory inside Blender.
+
+![SF Importer side panel](resources/images/ui/side%20pannel.png)
+
+## Save Import Options
+
+### Use Library Models
+
+Enable **Use Library Models** to use models from the Satisfactory asset library. The extension appends models from `SF_Asset_Lib.blend` before importing the save. Using the asset library increases import time, so enable this option only when you need to import models.
+
+> Blender may temporarily become unresponsive while a model is being appended. You can open Blender's system console to check whether models are still being appended.
+
+### Proxy Mesh
+
+Enable **Proxy Mesh** to generate a proxy mesh for each buildable.
+
+### Hide Buildable
+
+Enable **Hide Buildable** to hide the buildable model after it has been imported.
+
+### Bounding Box
+
+You can limit the imported area using a bounding box. The boundaries are calculated using the **X and Y coordinates** and a specified distance.
+
+The extension uses Blender coordinates, while Satisfactory save data uses Satisfactory coordinates. To convert Satisfactory coordinates:
+- Divide **X** by `100`.
+- Divide **Y** by `100`.
+- Flip the Y axis.
+
+For example:
+
+```
+Satisfactory:
+X = -50,000
+Y = -200,000
+
+Blender:
+X = -500
+Y = 2,000
+```
+
+## Choosing Buildable Types
+
+You can import the following buildable types individually or import all of them at once. **Signs and spline buildables are generally the most expensive to import.**
+
+For buildables with a lot of instances, I recommended:
+
+1. Use object culling using the Geometry Nodes group.
+2. Hide or delete points or splines that will never be visible in the final render.
+3. Import only the area required for your scene.
+
+---
+
+## How the Imported Factory Works
+
+Buildables are imported as points with attributes attached to them. These attributes contain the information required to reconstruct the buildable using Geometry Nodes. The Geometry Nodes implementation is still being developed, so some buildables may not look exactly like they do in the original Satisfactory save. If models are not available, the extension uses a default mesh with the primary colour applied.
+
+Buildable points can be:
+
+* Deleted in **Edit Mode**.
+* Separated into another object.
+* Modified before being processed by Geometry Nodes.
+* Used as the basis for additional custom logic.
+
+### Geometry Nodes
+
+The Geometry Nodes setup provides additional controls for:
+
+* Instance position adjustments.
+* Object culling.
+* Model instancing.
+* Buildable-specific logic.
+
+```
+To reimport updated Geometry Node groups:
+
+1. Remove the 'Fake User' tag from the existing node group.
+2. Reimport the Geometry Node groups.
+
+The extension will not reimport a node group if a node group with the same name already exists in the current blend file and has a 'Fake User' tag.
+```
+### Sign Text
+
+Sign text is generated through the Geometry Nodes modifier but can be expensive, additional culling options are available to improve performance.
+
+The resolution of the text mask depends on the number of faces available on the screen, There are two subdivision controls:
+
+- Base Subdivision, subdivides the entire sign face.
+- Text Mask Subdivision, subdivides only the area containing the text mask.
+
+---
+
+## Recommended Workflow for Large Saves
+
+recommended workflow is:
+
+1. Import a small section of the save first without models to create a lightweight preview.
+    - Only select lightweight buildables
+2. Enable **Hide Buildable**.
+3. Import buildable types separately.
+4. Hide or delete splines/points that will not appear in the final render.
+5. Use culling to further reduce unnecessary geometry.
+
+---
+
+## Custom Buildables
+
+You can manually add buildables or models to `buildable_to_asset.json`.
+
+The basic structure is:
+
+```json
+"Build_Name_C": {
+    "ObjectName": "ObjectName",
+    "Internal_Object_name": {
+        "Mesh": "Path-To-Mesh/",
+        "RelativeLocation": null,
+        "RelativeRotation": null,
+        "RelativeScale3D": null
+    },
+    "Internal_Object_name2": {
+        "Parent": "Parent_ObjectName",
+        "ParentAttach": null,
+        "Mesh": "Path-To-Mesh/",
+        "RelativeLocation": null,
+        "RelativeRotation": null,
+        "RelativeScale3D": null
+    }
+}
+```
+
+### Example
+
+```json
+"BP_ProductionIndicatorInstanced_C": {
+    "ObjectName": "ProductionIndicatorInstanced",
+    "Default__BP_ProductionIndicatorInstanced_C": {
+        "Mesh": "FactoryGame/Buildable/Factory/-Shared/ProductionIndicator/Mesh/SM_ProductionLight_01",
+        "RelativeLocation": null,
+        "RelativeRotation": null,
+        "RelativeScale3D": null
+    }
+}
+```
+
+> If an object has a parent, make sure the parent object is defined **before the child object**.
+
+---
+
+## Limitations
+
+Blender's API must run on the main thread, so although save parsing occurs separately, Blender's UI can still become unresponsive when creating or modifying large numbers of objects and collections. 
+
+The extension is still under development and there are some limitations such as missing buildables, models and large saves taking hours to import.
+
+I'm working parse optimizations, and more buildables will be added in newer versions of this extension
+
+> **Note:** Multithreading can crash blender, so this extension cannot currently be published on the Blender Extensions website.
 
 ## Examples
 ### Viewport renders
-<img alt="viewport 2" src="resources/images/viewport 2.png" width="500" />
-
-> Example with culling enabled
-<img alt="culling example" src="resources/images/couq sav/culling exmaple.png" width="500" />
+<img alt="viewport 2" src="resources/images/viewport 2.png" width="350" /><img alt="culling example" src="resources/images/couq sav/culling exmaple.png" width="350" />
 
 ### Renders
 
@@ -127,37 +330,3 @@ Note: Blender doesn't like multi-threading all that much, so this add-on can not
 
 <img alt="couq sav 04" src="resources/images/couq sav/04.png" width="350" /><img alt="couq sav 05" src="resources/images/couq sav/05.png" width="350" />
 
----
-# buildable_to_asset format JSON Examples
-> Use this format when adding your own buildable or model. Id the object has a parent, then make sure the parent object sets before the child object.
-```
-"Build_Name_C": {
-    "ObjectName": "ObjectName",
-    "Internal_Object_name": {
-      "Mesh": "Path-To-Mesh/",
-      "RelativeLocation": null,
-      "RelativeRotation": null,
-      "RelativeScale3D": null
-    },
-    "Internal_Object_name2": {
-      "Parent": "Parent_ObjectName",
-      "ParentAttach": null,
-      "Mesh": "Path-To-Mesh/",
-      "RelativeLocation": null,
-      "RelativeRotation": null,
-      "RelativeScale3D": null
-    }
-  },
-```
-**Example**
-```
-"BP_ProductionIndicatorInstanced_C": {
-    "ObjectName": "ProductionIndicatorInstanced",
-    "Default__BP_ProductionIndicatorInstanced_C": {
-      "Mesh": "FactoryGame/Buildable/Factory/-Shared/ProductionIndicator/Mesh/SM_ProductionLight_01",
-      "RelativeLocation": null,
-      "RelativeRotation": null,
-      "RelativeScale3D": null
-    }
-  },
-```
