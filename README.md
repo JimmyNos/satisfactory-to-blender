@@ -109,18 +109,12 @@ Note: Blender doesn't like multi-threading all that much, so this add-on can not
 
 ## Examples
 ### Viewport renders
-<img alt="viewport 3" src="resources/images/viewport 3.png" width="500" />
-
 <img alt="viewport 2" src="resources/images/viewport 2.png" width="500" />
-
-> A section of couq's save imported with Bounding box 
-<img alt="couq sav 01" src="resources/images/couq sav/01.png" width="500" />
 
 > Example with culling enabled
 <img alt="culling example" src="resources/images/couq sav/culling exmaple.png" width="500" />
 
 ### Renders
-<img alt="render 1" src="resources/images/renders/render 1.jpg" width="500" />
 
 > Corporate Ladder
 
@@ -128,7 +122,7 @@ Note: Blender doesn't like multi-threading all that much, so this add-on can not
 
 > Couq's sav
 
-<img alt="couq sav 04" src="resources/images/couq sav/04.png" width="500" /><img alt="couq sav 05" src="resources/images/couq sav/05.png" width="500" /><img alt="couq sav 02" src="resources/images/couq sav/02.png" width="500" />
+<img alt="couq sav 04" src="resources/images/couq sav/04.png" width="350" /><img alt="couq sav 05" src="resources/images/couq sav/05.png" width="350" />
 
 ---
 # buildable_to_asset format JSON Examples
