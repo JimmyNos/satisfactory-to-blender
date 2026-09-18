@@ -13,12 +13,15 @@ Import models:
 - Builds and applies materials
 - Creates an asset library and the imported models
 
+## Requirements
+- Blender 5.2 or higher
+- [Unreal PSK/PSA (.psk/.psa)](https://extensions.blender.org/add-ons/io-scene-psk-psa/) blender extension
+
 ## Installation
 1. Download the latest version of the extension as `.zip` file
 2. In Blender, go to Edit > Preferences > Get Extensions.
 3. Click Install from disk and select the .zip file.
 4. Blender will then install the addon and a new panel called ‘SF Importer’ will appear in the side panel.
-
 
 ## Configuration
 ### addon preferences tab
