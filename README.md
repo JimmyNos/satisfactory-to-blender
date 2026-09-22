@@ -4,6 +4,8 @@ A **Blender extension** that imports **save data and models** from Coffee Stain 
 
 The extension reconstructs your Satisfactory factories inside Blender using [satisfactory-3d-map](https://github.com/moritz-h/satisfactory-3d-map) for save parsing. Models and materials are imported from assets extracted using FModel.
 
+You can download the [latest release](https://github.com/JimmyNos/satisfactory-to-blender/releases/tag/v1.1.0) here
+
 ---
 
 ## Features
