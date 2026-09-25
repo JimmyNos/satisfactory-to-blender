@@ -89,13 +89,15 @@ The extension provides an asset library containing the Shader Groups and Geometr
 
 In the add-on preferences:
 
-**Copy asset library file to asset library path**
-
-This copies `SF_Asset_lib.blend` from the extension files to your selected asset-library location.
+1. Go to **Asset Libraries** and add a new asset library called 'SF Asset Lib' and set the path to your SF asset library folder.
+   - Set the **Import Method** to 'Append'
+   - Do **not** use your main Blender asset library
+2. Back in the add-on preferences, set the path to the 'SF Asset Lib' you just created.
+3. Click **Copy asset library file to asset library path**.
 
 > **Important:** Do **not** use your main Blender asset library.
 
-> The extension will overwrite `blender_assets.cats.txt`, which would remove categories created in your main asset library.
+> The extension will overwrite `blender_assets.cats.txt`, which will remove categories created in your main asset library.
 
 Use a separate directory for the Satisfactory asset library.
 
