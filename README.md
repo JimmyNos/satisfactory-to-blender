@@ -4,6 +4,8 @@ A **Blender extension** that imports **save data and models** from Coffee Stain 
 
 The extension reconstructs your Satisfactory factories inside Blender using [satisfactory-3d-map](https://github.com/moritz-h/satisfactory-3d-map) for save parsing. Models and materials are imported from assets extracted using FModel.
 
+You can download the [latest release](https://github.com/JimmyNos/satisfactory-to-blender/releases/tag/v1.1.0) here
+
 ---
 
 ## Features
@@ -87,13 +89,15 @@ The extension provides an asset library containing the Shader Groups and Geometr
 
 In the add-on preferences:
 
-**Copy asset library file to asset library path**
-
-This copies `SF_Asset_lib.blend` from the extension files to your selected asset-library location.
+1. Go to **Asset Libraries** and add a new asset library called 'SF Asset Lib' and set the path to your SF asset library folder.
+   - Set the **Import Method** to 'Append'
+   - Do **not** use your main Blender asset library
+2. Back in the add-on preferences, set the path to the 'SF Asset Lib' you just created.
+3. Click **Copy asset library file to asset library path**.
 
 > **Important:** Do **not** use your main Blender asset library.
 
-> The extension will overwrite `blender_assets.cats.txt`, which would remove categories created in your main asset library.
+> The extension will overwrite `blender_assets.cats.txt`, which will remove categories created in your main asset library.
 
 Use a separate directory for the Satisfactory asset library.
 
