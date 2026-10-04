@@ -229,7 +229,8 @@ def read_colors_custom(i: s.FRuntimeBuildableInstanceData| str) -> [Vec4, Vec4,i
             f = 7
         else:
             f = 0
-    except AttributeError:
+    except AttributeError as e:
+        print(f"AttributeError setting color: {e}")
         return ((1, 1, 1, 1), (1, 1, 1, 1),0)
 
     return ((p.R, p.G, p.B, p.A), (s.R, s.G, s.B, s.A), f)
