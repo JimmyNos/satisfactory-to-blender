@@ -16,7 +16,8 @@ license = [
 
 platforms = ["windows-x64", "linux-x64"]
 wheels = [
-  "./wheels/satisfactory_save-0.10.0-cp313-cp313-win_amd64.whl",
+  "./wheels/satisfactory_save-0.11.0-cp313-cp313-win_amd64.whl",
+  "./wheels/satisfactory_save-0.11.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
 ]
 
 [permissions]
