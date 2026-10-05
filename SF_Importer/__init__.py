@@ -694,6 +694,7 @@ def import_heavyweights_task(
             pole_scale_used = False
             passthrough_type = [0] * total_instances
             progress_in = 0.0
+            colors = [((1.0, 1.0, 1.0, 1.0), (1.0, 1.0, 1.0, 1.0),0)] * total_instances
             
             verts, rotations, scales = [],[],[]
             primary_colors = ()
@@ -762,7 +763,33 @@ def import_heavyweights_task(
                         ]
                         pole_scale_used = True
                         #pole_scale_check = True
-                        
+                    
+                    if 'mCustomizationData' in prop_name:
+                        color_data = {}
+                        for data in prop.Value.Data:
+                            if 'OverrideColorData' in data.Name.Name:
+                                p_color = None
+                                s_color = None
+                                f_path = None
+                                for swatch in data.Value.Data:
+                                    if 'PrimaryColor' in swatch.Name.Name:
+                                        #debug_inspect(swatch.Value.Data)
+                                        p_color = swatch.Value.Data
+                    
+                                    if 'SecondaryColor' in swatch.Name.Name:
+                                        #debug_inspect(swatch.Value.Data)
+                                        s_color = swatch.Value.Data
+                    
+                                    if 'PaintFinish' in swatch.Name.Name:
+                                        #debug_inspect(swatch.Value.PathName)
+                                        f_path = swatch.Value.PathName
+                                    color_data = {
+                                        "PrimaryColor":p_color,
+                                        "SecondaryColor":s_color,
+                                        "PaintFinish":f_path
+                                    }
+                    
+                        colors[idx] = read_colors(prop.Value.Data[0].Value.PathName,color_map,color_data)
                 #if not pole_scale_check:
                 #    pole_scale_attr.extend([0.0,0.0])
                 
@@ -818,12 +845,12 @@ def import_heavyweights_task(
                         "type":["INT","value"]
                 })
             
-            colors = [
-                read_colors(prop.Value.Data[0].Value.PathName,color_map) 
-                for i in instances[1]
-                for prop in i.Properties
-                if 'mCustomizationData' in prop.Name.Name
-                ]
+            #colors = [
+            #    read_colors(prop.Value.Data[0].Value.PathName,color_map) 
+            #    for i in instances[1]
+            #    for prop in i.Properties
+            #    if 'mCustomizationData' in prop.Name.Name
+            #    ]
             
             if colors:
                 primary_colors, secondary_colors, paint_type = zip(*colors)
@@ -1256,11 +1283,38 @@ def import_splines_task(
                             'Y':prop_data.Data.Y,
                             'Z':prop_data.Data.Z,
                         }
-            colors = [
-                read_colors(prop.Value.Data[0].Value.PathName,color_map) 
-                for prop in actor.Properties
-                if 'mCustomizationData' in prop.Name.Name
-                ]
+                
+                if 'mCustomizationData' in prop_name:
+                    color_data = {}
+                    for data in prop.Value.Data:
+                        if 'OverrideColorData' in data.Name.Name:
+                            p_color = None
+                            s_color = None
+                            f_path = None
+                            for swatch in data.Value.Data:
+                                if 'PrimaryColor' in swatch.Name.Name:
+                                    #debug_inspect(swatch.Value.Data)
+                                    p_color = swatch.Value.Data
+                
+                                if 'SecondaryColor' in swatch.Name.Name:
+                                    #debug_inspect(swatch.Value.Data)
+                                    s_color = swatch.Value.Data
+                
+                                if 'PaintFinish' in swatch.Name.Name:
+                                    #debug_inspect(swatch.Value.PathName)
+                                    f_path = swatch.Value.PathName
+                                color_data = {
+                                    "PrimaryColor":p_color,
+                                    "SecondaryColor":s_color,
+                                    "PaintFinish":f_path
+                                }
+                
+                    colors.append(read_colors(prop.Value.Data[0].Value.PathName,color_map,color_data))
+            #colors = [
+            #    read_colors(prop.Value.Data[0].Value.PathName,color_map) 
+            #    for prop in actor.Properties
+            #    if 'mCustomizationData' in prop.Name.Name
+            #    ]
             
             conveyor_dict[classRef] = {
                 "Rotations":rotations,
@@ -1621,11 +1675,12 @@ def import_splines_task(
                 spline_points = []
                 conv = lambda v: Vector((v.X/100, -v.Y/100, v.Z/100))
                 
-                colors = [
-                        read_colors(prop.Value.Data[0].Value.PathName,color_map) 
-                        for prop in actor.Properties
-                        if 'mCustomizationData' in prop.Name.Name
-                        ]
+                #colors = [
+                #        read_colors(prop.Value.Data[0].Value.PathName,color_map) 
+                #        for prop in actor.Properties
+                #        if 'mCustomizationData' in prop.Name.Name
+                #        ]
+                colors = []
                 #primary_colors, secondary_colors, paint_type = zip(*colors)
                 
                 props = actor.Properties
@@ -1655,6 +1710,33 @@ def import_splines_task(
                                     conv(point)
                                 )
                             spline_points.append(tuple(points))
+                    
+                    if 'mCustomizationData' in prop_name:
+                        color_data = {}
+                        for data in prop.Value.Data:
+                            if 'OverrideColorData' in data.Name.Name:
+                                p_color = None
+                                s_color = None
+                                f_path = None
+                                for swatch in data.Value.Data:
+                                    if 'PrimaryColor' in swatch.Name.Name:
+                                        #debug_inspect(swatch.Value.Data)
+                                        p_color = swatch.Value.Data
+                    
+                                    if 'SecondaryColor' in swatch.Name.Name:
+                                        #debug_inspect(swatch.Value.Data)
+                                        s_color = swatch.Value.Data
+                    
+                                    if 'PaintFinish' in swatch.Name.Name:
+                                        #debug_inspect(swatch.Value.PathName)
+                                        f_path = swatch.Value.PathName
+                                    color_data = {
+                                        "PrimaryColor":p_color,
+                                        "SecondaryColor":s_color,
+                                        "PaintFinish":f_path
+                                    }
+                    
+                        colors.append(read_colors(prop.Value.Data[0].Value.PathName,color_map,color_data))
 
                 
                 bpy.app.timers.register(

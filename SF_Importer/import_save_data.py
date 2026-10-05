@@ -217,22 +217,45 @@ def read_transform(transform: s.FTransform3f):
     return pos, rot, scale
 
 
-def read_colors_custom(i: s.FRuntimeBuildableInstanceData| str) -> [Vec4, Vec4,int]:
+def read_colors_custom(i: s.FRuntimeBuildableInstanceData,color_data: dict = {}) -> [Vec4, Vec4,int]:
     try:
-        p = i.CustomizationData.OverrideColorData.PrimaryColor
-        s = i.CustomizationData.OverrideColorData.SecondaryColor
-        f_path = i.CustomizationData.OverrideColorData.PaintFinish.PathName
+        p = color_data.get('PrimaryColor')
+        s = color_data.get('SecondaryColor')
+        f = None
+        f_path = color_data.get('PaintFinish')
         
-        if "Matte" in f_path:
-            f = 6
-        elif "Shiny" in f_path:
-            f = 7
+        if not color_data:
+            p = i.CustomizationData.OverrideColorData.PrimaryColor
+            s = i.CustomizationData.OverrideColorData.SecondaryColor
+            f_path = i.CustomizationData.OverrideColorData.PaintFinish.PathName
+            
+        
+        if f_path is not None:
+            if "Matte" in f_path:
+                f = 6
+            elif "Shiny" in f_path:
+                f = 7
+            else:
+                f = 0
         else:
             f = 0
     except AttributeError as e:
-        print(f"AttributeError setting color: {e}")
+        print(f"AttributeError setting custom color: {e}")
         return ((1, 1, 1, 1), (1, 1, 1, 1),0)
-
+    
+    if p is None or s is None or f is None:
+        #print(f"Error: One or more color values are None for {i}")
+        if p is None:
+            print(f"Primary color is None for {i}")
+            p = (1, 1, 1, 1)
+    
+        if s is None:
+            #print(f"Secondary color is None for {i}")
+            s = (1, 1, 1, 1)
+    
+        if f is None:
+            f = 0
+        return (p, s, f)
     return ((p.R, p.G, p.B, p.A), (s.R, s.G, s.B, s.A), f)
 
 def read_colors_swatch(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) -> tuple[Vec4, Vec4,int]:
@@ -273,15 +296,16 @@ def read_colors_swatch(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) 
     return ((p["R"], p["G"], p["B"], p["A"]), (s["R"], s["G"], s["B"], s["A"]),f)
 
 
-def read_colors(i: s.FRuntimeBuildableInstanceData| str,color_map: dict) -> tuple[Vec4, Vec4,int]:
+def read_colors(i: s.FRuntimeBuildableInstanceData| str,color_map: dict,color_data: dict = {}) -> tuple[Vec4, Vec4,int]:
     # custom colors use the swatch "...SwatchDesc_Custom_C"
     #print(type(i))
     if type(i) == s.FRuntimeBuildableInstanceData:
         if "SwatchDesc_Custom_C" in i.CustomizationData.SwatchDesc.PathName:
-            return read_colors_custom(i)
+            return read_colors_custom(i,color_data)
     else:
         if "SwatchDesc_Custom_C" in i:
-            return read_colors_custom(i)
+            if color_data:
+                return read_colors_custom(i,color_data)
 
     # todo swatch
     if type(i) == str:
@@ -298,7 +322,8 @@ def read_sign_colors(color_attr:dict) -> tuple[Vec4, Vec4, Vec4]:
             a = color_attr['mAuxilaryColor'] 
         else: 
             a = None
-    except AttributeError:
+    except AttributeError as e:
+        print(f"AttributeError setting sign color: {e}")
         return ((1, 1, 1, 1), (1, 1, 1, 1),(1, 1, 1, 1))
     
     if a:
