@@ -213,6 +213,7 @@ def get_materials(obj_material: str = "",sf_asset_export_path:str = ""):
         "Grass_RedJungle":"Top Vector",
         "Grass_01":"Top Vector",
         "Sand":"Top Vector",
+        "Forest":"Top Vector",
         "Moss":"Top Vector",
         "Puddles":"Top Vector",
         "Soil":"Top Vector",
@@ -820,7 +821,7 @@ def get_materials(obj_material: str = "",sf_asset_export_path:str = ""):
                         continue
                 if "FlatRock" in tex_file.name:#"Desert" in tex_file.name or "Flat" in tex_file.name:
                     continue
-                if "Sand" in tex_file.name or "RedJungle" in tex_file.name or "Grass_01" in tex_file.name:
+                if "Sand" in tex_file.name or "RedJungle" in tex_file.name or "Grass_01" in tex_file.name or "Forest" in tex_file.name:
                     if "Desert" in obj_material:
                         sf_env_shader_node.inputs["Use AO Mask?"].default_value = True
                     if "_ORMA" in tex_file.name:
@@ -1448,6 +1449,12 @@ def main() -> None:
                 print(f"⚠️Error: {models_used[model]} did not import into blend file.")
                 continue
             
+            obj_materials = [slot.material.name for slot in ob.material_slots if slot.material]
+            for i,mat in enumerate(obj_materials):
+                mat_results = get_materials(obj_material=mat,sf_asset_export_path=fmodel_export_path)
+                if mat_results == None:
+                    print(f"got {mat} material")
+            
             if sc_col in ob.users_collection:
                 sc_col.objects.unlink(ob) 
             if models_col not in ob.users_collection:
@@ -1588,14 +1595,17 @@ def main() -> None:
                 if ob_instance_mesh:
                     set_geonode_input(mod, "Object", ob_instance_mesh)
                     if i["OverrideMaterials"]:
+                        om_attr = [True] * len(point_positions)
+                        mesh.attributes.new("OverrideMaterial", "BOOLEAN", "POINT")
+                        mesh.attributes["OverrideMaterial"].data.foreach_set("value", om_attr)
                         mat_name = i["OverrideMaterials"]
                         o_mat = bpy.data.materials.get(i["OverrideMaterials"])
                         if not o_mat:
                             o_mat = bpy.data.materials.new(i["OverrideMaterials"])
                         
-                        mat_results = get_materials(obj_material=mat_name,sf_asset_export_path=fmodel_export_path)
-                        if mat_results == None:
-                            print(f"got {mat_name} material")
+                            mat_results = get_materials(obj_material=mat_name,sf_asset_export_path=fmodel_export_path)
+                            if mat_results == None:
+                                print(f"got {mat_name} material")
                         set_geonode_input(mod, "Override Material", o_mat)
                 else:
                     set_geonode_input(mod, "Use Default Object", True)
