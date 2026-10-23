@@ -5,7 +5,7 @@ import os
 from mathutils import Quaternion, Matrix, Vector
 
 
-def get_materials(ob,obj_material: str,index:int,sf_asset_export_path:str):
+def get_materials(ob=None,obj_material: str = "",index:int=0,sf_asset_export_path:str = ""):
     print("=================================")
     print("Getting Materials")
     print("=================================")
@@ -24,6 +24,7 @@ def get_materials(ob,obj_material: str,index:int,sf_asset_export_path:str):
     rn_type_tex = [
         "_N",
         "Nor",
+        "nor",
         "MREO",
         "Rough",
         "Relf",
@@ -218,6 +219,15 @@ def get_materials(ob,obj_material: str,index:int,sf_asset_export_path:str):
         "TX_DesertRock_Cracked_01":"Vector",
         "DesertRock_Rough_01":"Vector",
         "FlatRock":"Vector",
+        "Arc_Rock":"Vector",
+        "Arc_Inside":"Vector",
+        "CaveFloor_Inst":"Vector",
+        "OriginStaligtite":"Vector",
+        "Cliff_Detail_Alb":"Vector",
+        "Plateau1and3":"Vector",
+        "MI_Bigshell_01":"Vector",
+        "TX_TitanTree_TilingBark_N":"Vector",
+        "MI_TitanTree_01":"Vector",
     }
     
     detail_normal_tex = [
@@ -226,12 +236,26 @@ def get_materials(ob,obj_material: str,index:int,sf_asset_export_path:str):
         "TX_CliffRock_A_2x2_1K_normal",
         "Cliff_Sediment_Nor",
         "CliffSediment_Nor",
-        "TX_Arc_Rock_N",
+        #"TX_Arc_Rock_N",
         "TX_Arc_Inside_N",
+        "T_Detail_Rocky_N",
+        "SeaRock_Detail_Nor",
+        "Cliff_Nor_03",
+        "lambert1_Normal_DirectX"
     ]
     
-    bark_mats = [
-        "_Bark"
+    detail_tex = [
+        "Cliff_Sediment_Alb",
+        "TX_FlatRock_01_Alb"
+    ]
+    
+    no_a_orma_mats = [
+        "_Bark",
+        "FieldFlower",
+        "SnailBottom",
+        "Trunk",
+        "MI_TitanTreeMushrooms_01",
+        "ubkmehzya"
     ]
     
     parameters = {
@@ -261,6 +285,43 @@ def get_materials(ob,obj_material: str,index:int,sf_asset_export_path:str):
         "Use Moss Mask":[False],
     }
     
+    mapping_tex = {
+        "Lianas":"Liana",
+        "ubkmehzya":"Kapok"
+    }
+    
+    tex_type_used = [
+        "PM_Normals",
+        "PM_SpecularMasks",
+        "Normal",
+        "ORMA Map",
+        "PM_Diffuse",
+        "Albedo",
+        "Detail Albedo",
+        "PM_Emissive",
+        "Emissive",
+        "Reflection",
+        "ReflectionMap",
+        "HRA",
+        "Nor",
+        "Baked Normal",
+        "Detail_Normal",
+        "ORMA",
+        "Reflection Map",
+        "DestructibleRocks_Refl",
+        "DestructibleRocks_Alb",
+        "DestructibleRocks_Nor",
+        "FunnelTree_01_Refl",
+        "NormalMap",
+        "TilingBarkMREO",
+        "TilingBarkBC",
+        "TX_Grass_Dried_BC",
+        "TX_Grass_Dried_MREO",
+        "TX_Grass_Dried_N",
+        "TX_TitanTree_01_N",
+        "TX_TitanTree_masks_01",
+        "TX_TubeCoral_BC"
+    ]
     
     mat_path = None
     
@@ -294,6 +355,7 @@ def get_materials(ob,obj_material: str,index:int,sf_asset_export_path:str):
     switch_parameters = [] # type: list[dict[str,str]] 
     vec_parameters = [] # type: list[dict[str,dict]] 
     is_wrong_format = False
+    is_cliff_mat = False
     for item in m_data:
         if is_wrong_format:
             break
@@ -327,6 +389,53 @@ def get_materials(ob,obj_material: str,index:int,sf_asset_export_path:str):
                 for tex_name in tex_data:
                     if is_wrong_format:
                         break
+                    if "cliff" in obj_material.lower():
+                        is_cliff_mat = True
+                    skip_tex = False
+                    if "Desert" in tex_name and "cliff" in obj_material.lower():
+                        skip_tex = True
+                    if tex_name not in detail_normal_tex and not any(ut in tex_name for ut in use_tiling):
+                            
+                        if tex_name not in tex_type_used:
+                            skip_tex = True
+                    
+                    if "desert" in obj_material.lower():
+                        if "sand" in tex_name:
+                            skip_tex = False
+                    if skip_tex:
+                        continue
+                    
+                    #if tex_data[tex_name]["ObjectPath"].split("/")[-1] not in detail_normal_tex:
+                    #    if "desert" in tex_name.lower() and "desert" not in obj_material:
+                    #        continue
+                    #
+                    #t_name_parts = tex_data[tex_name]["ObjectPath"].split("/")[-1].split("_")
+                    #obj_material_parts = tex_name.split("_")
+                    #if tex_name not in detail_normal_tex:
+                    #    for p in t_name_parts:
+                    #        if "cliff" in p.lower() and p not in obj_material.lower():
+                    #            if "Foliage" not in tex_data[tex_name]["ObjectPath"]:
+                    #                skip_tex = True
+                    #                break
+                    #
+                    #
+                    #
+                    #if "Foliage" in tex_data[tex_name]["ObjectPath"]:
+                    #    for p in t_name_parts:
+                    #        if p == "TX" or p == "T" or p.lower() == "mask":
+                    #            continue
+                    #        if p.lower() in obj_material.lower():
+                    #            break
+                    #        if "tree" in p.lower() and p.lower() not in obj_material.lower():
+                    #            skip_tex = True
+                    #            break
+                    #        if mapping_tex.get(p,p).lower() in obj_material.lower():
+                    #            break
+                    #        if p not in obj_material:
+                    #            skip_tex = True
+                    #            break
+                            
+                    
                     
                     tex_path_tmp = tex_data[tex_name]
                     if tex_path_tmp == None:
@@ -361,7 +470,7 @@ def get_materials(ob,obj_material: str,index:int,sf_asset_export_path:str):
                             break
                     if is_exclude:
                         continue
-                    if "_Grass" not in obj_material and "_Sand" not in obj_material and "_RedJungle" not in obj_material: 
+                    if "_Grass" not in obj_material and "_Sand" not in obj_material and "_RedJungle" not in obj_material and "Desert" not in obj_material: 
                         if "Sand" in tex_path or "RedJungle" in tex_path or "Grass_01" in tex_path:
                             print("skipping ",tex_name)
                             continue
@@ -640,8 +749,9 @@ def get_materials(ob,obj_material: str,index:int,sf_asset_export_path:str):
                 sf_env_shader_node.inputs["BC Tint"].default_value = (color_par["R"], color_par["G"], color_par["B"], 1.0)
         
         tiling_shader_node = None
-        if "Cliff" in obj_material or "DesertRock" in obj_material:
-            sf_env_shader_node.inputs["Cliff Relf?"].default_value = True
+        if "Cliff" in obj_material or "DesertRock" in obj_material or any(ut in obj_material for ut in use_tiling):
+            if is_cliff_mat:
+                sf_env_shader_node.inputs["Cliff Relf?"].default_value = True
             tiling_shader_node = nodes.new('ShaderNodeGroup')
             if bpy.data.node_groups.get("Tiling"):
                 tiling_shader_node.node_tree = bpy.data.node_groups['Tiling']
@@ -699,16 +809,18 @@ def get_materials(ob,obj_material: str,index:int,sf_asset_export_path:str):
                     #links.new(tiling_shader_node.outputs["Vector"], b_texture.inputs["Vector"])
                     for detail in detail_normal_tex:
                         if detail in tex_file.name:
-                            if "Desert" in detail and not "Desert" in obj_material:
+                            if "Desert" in detail and "Cliff_Sediment_Alb" in textures:
                                 continue
                             is_detail_normal = True
                             links.new(tiling_shader_node.outputs["Vector"], b_texture.inputs["Vector"])
                             links.new(b_texture.outputs["Color"], sf_env_shader_node.inputs["Normal/Nor/N top"])
                     if is_detail_normal:    
                         continue
-                if "Flat" in tex_file.name:#"Desert" in tex_file.name or "Flat" in tex_file.name:
+                if "FlatRock" in tex_file.name:#"Desert" in tex_file.name or "Flat" in tex_file.name:
                     continue
                 if "Sand" in tex_file.name or "RedJungle" in tex_file.name or "Grass_01" in tex_file.name:
+                    if "Desert" in obj_material:
+                        sf_env_shader_node.inputs["Use AO Mask?"].default_value = True
                     if "_ORMA" in tex_file.name:
                         sf_env_shader_node.inputs["Top ORMA?"].default_value = True
                 
@@ -723,7 +835,8 @@ def get_materials(ob,obj_material: str,index:int,sf_asset_export_path:str):
                     tx_type_a = ""
                 
                     if "_N" in tex_file.name or "N" in tex_type:
-                        tx_type = "Top Normal/Nor/N"
+                        if "wet" not in tex_file.name.lower():
+                            tx_type = "Top Normal/Nor/N"
                     if "_AO" in tex_file.name or "AO" in tex_type:
                         tx_type = "Top AO/IDMask"
                     for rt in rough_type_tex:
@@ -747,8 +860,8 @@ def get_materials(ob,obj_material: str,index:int,sf_asset_export_path:str):
                         links.new(b_texture.outputs["Alpha"], sf_env_shader_node.inputs[tx_type_a])
                 else:
                     if "_ORMA" in tex_file.name:
-                        if "Bark" in tex_file.name or "FieldFlower" in tex_file.name or "SnailBottom" in tex_file.name:
-                            sf_env_shader_node.inputs["Bark ORMA?"].default_value = True
+                        if any(nao in tex_file.name for nao in no_a_orma_mats):
+                            sf_env_shader_node.inputs["ORMA No Alpha?"].default_value = True
                         elif "Desert" in tex_file.name:
                             sf_env_shader_node.inputs["Desert ORMA?"].default_value = True
                         else:
@@ -801,55 +914,60 @@ sf_asset_export_path = r"F:\blenber\SF to blend\fmodel export"
 collection_name = "prototypes" # replace with the actual collection name
 get_singal_coll = False
 
-file_name = "HLODInstancedStaticMeshComponent_2307"
-ob = bpy.data.objects.get(file_name)
-if ob != None:
-    obj_materials = [slot.material.name for slot in ob.material_slots if slot.material]
-    print(f"Materials on {ob.name}: {obj_materials}")
-    
-    for i,mat in enumerate(obj_materials):
-        mat_trim = mat#.split('_G')[0]
-        mat_results = get_materials(ob,mat_trim,i,sf_asset_export_path)
-        if mat_results == None:
-            print(f"got {mat_trim} material for {ob}")
-            
+mat_trim = "MI_DesertRock_01"
+mat_results = get_materials(obj_material=mat_trim,sf_asset_export_path=sf_asset_export_path)
+if mat_results == None:
+    print(f"got {mat_trim} material")
+
+#file_name = "HLODInstancedStaticMeshComponent_2307"
+#ob = bpy.data.objects.get(file_name)
+#if ob != None:
+#    obj_materials = [slot.material.name for slot in ob.material_slots if slot.material]
+#    print(f"Materials on {ob.name}: {obj_materials}")
+#    
+#    for i,mat in enumerate(obj_materials):
+#        mat_trim = mat#.split('_G')[0]
+#        mat_results = get_materials(ob,mat_trim,i,sf_asset_export_path)
+#        if mat_results == None:
+#            print(f"got {mat_trim} material for {ob}")
+#            
 
 # If you want to process all objects in a specific collection:
-collection_name = "prototypes" # replace with the actual collection name
-collection = bpy.data.collections.get(collection_name)
+#collection_name = "prototypes" # replace with the actual collection name
+#collection = bpy.data.collections.get(collection_name)
+#
+#processed_materials = []
+#for col in bpy.data.collections:
+#    #if col.name.startswith("Persistent Level"):
+#    if collection and get_singal_coll:
+#        for obj in collection.all_objects:
+#            if obj.type == 'MESH':
+#                obj_materials = [slot.material.name for slot in obj.material_slots if slot.material]
+#                print(f"Materials on {obj.name}: {obj_materials}")
+#                
+#                for i,mat in enumerate(obj_materials):
+#                    mat_results = get_materials(obj,mat,i,sf_asset_export_path)
+#                    if mat_results == None:
+#                        print(f"got {mat} material for {obj}")
+#        break
+#    
+#    # Models instanced are in the prototypes collection.
+#    elif col.name.startswith("prototypes"):
+#        for obj in col.all_objects:
+#            if obj.type == 'MESH':
+#                obj_materials = [slot.material.name for slot in obj.material_slots if slot.material]
+#                print(f"Materials on {obj.name}: {len(obj_materials)}")
+#        
+#                for i,mat in enumerate(obj_materials):
+#                    if mat not in processed_materials:
+#                        mat_results = get_materials(obj,mat,i,sf_asset_export_path)
+#                        if mat_results == None:
+#                            processed_materials.append(mat)
+#                            print(f"got {mat} material for {obj}")
+#                    else:
+#                        print(f"{mat} already processed")
+#    #break
+#else:
+#    print(f"Collection '{collection_name}' not found.")
 
-processed_materials = []
-for col in bpy.data.collections:
-    #if col.name.startswith("Persistent Level"):
-    if collection and get_singal_coll:
-        for obj in collection.all_objects:
-            if obj.type == 'MESH':
-                obj_materials = [slot.material.name for slot in obj.material_slots if slot.material]
-                print(f"Materials on {obj.name}: {obj_materials}")
-                
-                for i,mat in enumerate(obj_materials):
-                    mat_results = get_materials(obj,mat,i,sf_asset_export_path)
-                    if mat_results == None:
-                        print(f"got {mat} material for {obj}")
-        break
-    
-    # Models instanced are in the prototypes collection.
-    elif col.name.startswith("prototypes"):
-        for obj in col.all_objects:
-            if obj.type == 'MESH':
-                obj_materials = [slot.material.name for slot in obj.material_slots if slot.material]
-                print(f"Materials on {obj.name}: {len(obj_materials)}")
-        
-                for i,mat in enumerate(obj_materials):
-                    if mat not in processed_materials:
-                        mat_results = get_materials(obj,mat,i,sf_asset_export_path)
-                        if mat_results == None:
-                            processed_materials.append(mat)
-                            print(f"got {mat} material for {obj}")
-                    else:
-                        print(f"{mat} already processed")
-    #break
-else:
-    print(f"Collection '{collection_name}' not found.")
-
-print(f"Processed {len(processed_materials)} materials")
+#print(f"Processed {len(processed_materials)} materials")
