@@ -5,6 +5,17 @@ from typing import Any, List, Tuple
 import time
 import bpy
 
+def set_geonode_input(modifier: bpy.types.Modifier, label: str, value):
+    for item in modifier.node_group.interface.items_tree:
+        if getattr(item, "in_out", None) == "INPUT" and item.name == label:
+            if bpy.app.version < (5, 2, 0):
+                modifier[item.identifier] = value
+            else:
+                input_prop = getattr(modifier.properties.inputs, item.identifier)
+                input_prop.value = value
+            return
+    raise KeyError(f"Input '{label}' not found")
+
 
 fmodel_export_path = r"F:\blenber\SF to blend\fmodel export"
 search_path = fmodel_export_path + r"\FactoryGame\Content\FactoryGame\Map\GameLevel01\Persistent_Level\_Generated_"
@@ -27,6 +38,7 @@ umap_processed = {
     }
 }
 umap_dict = {}
+land_umap_dict = {}
 
 exclude_actors = [
     "Spawn",
@@ -45,6 +57,10 @@ ex_dump = []
 
 models_used = {}
 
+height_maps = {}
+
+
+
 #for file_path in sorted(FOLDER_PATH.rglob("0C0EB0SNHH89X7G16DXI46BC3.json")):
 #for file_path in sorted(FOLDER_PATH.rglob("1IRGQ236BGL3067IY2HJARLHO.json")):
 count = 0
@@ -53,12 +69,28 @@ for file_path in sorted(FOLDER_PATH.rglob("E1E1IXJH446CPIWHCCJIXST0Q.json")):
     with file_path.open("r", encoding="utf-8") as f:
         data = json.load(f)
     
+    
+    #for item in data:
+    #    i_type = item.get("Name")
+    #    i_prop = item.get("Properties")
+    #    if i_prop:
+    #        for prop in i_prop:
+    #            if "Mesh" in prop:
+    #                if type(i_prop[prop]) == dict and i_prop[prop].get("ObjectName"):
+    #                    if "ResourceNode" in i_prop[prop]["ObjectName"]:
+    #                        print(item)
+    
+    #continue
     umap_dict.update({
         file_path.stem:[]
     })
     
+    land_umap_dict.update({
+        file_path.stem:[]
+    })
     
-    print(data[232])
+    
+    #print(data[232])
     actor_indexes = []
     instance_indexes = []
     root_indexes = []
@@ -185,13 +217,96 @@ for file_path in sorted(FOLDER_PATH.rglob("E1E1IXJH446CPIWHCCJIXST0Q.json")):
                     root_parent_name = data[root_parent]["Name"]
                 
                 mesh = instance_props.get("StaticMesh") # maybe add to list of meshes used in umap?
-                if not mesh:
+                height_map = instance_props.get("HeightmapTexture")
+                if not mesh and not height_map:
                     continue
+                if height_map:
+                    s_base_x = instance_props.get("SectionBaseX")
+                    s_base_y = instance_props["SectionBaseY"]
+                    
+                    if instance_props.get("RelativeLocation"):
+                        offset = (
+                            instance_props["RelativeLocation"]["X"] if instance_props["RelativeLocation"]["X"] > 0 else 0,
+                            (instance_props["RelativeLocation"]["Y"] * -1) - 127 if instance_props["RelativeLocation"]["Y"] > 0 else -127,
+                        )
+                    else:
+                        offset = (
+                            0,
+                            -127,
+                        )
+                    
+                    height_map_path = Path(height_map["ObjectPath"][6:].split('.')[0],"PersistentLevel",height_map["ObjectName"].split('.')[1],"Heightmaps_Grayscale",height_map["ObjectName"].split('.')[2][:-1]+".png")
+                    
+                    weightmaps = [ 
+                                Path(weight["ObjectPath"][6:].split('.')[0],"PersistentLevel",weight["ObjectName"].split('.')[1],weight["ObjectName"].split('.')[2][:-1]+".png") 
+                                for weight in instance_props["WeightmapTextures"] 
+                                ]
+                    layer_maps = {
+                        "Cliff_LayerInfo":{},
+                        "CoralRock_LayerInfo":{},
+                        "DesertRock_LayerInfo":{},
+                        "Foliage_Eraser_LayerInfo":{},
+                        "Forest_LayerInfo":{},
+                        "Grass_LayerInfo":{},
+                        "GrassRed_LayerInfo":{},
+                        "Gravel_WeightLayerInfo":{},
+                        "Puddles_LayerInfo":{},
+                        "PurpleForest_LayerInfo":{},
+                        "RedJungle_LayerInfo":{},
+                        "Sand_LayerInfo":{},
+                        "SandCracks_LayerInfo":{},
+                        "SandPebbles_LayerInfo":{},
+                        "SandRipples_LayerInfo":{},
+                        "SandRock_LayerInfo":{},
+                        "Soil_LayerInfo":{},
+                        "WetSand_LayerInfo":{}
+                    }
+                    for weight in instance_props["WeightmapLayerAllocations"]:
+                        weightmap_index = weight["WeightmapTextureIndex"]
+                        weightmap_Channel = weight["WeightmapTextureChannel"]
+                        
+                        layer_maps[weight["LayerInfo"]["ObjectName"].split("'")[1]] = {
+                            "weightmap":weightmap_index,
+                            "channel":weightmap_Channel
+                        }
+                    
+                    #height_maps.update({
+                    #    height_map["ObjectName"].split("'")[1]:height_map["ObjectPath"].split('.')[0]
+                    #})
+
+                    
+                    mesh_object_name = instance_data["Name"]
+                    root_name = f"RootComponent0.{root_parent}"
+                    root_transform = all_root_dict[root_parent]
+                
+                    land_umap_dict[file_path.stem].append(
+                                    {
+                                        "ObjectName": mesh_object_name,
+                                        "root" : {
+                                            "name":root_name,
+                                            "transform":root_transform
+                                            },
+                                        "mesh" : mesh_object_name,
+                                        "height_map_path" : height_map_path,
+                                        "weightmaps" : weightmaps,
+                                        "layer_maps" : layer_maps,
+                                        "s_base_x" : s_base_x,
+                                        "s_base_y" : s_base_y,
+                                        "offset":offset
+                                    }
+                                    )
+
+                continue
                 models_used.update({
                     mesh["ObjectName"].split("'")[1]:mesh["ObjectPath"].split('.')[0]
                 })
+                instance_count = 1
+                instance_bounds = {}
                 if instance_props.get("TranslatedInstanceSpaceOrigin"):
                     translations = instance_props["TranslatedInstanceSpaceOrigin"]
+                    if instance_props["InstanceCountToRender"] > 1:
+                        instance_count = instance_props["InstanceCountToRender"]
+                        instance_bounds = instance_props["BuiltInstanceBounds"]
                 elif instance_props.get("RelativeLocation"):
                     translations = instance_props["RelativeLocation"]
                 else:
@@ -255,7 +370,9 @@ for file_path in sorted(FOLDER_PATH.rglob("E1E1IXJH446CPIWHCCJIXST0Q.json")):
                                         },
                                     "mesh" : mesh["ObjectName"].split("'")[1],  # mesh name
                                     "transform" : transform_data,
-                                    "OverrideMaterials" : override_materials
+                                    "OverrideMaterials" : override_materials,
+                                    "instance_count" : instance_count,
+                                    "instance_bounds":instance_bounds
                                 }
                                 )
                 
@@ -263,6 +380,102 @@ for file_path in sorted(FOLDER_PATH.rglob("E1E1IXJH446CPIWHCCJIXST0Q.json")):
             
             break
     
+    if land_umap_dict:
+        for i in land_umap_dict[file_path.stem]:
+            if i == []:
+                continue
+            
+            #break
+            point_positions = []
+            
+            if "RootComponent0" in i["root"]["name"]:
+                ob_parent = bpy.data.objects.get(file_path.stem+"_"+i["root"]["name"])
+                if not ob_parent:
+                    ob_parent = bpy.data.objects.new(file_path.stem+"_"+i["root"]["name"],None)
+                pos = i["root"]["transform"]['X'] / 100.0, -i["root"]["transform"]['Y'] / 100.0, i["root"]["transform"]['Z'] / 100.0
+                ob_parent.location = pos
+                ob_parent.scale = ob_parent.scale
+                point_positions = [pos]
+            else:
+                ob_parent = None
+            
+            has_attr = True
+            
+            if not point_positions:
+                continue
+            mesh = bpy.data.meshes.new(f"{file_path.stem+"_"+i["mesh"]}_Points")
+            mesh.from_pydata(point_positions, [], [])
+            # object from the mesh
+            point_obj = bpy.data.objects.new(f"{file_path.stem+"_"+i["mesh"]}_Points", mesh)
+            if ob_parent:
+                point_obj.parent = ob_parent
+            
+            if has_attr:
+                for layer in i["layer_maps"]:
+                    if i["layer_maps"][layer]:
+                        layer_attr = (i["layer_maps"][layer]["weightmap"],i["layer_maps"][layer]["channel"],0)
+                        mesh.attributes.new(layer, "FLOAT_VECTOR", "POINT")
+                        mesh.attributes[layer].data.foreach_set("vector", layer_attr)
+                
+            
+            heightmap_path = Path(fmodel_export_path,r"FactoryGame\Content") / i["height_map_path"]
+            if not heightmap_path.exists():
+                print(f"Heightmap not found: {heightmap_path}")
+                continue
+            heightmap_img = bpy.data.images.load(os.fspath(heightmap_path))
+            heightmap_img.colorspace_settings.name = 'Linear Rec.709'
+            
+            weightmap_img = []
+            for w in i["weightmaps"]:
+                weightmap_path = Path(fmodel_export_path,r"FactoryGame\Content") / w
+                if not weightmap_path.exists():
+                    print(f"Weightmap not found: {weightmap_path}")
+                    continue
+                weightmap_img.append(bpy.data.images.load(os.fspath(weightmap_path)))
+            if bpy.data.node_groups.get("landscape_builder"):
+                node_group = bpy.data.node_groups["landscape_builder"]
+                mod = point_obj.modifiers.new(name="LandscapeBuilder", type="NODES")
+                mod.node_group = node_group
+            
+                if mesh:
+                    
+                    set_geonode_input(mod, "Heightmap", heightmap_img)
+                    
+                    set_geonode_input(mod, "Pos", i["offset"])
+                    
+                    section_base = (i.get("s_base_x", 0) or 0, i.get("s_base_y", 0))
+                    print(f"Section Base: {section_base}")
+                    set_geonode_input(mod, "Section Base", section_base)
+                    for idx, we in enumerate(weightmap_img,1):
+                        we.colorspace_settings.name = 'Linear Rec.709'
+                        we.alpha_mode = 'CHANNEL_PACKED'
+                        set_geonode_input(mod, f"Weightmap {idx}", we)
+                    
+            #node_group = bpy.data.node_groups["instance env"]
+            #mod = point_obj.modifiers.new(name="InstanceEnv", type="NODES")
+            #mod.node_group = node_group
+            
+            sc_col = bpy.context.scene.collection
+            col = bpy.data.collections.get(file_path.stem)
+            col = bpy.data.collections.get("test_land")
+            if not col:
+                col = bpy.data.collections.new("test_land")
+                bpy.context.scene.collection.children.link(col)
+            
+            if ob_parent:
+                if sc_col in ob_parent.users_collection:
+                    bpy.context.scene.collection.objects.unlink(ob_parent) 
+            
+                if col not in ob_parent.users_collection:
+                    col.objects.link(ob_parent)
+            
+            if sc_col in point_obj.users_collection:
+                bpy.context.scene.collection.objects.unlink(point_obj) 
+            
+            if col not in point_obj.users_collection:
+                col.objects.link(point_obj)
+    
+    break
     models_col = bpy.data.collections.get("models")
     if not models_col:
         models_col = bpy.data.collections.new("models")

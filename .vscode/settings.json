@@ -42,5 +42,7 @@
         "Truckstation",
         "verts",
         "Xmass"
-    ]
+    ],
+    "discord.idleTimeout": 720,
+    "discord.enabled": false
 }

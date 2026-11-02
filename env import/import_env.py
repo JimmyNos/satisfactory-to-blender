@@ -1284,8 +1284,13 @@ def main() -> None:
                     models_used.update({
                         mesh["ObjectName"].split("'")[1]:mesh["ObjectPath"].split('.')[0]
                     })
+                    instance_count = 1
+                    instance_bounds = {}
                     if instance_props.get("TranslatedInstanceSpaceOrigin"):
                         translations = instance_props["TranslatedInstanceSpaceOrigin"]
+                        if instance_props["InstanceCountToRender"] > 1:
+                            instance_count = instance_props["InstanceCountToRender"]
+                            instance_bounds = instance_props["BuiltInstanceBounds"]
                     elif instance_props.get("RelativeLocation"):
                         translations = instance_props["RelativeLocation"]
                     else:
@@ -1349,7 +1354,9 @@ def main() -> None:
                                             },
                                         "mesh" : mesh["ObjectName"].split("'")[1],  # mesh name
                                         "transform" : transform_data,
-                                        "OverrideMaterials" : override_materials
+                                        "OverrideMaterials" : override_materials,
+                                        "instance_count" : instance_count,
+                                        "instance_bounds":instance_bounds
                                     }
                                     )
         
@@ -1564,6 +1571,7 @@ def main() -> None:
                 mod.node_group = node_group
                 
                 if ob_instance_mesh:
+                    set_geonode_input(mod, "Use Culling", True)
                     set_geonode_input(mod, "Object", ob_instance_mesh)
                     if i["OverrideMaterials"]:
                         om_attr = [True] * len(point_positions)
@@ -1578,6 +1586,22 @@ def main() -> None:
                             if mat_results == None:
                                 print(f"got {mat_name} material")
                         set_geonode_input(mod, "Override Material", o_mat)
+                    
+                    if i["instance_count"] > 1:
+                        set_geonode_input(mod, "Instance Count", i["instance_count"])
+                        if i["instance_bounds"]:
+                            in_max = Vector((
+                                i["instance_bounds"]["Max"]['X'] / 100.0,
+                                i["instance_bounds"]["Max"]['Y'] / 100.0,
+                                i["instance_bounds"]["Max"]['Z'] / 100.0
+                                ))
+                            in_min = Vector((
+                                i["instance_bounds"]["Min"]['X'] / 100.0,
+                                i["instance_bounds"]["Min"]['Y'] / 100.0,
+                                i["instance_bounds"]["Min"]['Z'] / 100.0
+                                ))
+                            set_geonode_input(mod, "Instance Pos Min", in_min)
+                            set_geonode_input(mod, "Instance Pos Max", in_max)
                 else:
                     set_geonode_input(mod, "Use Default Object", True)
         
@@ -1612,8 +1636,8 @@ search_path = fmodel_export_path + r"\FactoryGame\Content\FactoryGame\Map\GameLe
 FOLDER_PATH = Path(fmodel_export_path + r"\Exports\FactoryGame\Content\FactoryGame\Map\GameLevel01\Persistent_Level\_Generated_")
 
 # import coordinates. Multiply by 100 for conversion from unreal units to blender units (1 unit = 100 blender units).
-TARGET_X = 1000 * 100
-TARGET_Y = 1000 * -100 # Y needs to be negative because the Y axis is inverted in blender compared to unreal engine.
+TARGET_X = -300 * 100
+TARGET_Y = 1200 * -100 # Y needs to be negative because the Y axis is inverted in blender compared to unreal engine.
 TOLERANCE = 500.0 * 100
 
 if __name__ == "__main__":
