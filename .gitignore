@@ -222,5 +222,4 @@ SF Assets blend/SF Assets.blend
 *.zip
 /AS_Asset_Lib_backup
 /examples
-env import/import textures backup.py
-/env import/env dev
+/env dev
