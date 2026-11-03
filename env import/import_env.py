@@ -1102,7 +1102,7 @@ def scan_file(file_path: Path) -> List[Tuple[str, float, float]]:
     for i in data:
         if "Foliage" in i["Type"]:
             u_type = 1
-            print("type: Foliage")
+            #print("type: Foliage")
             break
     
     parent_coords = {}
@@ -1114,7 +1114,7 @@ def scan_file(file_path: Path) -> List[Tuple[str, float, float]]:
                 parent_coords = root_component["Properties"]["RelativeLocation"]
                 
             u_type = 2
-            print("type: Landscape")
+            #print("type: Landscape")
             break
     #print()
     return find_translation_points(data,u_type=u_type,parent_coords=parent_coords)
@@ -1224,8 +1224,8 @@ def main() -> None:
         for item in data:
             if is_skip:
                 break
-            if u_type == 2:
-                break
+            #if u_type == 2:
+            #    break
             #print("type:", end="\r")
             
             i_type = item.get("Type")
@@ -1275,6 +1275,13 @@ def main() -> None:
                         instance_indexes.append(instance_index)
                     elif actor_data["Properties"].get("InstanceComponents"):
                         for int_comp in actor_data["Properties"]["InstanceComponents"]:
+                            if not int_comp:
+                                continue
+                            instance_index = int(int_comp["ObjectPath"].split('.')[-1])
+                            instance_indexes.append(instance_index)
+                    
+                    elif actor_data["Properties"].get("LandscapeComponents"):
+                        for int_comp in actor_data["Properties"]["LandscapeComponents"]:
                             if not int_comp:
                                 continue
                             instance_index = int(int_comp["ObjectPath"].split('.')[-1])
@@ -1624,9 +1631,6 @@ def main() -> None:
                     col.objects.link(point_obj)
             
         else:
-        
-        
-            
             models_col = bpy.data.collections.get("models")
             if not models_col:
                 models_col = bpy.data.collections.new("models")
@@ -1826,7 +1830,7 @@ def main() -> None:
                     point_obj.parent = ob_parent
             
                 if has_attr:
-                    if i["transform"]["scale"]:
+                    if type(i["transform"]) == list:#i["transform"]["scale"]:
                         mesh.attributes.new("scale", "FLOAT_VECTOR", "POINT")
                         mesh.attributes["scale"].data.foreach_set("vector", scale_attr)
                     mesh.attributes.new("rotation", "FLOAT_VECTOR", "POINT")

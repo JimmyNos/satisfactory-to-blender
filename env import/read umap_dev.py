@@ -119,7 +119,7 @@ height_maps = {}
 #for file_path in sorted(FOLDER_PATH.rglob("1IRGQ236BGL3067IY2HJARLHO.json")):
 count = 0
 is_skip = False
-for file_path in sorted(FOLDER_PATH.rglob("0160F7U27T6ZUCR84XFMB9NWI.json")):
+for file_path in sorted(FOLDER_PATH.rglob("*.json")):
     with file_path.open("r", encoding="utf-8") as f:
         data = json.load(f)
     
