@@ -4,6 +4,9 @@ from pathlib import Path
 from typing import Any, List, Tuple
 import time
 import bpy
+import sys
+
+from PIL import Image
 
 def set_geonode_input(modifier: bpy.types.Modifier, label: str, value):
     for item in modifier.node_group.interface.items_tree:
@@ -20,6 +23,57 @@ def set_geonode_input(modifier: bpy.types.Modifier, label: str, value):
 fmodel_export_path = r"F:\blenber\SF to blend\fmodel export"
 search_path = fmodel_export_path + r"\FactoryGame\Content\FactoryGame\Map\GameLevel01\Persistent_Level\_Generated_"
 FOLDER_PATH = Path(fmodel_export_path + r"\Exports\FactoryGame\Content\FactoryGame\Map\GameLevel01\Persistent_Level\_Generated_")
+
+
+
+def convert_heightmap(source_path: Path, output_path: Path) -> None:
+    """Decode Unreal's packed red/green height values into a grayscale image."""
+    with Image.open(source_path) as source:
+        if source.mode != "RGBA":
+            raise ValueError(
+                f"Expected an RGBA height map, got {source.mode}: {source_path}"
+            )
+
+        rgba = source.tobytes()
+        height_pixels = bytearray(source.width * source.height * 2)
+        for pixel_index in range(source.width * source.height):
+            source_index = pixel_index * 4
+            height = (rgba[source_index] << 8) | rgba[source_index + 1]
+            destination_index = pixel_index * 2
+            height_pixels[destination_index : destination_index + 2] = height.to_bytes(
+                2, sys.byteorder
+            )
+
+        grayscale = Image.frombytes("I;16", source.size, bytes(height_pixels))
+        grayscale.save(output_path, format="PNG")
+        grayscale.close()
+
+def create_gs_heightmap(umap_path: Path, height_output_dir: Path | None = None):
+    input_path = umap_path.expanduser()
+    if input_path.is_file():
+        sources = [input_path]
+        default_output_dir = input_path.parent / "Heightmaps_Grayscale"
+    elif input_path.is_dir():
+        sources = sorted(input_path.glob("Heightmap_*.png"))
+        default_output_dir = input_path / "Heightmaps_Grayscale"
+    else:
+        raise FileNotFoundError(f"Input path does not exist: {input_path}")
+    
+    if not sources:
+        raise FileNotFoundError(f"No Heightmap_*.png files found in {input_path}")
+    
+    output_dir = (height_output_dir or default_output_dir).expanduser()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    for source_path in sources:
+        output_path = output_dir / source_path.name
+        if output_path.exists():
+            print(f"Skipping {source_path.name}, already exists: {output_path}")
+            continue
+        convert_heightmap(source_path, output_path)
+        print(f"Converted {source_path.name} -> {output_path}")
+    
+    print(f"Converted {len(sources)} height map(s) to 16-bit grayscale.")
 
 actor = ""
 root = ""
@@ -65,20 +119,20 @@ height_maps = {}
 #for file_path in sorted(FOLDER_PATH.rglob("1IRGQ236BGL3067IY2HJARLHO.json")):
 count = 0
 is_skip = False
-for file_path in sorted(FOLDER_PATH.rglob("E1E1IXJH446CPIWHCCJIXST0Q.json")):
+for file_path in sorted(FOLDER_PATH.rglob("0160F7U27T6ZUCR84XFMB9NWI.json")):
     with file_path.open("r", encoding="utf-8") as f:
         data = json.load(f)
     
     
-    #for item in data:
-    #    i_type = item.get("Name")
-    #    i_prop = item.get("Properties")
-    #    if i_prop:
-    #        for prop in i_prop:
-    #            if "Mesh" in prop:
-    #                if type(i_prop[prop]) == dict and i_prop[prop].get("ObjectName"):
-    #                    if "ResourceNode" in i_prop[prop]["ObjectName"]:
-    #                        print(item)
+    for item in data:
+        i_type = item.get("Name")
+        i_prop = item.get("Properties")
+        if i_prop:
+            for prop in i_prop:
+                if "Mesh" in prop:
+                    if type(i_prop[prop]) == dict and i_prop[prop].get("ObjectName"):
+                        if "ResourceNode" in i_prop[prop]["ObjectName"]:
+                            print(item)
     
     #continue
     umap_dict.update({
@@ -133,6 +187,8 @@ for file_path in sorted(FOLDER_PATH.rglob("E1E1IXJH446CPIWHCCJIXST0Q.json")):
                     static_comp = actor_data["Properties"]["StaticMeshComponent"]
                     instance_index = int(static_comp["ObjectPath"].split('.')[-1])
                     instance_indexes.append(instance_index)
+                    if "ResourceNode" in actor_data["Properties"]["StaticMeshComponent"]["ObjectName"]:
+                        print(actor_data)
                     #is_skip = True
                     #break
                 elif actor_data["Properties"].get("mStaticMesh"):
@@ -234,7 +290,7 @@ for file_path in sorted(FOLDER_PATH.rglob("E1E1IXJH446CPIWHCCJIXST0Q.json")):
                             0,
                             -127,
                         )
-                    
+                    mega_tile_name = height_map["ObjectName"].split('.')[1]
                     height_map_path = Path(height_map["ObjectPath"][6:].split('.')[0],"PersistentLevel",height_map["ObjectName"].split('.')[1],"Heightmaps_Grayscale",height_map["ObjectName"].split('.')[2][:-1]+".png")
                     
                     weightmaps = [ 
@@ -292,11 +348,12 @@ for file_path in sorted(FOLDER_PATH.rglob("E1E1IXJH446CPIWHCCJIXST0Q.json")):
                                         "layer_maps" : layer_maps,
                                         "s_base_x" : s_base_x,
                                         "s_base_y" : s_base_y,
-                                        "offset":offset
+                                        "offset":offset,
+                                        "mega_tile_name":mega_tile_name
                                     }
                                     )
 
-                continue
+                #continue
                 models_used.update({
                     mesh["ObjectName"].split("'")[1]:mesh["ObjectPath"].split('.')[0]
                 })
@@ -381,6 +438,12 @@ for file_path in sorted(FOLDER_PATH.rglob("E1E1IXJH446CPIWHCCJIXST0Q.json")):
             break
     
     if land_umap_dict:
+        tile_names = set()
+        for i in land_umap_dict[file_path.stem]:
+            tile_names.add(i["mega_tile_name"])
+        for tile in tile_names:
+            umap_path = Path(search_path) / file_path.stem / "PersistentLevel" / tile
+            create_gs_heightmap(umap_path)
         for i in land_umap_dict[file_path.stem]:
             if i == []:
                 continue
@@ -475,13 +538,15 @@ for file_path in sorted(FOLDER_PATH.rglob("E1E1IXJH446CPIWHCCJIXST0Q.json")):
             if col not in point_obj.users_collection:
                 col.objects.link(point_obj)
     
-    break
+    #continue
     models_col = bpy.data.collections.get("models")
     if not models_col:
         models_col = bpy.data.collections.new("models")
         bpy.context.scene.collection.children.link(models_col)
         
     for model in models_used:
+        if "resource" in model.lower():
+            print(model)
         ob = bpy.data.objects.get(model)
         if ob == None: 
             model_in_path = models_used[model].replace("/Game",r"FactoryGame\Content")
@@ -592,6 +657,47 @@ for file_path in sorted(FOLDER_PATH.rglob("E1E1IXJH446CPIWHCCJIXST0Q.json")):
             mesh.attributes["scale"].data.foreach_set("vector", scale_attr)
             mesh.attributes.new("rotation", "QUATERNION", "POINT")
             mesh.attributes["rotation"].data.foreach_set("value", rotation_attr)
+        
+        
+        if bpy.data.node_groups.get("instance env"):
+            node_group = bpy.data.node_groups["instance env"]
+            mod = point_obj.modifiers.new(name="InstanceEnv", type="NODES")
+            mod.node_group = node_group
+        
+            if ob_instance_mesh:
+                set_geonode_input(mod, "Use Culling", True)
+                set_geonode_input(mod, "Object", ob_instance_mesh)
+                if i["OverrideMaterials"]:
+                    om_attr = [True] * len(point_positions)
+                    mesh.attributes.new("OverrideMaterial", "BOOLEAN", "POINT")
+                    mesh.attributes["OverrideMaterial"].data.foreach_set("value", om_attr)
+                    mat_name = i["OverrideMaterials"]
+                    o_mat = bpy.data.materials.get(i["OverrideMaterials"])
+                    if not o_mat:
+                        o_mat = bpy.data.materials.new(i["OverrideMaterials"])
+        
+                        mat_results = get_materials(obj_material=mat_name,sf_asset_export_path=fmodel_export_path)
+                        if mat_results == None:
+                            print(f"got {mat_name} material")
+                    set_geonode_input(mod, "Override Material", o_mat)
+        
+                if i["instance_count"] > 1:
+                    set_geonode_input(mod, "Instance Count", i["instance_count"])
+                    if i["instance_bounds"]:
+                        in_max = Vector((
+                            i["instance_bounds"]["Max"]['X'] / 100.0,
+                            i["instance_bounds"]["Max"]['Y'] / 100.0,
+                            i["instance_bounds"]["Max"]['Z'] / 100.0
+                            ))
+                        in_min = Vector((
+                            i["instance_bounds"]["Min"]['X'] / 100.0,
+                            i["instance_bounds"]["Min"]['Y'] / 100.0,
+                            i["instance_bounds"]["Min"]['Z'] / 100.0
+                            ))
+                        set_geonode_input(mod, "Instance Pos Min", in_min)
+                        set_geonode_input(mod, "Instance Pos Max", in_max)
+            else:
+                set_geonode_input(mod, "Use Default Object", True)
         
         
         #node_group = bpy.data.node_groups["instance env"]
