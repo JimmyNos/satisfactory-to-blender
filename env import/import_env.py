@@ -288,7 +288,8 @@ def get_materials(obj_material: str = "",sf_asset_export_path:str = ""):
         "Trunk",
         "MI_TitanTreeMushrooms_01",
         "ubkmehzya",
-        "MI_Landkelp_01"
+        "MI_Landkelp_01",
+        "MI_TitanTreeLeaves_01"
     ]
     
     parameters = {
@@ -1400,8 +1401,8 @@ def main() -> None:
                         translations = instance_props["RelativeLocation"]
                     else:
                         translations = None # replace if more translations found
-                    rotation = instance_props.get("RelativeRotation") or instance_props.get("Rotation") # replace if more translations found
-                    scale = instance_props.get("RelativeScale3D") # replace if more translations found
+                    rotation = instance_props.get("RelativeRotation",None) # replace if more translations found
+                    scale = instance_props.get("RelativeScale3D",None) # replace if more translations found
                     override_materials = None
                     mesh_object_name = instance_data["Name"]
                     if instance_props.get("OverrideMaterials"):
