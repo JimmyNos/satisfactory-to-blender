@@ -287,7 +287,8 @@ def get_materials(obj_material: str = "",sf_asset_export_path:str = ""):
         "SnailBottom",
         "Trunk",
         "MI_TitanTreeMushrooms_01",
-        "ubkmehzya"
+        "ubkmehzya",
+        "MI_Landkelp_01"
     ]
     
     parameters = {
