@@ -371,6 +371,7 @@ def get_materials(obj_material: str = "",sf_asset_export_path:str = ""):
         "Moss",
         "WetSand",
         "Sandy",
+        "Forest"
     ]
     
     top_ao_mask = [
@@ -949,51 +950,7 @@ def create_gs_heightmap(umap_path: Path, height_output_dir: Path | None = None):
     
     print(f"Converted {len(sources)} height map(s) to 16-bit grayscale.")
 
-fmodel_export_path = r"F:\blenber\SF to blend\fmodel export"
-search_path = fmodel_export_path + r"\FactoryGame\Content\FactoryGame\Map\GameLevel01\Persistent_Level\_Generated_"
-FOLDER_PATH = Path(fmodel_export_path + r"\Exports\FactoryGame\Content\FactoryGame\Map\GameLevel01\Persistent_Level\_Generated_")
 
-
-
-actor = ""
-root = ""
-meshes = ""
-
-umap_processed = {
-    "root" : {
-        "name":"", # root index
-        "transform":{}
-        },
-    "mesh" : '',  # mesh name
-    "transform" : {
-        "location" : {},
-        "rotation" : {},
-        "scale" : {}
-    }
-}
-umap_dict = {}
-umap_type = {}
-land_umap_dict = {}
-
-exclude_actors = [
-    "Spawn",
-    "Spline",
-    "BP_",
-    "NiagaraActor",
-    "Emitter",
-    "LandscapeStreamingProxy",
-    "FGItemPickup",
-    "Volume",
-    "Ambient",
-    "Decal"
-]
-
-ex_dump = []
-models_used = {}
-#for file_path in sorted(FOLDER_PATH.rglob("0C0EB0SNHH89X7G16DXI46BC3.json")):
-#for file_path in sorted(FOLDER_PATH.rglob("1IRGQ236BGL3067IY2HJARLHO.json")):
-count = 0
-is_skip = False
 
 def find_translation_points(data: Any, path: str = "",u_type: int = 0,parent_coords:dict = {}) -> List[Tuple[str, float, float]]:
     """Return list of (path, x, y) for Translation objects that have both X and Y as floats.
@@ -1901,9 +1858,46 @@ def main() -> None:
                 if col not in point_obj.users_collection:
                     col.objects.link(point_obj)
         print(f"imported {un}")
-        
-#fmodel_export_path = r"FMODEL-EXPORT-PATH"
-fmodel_export_path = r"F:\blenber\SF to blend\fmodel export"
+
+actor = ""
+root = ""
+meshes = ""
+
+umap_processed = {
+    "root" : {
+        "name":"", # root index
+        "transform":{}
+        },
+    "mesh" : '',  # mesh name
+    "transform" : {
+        "location" : {},
+        "rotation" : {},
+        "scale" : {}
+    }
+}
+umap_dict = {}
+umap_type = {}
+land_umap_dict = {}
+
+exclude_actors = [
+    "Spawn",
+    "Spline",
+    "BP_",
+    "NiagaraActor",
+    "Emitter",
+    "LandscapeStreamingProxy",
+    "FGItemPickup",
+    "Volume",
+    "Ambient",
+    "Decal"
+]
+
+ex_dump = []
+models_used = {}
+count = 0
+is_skip = False
+
+fmodel_export_path = r"FMODEL-EXPORT-PATH"
 search_path = fmodel_export_path + r"\FactoryGame\Content\FactoryGame\Map\GameLevel01\Persistent_Level\_Generated_"
 FOLDER_PATH = Path(fmodel_export_path + r"\Exports\FactoryGame\Content\FactoryGame\Map\GameLevel01\Persistent_Level\_Generated_")
 
