@@ -85,7 +85,6 @@ def get_par_materials(sf_asset_export_path):
                 
             print("getting mat tex")    
             mat_tex = m_data["Textures"]
-            mat_color_data = m_data["Parameters"]["Colors"]
         except Exception as e:
             print("Error opening material file: ",e)
             return f"Error opening material file: {Path(mat_dir,f"{mat}.json")}: {e}"
