@@ -80,14 +80,45 @@ def get_par_materials(sf_asset_export_path):
         
         try:
             mat_file = Path(mat_dir,f"{mat}.json")
+            if not mat_file.exists():
+                print(f"{mat} file does not exist, using fallback file instead: {mat_file}")
+                mat_file = Path(__file__).parent / "fallback_materials" / f"{mat}.json"
+            
             with open(mat_file, 'r', encoding='utf-8') as f:
                 m_data = json.load(f)
-                
-            print("getting mat tex")    
+            
+            print("getting mat tex") 
+            if "Textures" not in m_data:   
+                print(f"Incorrect Material file, using fallback material instead: {mat_file}")
+                mat_file = Path(__file__).parent / "fallback_materials" / f"{mat}.json"
+                with open(mat_file, 'r', encoding='utf-8') as f:
+                    m_data = json.load(f)
+            
             mat_tex = m_data["Textures"]
+            tmp_tex = {}
+            for tex_name in mat_tex:
+                mat_tex_tmp = mat_tex[tex_name]
+                if mat_tex_tmp == None:
+                    continue
+            
+                if type(mat_tex_tmp) == dict:
+            
+                    if mat_tex_tmp.get('AssetPathName'):
+                        continue
+                        mat_tex = mat_tex_tmp['AssetPathName']
+                    elif mat_tex_tmp.get('ObjectPath'):
+                        tmp_tex.update({
+                            tex_name:mat_tex_tmp['ObjectPath']
+                        })
+                    else:
+                        continue
+                else:
+                    break
+            if tmp_tex:
+                mat_tex = tmp_tex
         except Exception as e:
-            print("Error opening material file: ",e)
-            return f"Error opening material file: {Path(mat_dir,f"{mat}.json")}: {e}"
+            print(f"Error opening {mat} file: ",e)
+            return f"Error opening {mat} file: {Path(mat_dir,f"{mat}.json")}: {e}"
         
         
         pos = 0
@@ -276,7 +307,7 @@ def get_par_materials(sf_asset_export_path):
                         print(f"Finished loading {tex_id}")
                         print("----------------")
                     except Exception as e:
-                        print("Error loading texture: ",e)
+                        print(f"Error loading {tex_id} texture: ",e)
                 print("===================>")
                 
                     
@@ -386,4 +417,4 @@ def get_par_materials(sf_asset_export_path):
                     print(f"Finished loading {tex}")
                     print("----------------")
                 except Exception as e:
-                    print("Error loading texture: ",e)
+                    print(f"Error loading texture {tex}: ",e)

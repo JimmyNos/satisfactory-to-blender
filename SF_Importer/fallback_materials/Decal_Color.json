@@ -1,0 +1,37 @@
+{
+  "BlendMode": 2,
+  "ShadingModel": 0,
+  "Textures": {
+    "ColorAtlas_Alb": {
+      "ObjectName": "Texture2D'ColorAtlas_Alb'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Texture/ColorAtlas_Alb.0"
+    },
+    "ColorAtlas_Rough": {
+      "ObjectName": "Texture2D'ColorAtlas_Rough'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Texture/ColorAtlas_Rough.0"
+    },
+    "ColorAtlas_Nor": {
+      "ObjectName": "Texture2D'ColorAtlas_Nor'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Texture/ColorAtlas_Nor.0"
+    }
+  },
+  "Colors": {},
+  "Scalars": {},
+  "Switches": {},
+  "Properties": {
+    "MaterialDomain": "MD_DeferredDecal",
+    "bUsedWithSkeletalMesh": true,
+    "bUsedWithSplineMeshes": true,
+    "bUsedWithInstancedStaticMeshes": true,
+    "bCanMaskedBeAssumedOpaque": true,
+    "PixelDepthOffsetMode": "PDOM_Legacy",
+    "StateId": "CD04F620-439D5478-0C86F3A7-7AB65F25",
+    "bIncludedInBaseGame": true
+  },
+  "HasTopDiffuse": false,
+  "HasTopNormals": false,
+  "HasTopSpecularMasks": false,
+  "HasTopEmissive": false,
+  "IsTranslucent": true,
+  "IsNull": false
+}

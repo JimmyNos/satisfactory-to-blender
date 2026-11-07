@@ -1,0 +1,274 @@
+{
+  "BlendMode": 0,
+  "ShadingModel": 0,
+  "Textures": {
+    "TX2D_FactoryBase_N": {
+      "ObjectName": "Texture2DArray'TX2D_FactoryBase_N'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Material/Resources/TX2D_FactoryBase_N.0"
+    },
+    "TX2D_FactoryBase_BC": {
+      "ObjectName": "Texture2DArray'TX2D_FactoryBase_BC'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Material/Resources/TX2D_FactoryBase_BC.0"
+    },
+    "TX2D_FactoryBase_MREO": {
+      "ObjectName": "Texture2DArray'TX2D_FactoryBase_MREO'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Material/Resources/TX2D_FactoryBase_MREO.0"
+    },
+    "RT_WeatherOcclusion": {
+      "ObjectName": "TextureRenderTarget2D'RT_WeatherOcclusion'",
+      "ObjectPath": "/Game/FactoryGame/World/Environment/Weather/RT_WeatherOcclusion.0"
+    },
+    "Good64x64TilingNoiseHighFreq": {
+      "ObjectName": "Texture2D'Good64x64TilingNoiseHighFreq'",
+      "ObjectPath": "/Engine/EngineMaterials/Good64x64TilingNoiseHighFreq.0"
+    },
+    "None": null,
+    "DefaultDiffuse": {
+      "ObjectName": "Texture2D'DefaultDiffuse'",
+      "ObjectPath": "/Engine/EngineMaterials/DefaultDiffuse.0"
+    },
+    "DebugNumberStrip": {
+      "ObjectName": "Texture2D'DebugNumberStrip'",
+      "ObjectPath": "/Engine/Functions/Engine_MaterialFunctions02/ExampleContent/DebugNumberStrip.0"
+    },
+    "DebugNumberPeriod": {
+      "ObjectName": "Texture2D'DebugNumberPeriod'",
+      "ObjectPath": "/Engine/Functions/Engine_MaterialFunctions02/ExampleContent/Textures/DebugNumberPeriod.0"
+    },
+    "flipbook": {
+      "ObjectName": "Texture2D'flipbook'",
+      "ObjectPath": "/Engine/Functions/Engine_MaterialFunctions02/ExampleContent/Textures/flipbook.0"
+    },
+    "TX_RainFlipBook4x4_N": {
+      "ObjectName": "Texture2D'TX_RainFlipBook4x4_N'",
+      "ObjectPath": "/Game/FactoryGame/Weather/TX_RainFlipBook4x4_N.0"
+    },
+    "NoiseStorm": {
+      "ObjectName": "Texture2D'NoiseStorm'",
+      "ObjectPath": "/Game/FactoryGame/-Shared/Texture/Noise/NoiseStorm.0"
+    },
+    "Mask_Factory_02": {
+      "ObjectName": "Texture2D'Mask_Factory_02'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Texture/Factory/Mask_Factory_02.0"
+    },
+    "PM_Diffuse": {
+      "ObjectName": "Texture2DArray'TX2D_FactoryBase_BC'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Material/Resources/TX2D_FactoryBase_BC.0"
+    },
+    "Albedo": {
+      "ObjectName": "Texture2DArray'TX2D_FactoryBase_BC'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Material/Resources/TX2D_FactoryBase_BC.0"
+    },
+    "FringeTexture(R)": {
+      "AssetPathName": "/Game/FactoryGame/-Shared/Texture/Noise/NoiseStorm.NoiseStorm",
+      "SubPathString": ""
+    },
+    "PM_Normals": {
+      "ObjectName": "Texture2DArray'TX2D_FactoryBase_N'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Material/Resources/TX2D_FactoryBase_N.0"
+    },
+    "PM_SpecularMasks": {
+      "ObjectName": "Texture2DArray'TX2D_FactoryBase_MREO'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Material/Resources/TX2D_FactoryBase_MREO.0"
+    }
+  },
+  "Colors": {
+    "Output_Color": {
+      "R": 0.011239,
+      "G": 1.0,
+      "B": 0.664743,
+      "A": 1.0,
+      "Hex": "1BFFD5"
+    },
+    "Input_Color": {
+      "R": 1.0,
+      "G": 0.49,
+      "B": 0.0,
+      "A": 1.0,
+      "Hex": "FFBA00"
+    },
+    "GlowingLight": {
+      "R": 1.0,
+      "G": 0.3,
+      "B": 0.0,
+      "A": 1.0,
+      "Hex": "FF9500"
+    },
+    "StandardLight": {
+      "R": 0.98,
+      "G": 0.898,
+      "B": 0.556,
+      "A": 1.0,
+      "Hex": "FDF4C5"
+    },
+    "Composite_Color": {
+      "R": 0.524063,
+      "G": 0.5593,
+      "B": 0.609375,
+      "A": 1.0,
+      "Hex": "C0C5CD"
+    },
+    "Plastic_Color": {
+      "R": 0.046875,
+      "G": 0.046875,
+      "B": 0.046875,
+      "A": 1.0,
+      "Hex": "3D3D3D"
+    },
+    "SecondaryPaintedMetal_Color": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 0.0,
+      "Hex": "000000"
+    },
+    "PrimaryPaintMetal_Color": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 0.0,
+      "Hex": "000000"
+    },
+    "Height_Color": {
+      "R": 1.0,
+      "G": 0.147163,
+      "B": 0.0,
+      "A": 1.0,
+      "Hex": "FF6B00"
+    },
+    "WeldSeamColor": {
+      "R": 1.0,
+      "G": 0.719987,
+      "B": 0.44959,
+      "A": 1.0,
+      "Hex": "FFDDB3"
+    },
+    "GlowColor": {
+      "R": 2.0,
+      "G": 0.458302,
+      "B": 0.0,
+      "A": 1.0,
+      "Hex": "FFB500"
+    },
+    "Begin": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0,
+      "Hex": "000000"
+    },
+    "End": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0,
+      "Hex": "000000"
+    },
+    "Reverse Light Color": {
+      "R": 1.0,
+      "G": 0.066516,
+      "B": 0.0,
+      "A": 1.0,
+      "Hex": "FF4900"
+    }
+  },
+  "Scalars": {
+    "Scale": 20.0,
+    "InputColorIntensity": 5.0,
+    "EmissiveHeatIntensity": 7.5,
+    "EmissiveLightIntensity": 5.0,
+    "HasPower": 0.0,
+    "SecondaryPaintedMetal_Color_R": 0.0,
+    "SecondaryPaintedMetal_Color_G": 0.0,
+    "SecondaryPaintedMetal_Color_B": 0.0,
+    "LightR": 0.0,
+    "LightG": 0.0,
+    "LightB": 0.0,
+    "Bias": 100.0,
+    "Padding": 0.1,
+    "DitherRange": 0.0006,
+    "Steps": 5.0,
+    "Range": 0.0003,
+    "BreakupRep": 58.64579,
+    "Intenisty": 0.2,
+    "Speed": 1.8,
+    "SpeedY Layer 1": 0.153656,
+    "SpeedX Layer 1": -0.091668,
+    "SpeedY Layer 2": 0.122535,
+    "SpeedX Layer 2": 0.141146,
+    "RainScale Layer 1": 57.457767,
+    "RainScale Layer 2": 47.277668,
+    "Layer2TimeOffset": -0.15238,
+    "FadeOutDistance": 10000.0,
+    "PrimaryPaintMetal_Color_R": 0.0,
+    "PrimaryPaintMetal_Color_G": 0.0,
+    "PrimaryPaintMetal_Color_B": 0.0,
+    "LumenBoost": 5.0,
+    "AtmosphereFogIntensity": 0.3,
+    "Sky Saturation": -0.33,
+    "PR_Metallic": 0.0,
+    "PR_Roughness": 1.0,
+    "AlbedoContribution": 0.03,
+    "DownMaskIntensity": 1.0,
+    "DownMaskExp": 2.0,
+    "BuildEdgeLineExp": 2.3,
+    "LineIntensity": 150.0,
+    "GlowIntensity": 10.0,
+    "DefaultIntensity": 5.0,
+    "EmissiveIntensity": 0.15,
+    "FringeDisplacement": 5.0,
+    "FringePanSpeed": 1.0,
+    "TopLineExp": 25.0,
+    "TopLineMultiply": 1.5,
+    "WeldIntensity": 5.0,
+    "Size": 3000.0,
+    "EdgeRandomization": 0.025,
+    "FringeSize": 512.0,
+    "GlowEffectBoost": 1.5,
+    "FinalizeGlowMinimumMaskValue": 0.25,
+    "RaiseIntensity": 12.0,
+    "DayEmisIntenity": 0.8,
+    "NightEmisIntenity": 0.2,
+    "Materialize": 0.0,
+    "FinalizeGlow": 1.0,
+    "HeatGlow": 1.0,
+    "Displacement": 0.0,
+    "Volume": 1.0,
+    "SphereMask Radius": 700.0,
+    "Constrast Reduction": 0.0,
+    "Reverser": 0.0,
+    "RefractionDepthBias": 0.0
+  },
+  "Switches": {},
+  "Properties": {
+    "bUsedWithSkeletalMesh": true,
+    "bUsedWithNiagaraMeshParticles": true,
+    "bUsedWithSplineMeshes": true,
+    "bUsedWithInstancedStaticMeshes": true,
+    "bUsedWithInstancedSplineMeshes": true,
+    "bAutomaticallySetUsageInEditor": false,
+    "bUseMaterialAttributes": true,
+    "PixelDepthOffsetMode": "PDOM_Legacy",
+    "StateId": "D5C79073-4BD02B2A-65A8888A-C8CEFE6A",
+    "AssetUserData": [
+      {
+        "ObjectName": "FGBuildEffectMaterialSwapAssetData'MI_Factory2D_01:FGBuildEffectMaterialSwapAssetData_0'",
+        "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Material/MI_Factory2D_01.0"
+      }
+    ],
+    "bIncludedInBaseGame": true,
+    "BasePropertyOverrides": {
+      "OpacityMaskClipValue": 0.3333
+    },
+    "PhysMaterial": {
+      "ObjectName": "PhysicalMaterial'PhysMat_Metal'",
+      "ObjectPath": "/Game/FactoryGame/-Shared/Material/PhysicalMaterial/PhysMat_Metal.0"
+    }
+  },
+  "HasTopDiffuse": true,
+  "HasTopNormals": false,
+  "HasTopSpecularMasks": false,
+  "HasTopEmissive": false,
+  "IsTranslucent": false,
+  "IsNull": false
+}

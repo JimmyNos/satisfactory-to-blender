@@ -472,9 +472,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
         else:
             mat_path = search_file[0]
     
-    
-    # search Exports path if not found in mesh path 
-    if not mat_path: # TODO
+    if not mat_path:
         return None
     
     # Get Material file
@@ -488,15 +486,8 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
             m_data = json.load(f)
             
     except Exception as e:
-        print("⚠️Error opening material file: ",e)
+        print(f"⚠️Error opening {obj_material} file: ",e)
         return None
-
-    
-    #if textures:
-    #    for tex in textures:
-    #        if "TX2D_" in tex:
-    #            ob.material_slots[index].material = fact_mat
-    #            return None
     
     textures = [] # type: list[dict[str,str]] 
     switch_parameters = [] # type: list[dict[str,str]] 
@@ -894,7 +885,7 @@ def get_materials(ob,obj_material: str, file: Path,index:int,sf_asset_export_pat
                 if tx_type_a:
                     links.new(b_texture.outputs["Alpha"], sf_shader_node.inputs[tx_type_a])
             except Exception as e:
-                print("Error loading texture: ",e)
+                print(f"Error loading texture {tex_file}: ",e)
                 return None         
 
 def read_transform(transform: dict,attach_bone_pos,ob_parent):

@@ -1,0 +1,128 @@
+{
+  "BlendMode": 1,
+  "ShadingModel": 0,
+  "Textures": {
+    "ColorAtlas_Alb": {
+      "ObjectName": "Texture2D'ColorAtlas_Alb'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Texture/ColorAtlas_Alb.0"
+    },
+    "ColorAtlas_Rough": {
+      "ObjectName": "Texture2D'ColorAtlas_Rough'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Texture/ColorAtlas_Rough.0"
+    },
+    "ColorAtlas_Nor": {
+      "ObjectName": "Texture2D'ColorAtlas_Nor'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Texture/ColorAtlas_Nor.0"
+    },
+    "Good64x64TilingNoiseHighFreq": {
+      "ObjectName": "Texture2D'Good64x64TilingNoiseHighFreq'",
+      "ObjectPath": "/Engine/EngineMaterials/Good64x64TilingNoiseHighFreq.0"
+    },
+    "NoiseStorm": {
+      "ObjectName": "Texture2D'NoiseStorm'",
+      "ObjectPath": "/Game/FactoryGame/-Shared/Texture/Noise/NoiseStorm.0"
+    },
+    "Mask_Factory_02": {
+      "ObjectName": "Texture2D'Mask_Factory_02'",
+      "ObjectPath": "/Game/FactoryGame/Buildable/-Shared/Texture/Factory/Mask_Factory_02.0"
+    },
+    "PM_Normals": {
+      "AssetPathName": "/Game/FactoryGame/Buildable/-Shared/Texture/ColorAtlas_Nor.ColorAtlas_Nor",
+      "SubPathString": ""
+    },
+    "Normal": {
+      "AssetPathName": "/Game/FactoryGame/Buildable/-Shared/Texture/ColorAtlas_Nor.ColorAtlas_Nor",
+      "SubPathString": ""
+    },
+    "FringeTexture(R)": {
+      "AssetPathName": "/Game/FactoryGame/-Shared/Texture/Noise/NoiseStorm.NoiseStorm",
+      "SubPathString": ""
+    },
+    "PM_SpecularMasks": {
+      "ObjectName": "Texture2D'NoiseStorm'",
+      "ObjectPath": "/Game/FactoryGame/-Shared/Texture/Noise/NoiseStorm.0"
+    }
+  },
+  "Colors": {
+    "Height_Color": {
+      "R": 1.0,
+      "G": 0.147163,
+      "B": 0.0,
+      "A": 1.0,
+      "Hex": "FF6B00"
+    },
+    "WeldSeamColor": {
+      "R": 1.0,
+      "G": 0.719987,
+      "B": 0.44959,
+      "A": 1.0,
+      "Hex": "FFDDB3"
+    },
+    "GlowColor": {
+      "R": 2.0,
+      "G": 0.458302,
+      "B": 0.0,
+      "A": 1.0,
+      "Hex": "FFB500"
+    },
+    "Begin": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0,
+      "Hex": "000000"
+    },
+    "End": {
+      "R": 0.0,
+      "G": 0.0,
+      "B": 0.0,
+      "A": 1.0,
+      "Hex": "000000"
+    }
+  },
+  "Scalars": {
+    "BuildEdgeLineExp": 2.3,
+    "LineIntensity": 150.0,
+    "GlowIntensity": 10.0,
+    "DefaultIntensity": 5.0,
+    "EmissiveIntensity": 0.15,
+    "FringeDisplacement": 5.0,
+    "FringePanSpeed": 1.0,
+    "TopLineExp": 25.0,
+    "TopLineMultiply": 1.5,
+    "WeldIntensity": 5.0,
+    "Size": 3000.0,
+    "EdgeRandomization": 0.025,
+    "FringeSize": 512.0,
+    "GlowEffectBoost": 1.5,
+    "FinalizeGlowMinimumMaskValue": 0.25,
+    "RaiseIntensity": 12.0,
+    "DayEmisIntenity": 0.8,
+    "NightEmisIntenity": 0.2,
+    "Materialize": 0.0,
+    "FinalizeGlow": 1.0,
+    "HeatGlow": 1.0,
+    "Displacement": 0.0,
+    "Volume": 1.0
+  },
+  "Switches": {},
+  "Properties": {
+    "PhysMaterial": {
+      "ObjectName": "PhysicalMaterial'PhysMat_Metal'",
+      "ObjectPath": "/Game/FactoryGame/-Shared/Material/PhysicalMaterial/PhysMat_Metal.0"
+    },
+    "TwoSided": true,
+    "bUsedWithSkeletalMesh": true,
+    "bUsedWithSplineMeshes": true,
+    "bUsedWithInstancedStaticMeshes": true,
+    "PixelDepthOffsetMode": "PDOM_Legacy",
+    "StateId": "BB151272-4C667AAD-72D38A8E-B9808090",
+    "bIncludedInBaseGame": true
+  },
+  "HasTopDiffuse": false,
+  "HasTopNormals": true,
+  "HasTopSpecularMasks": false,
+  "HasTopEmissive": false,
+  "IsTranslucent": false,
+  "IsNull": false
+}
