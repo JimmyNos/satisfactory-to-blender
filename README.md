@@ -106,6 +106,8 @@ Use a separate directory for the Satisfactory asset library.
 ## FModel Setup
 
 Before models can be imported, you need to extract the required files from Satisfactory using FModel:
+> Make sure you export both `properties(.json)` and `textures` from `FactoryGame/Content/FactoryGame/Buildable/-Shared/Material` (Refer to second FModel image)
+
 * **Build files** (`.json`)
   * For example:
     * `Build_Blender.json`
@@ -118,14 +120,13 @@ Before models can be imported, you need to extract the required files from Satis
 * **Materials**
   * `.json`
 
-You can export both build files and material files for most buildables by right-clicking the `buildable` folder in FModel and selecting:
-
-**Export Folder → Properties (.json)**
+You can export both build files and material files for most buildables by right-clicking the `buildable` folder in FModel and selecting: **Export Folder → Properties (.json)**
 
 > Not all buildables and models are located in the `buildable` folder. For example, Beam build files are stored under `/FactoryGame/Prototype/Buildable/Beams`.
 
 ![FModel export options](resources/images/FModel/fmodel%202.png)
 
+![FModel_export_properties(.json)_and_textures](image.png)
 ---
 
 ## How to use
