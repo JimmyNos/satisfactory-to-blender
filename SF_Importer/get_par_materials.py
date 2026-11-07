@@ -61,7 +61,7 @@ def get_par_materials(sf_asset_export_path):
     BASE_FILE_DIR = Path(sf_asset_export_path,EXPORT_FILE_DIR,"FactoryGame","Buildable")
     BASE_TEX_DIR = Path(sf_asset_export_path,TX_EXPORT_FILE_DIR,"FactoryGame","Buildable")
     ATLAS_MAT_DIR = Path(BASE_FILE_DIR,'-Shared') # textures and materials for the atlas materials (decal_color,decal_color_masked, decal_normal)
-    ARR_TEX_DIR = Path(BASE_TEX_DIR,'-Shared','Material','Resources') # textures for the factory_inst material
+    ARR_TEX_DIR = Path(BASE_FILE_DIR,'-Shared','Material','Resources') # textures for the factory_inst material
 
     mat_dir = Path(ATLAS_MAT_DIR,'Material')
     tex_dir = Path(ATLAS_MAT_DIR,'Texture')
@@ -129,12 +129,14 @@ def get_par_materials(sf_asset_export_path):
         nodes = material.node_tree.nodes
         links = material.node_tree.links
         
+        is_txd_Shader_node = False
         for tex in mat_tex:
             if "TX2D_" in tex:
                 txd_Shader_node = nodes.new('ShaderNodeGroup')
                 if txd_Shader_node:
                     txd_Shader_node.node_tree = bpy.data.node_groups['TX2D_Shader']
                 txd_Shader_node.location.x = -400
+                is_txd_Shader_node = True
                 
                 txd_Shader = bpy.data.node_groups['TX2D_Shader']
                 if not cleared_txd_Shader:
@@ -164,7 +166,8 @@ def get_par_materials(sf_asset_export_path):
             sf_shader_node.node_tree = bpy.data.node_groups['FallBack']
         sf_shader_node.location.x = 500
         links.new(tex_coord_node.outputs["UV"], mapping_node.inputs["Vector"])
-        links.new(mapping_node.outputs["Vector"], txd_Shader_node.inputs["UV"])
+        if is_txd_Shader_node:
+            links.new(mapping_node.outputs["Vector"], txd_Shader_node.inputs["UV"])
         
         output_node = nodes.new('ShaderNodeOutputMaterial')
         output_node.location.x = 700
@@ -252,7 +255,7 @@ def get_par_materials(sf_asset_export_path):
                 txd_shader_node.location.y = 0-(pos*50)
                 
                 for i in range(9):
-                    tex_id = f"{tex}_{i}"
+                    tex_id = f"{tex}_LAYER{i}"
                     tex_file = Path(ARR_TEX_DIR,f"{tex_id}.png")
                     
                     print("---")
